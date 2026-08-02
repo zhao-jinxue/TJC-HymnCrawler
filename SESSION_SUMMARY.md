@@ -6,7 +6,8 @@
 真耶穌教會聖樂网爬虫 — 抓取 **474 首**诗歌（sacredmusic.tjc.org.tw）
 
 ## 当前阶段
-**第三阶段（多媒体资源下载）已完成**，下一步：**第四阶段（项目收尾与数据校验）**
+**第四阶段（项目收尾与数据校验）已完成 ✅**，项目已验收归档。
+产出：`step4_verify_and_report.py` + `final_report.txt`。
 
 ## 核心架构
 
@@ -22,8 +23,10 @@ hymn_crawler/
 │   ├── probe.py                   # 资源探测（PDF HEAD + 音频页面点击）
 │   └── downloader.py              # 资源下载管理器（含下载/完整性校验）
 ├── crawler_fast.py                # 统一菜单入口（主入口，含 print_db_status）
+├── step4_verify_and_report.py     # 第四阶段：校验与报告（数据对账/资源核验/final_report）
 ├── tjc_hymn.db                    # SQLite 数据库（v4 结构）
 ├── probe_report.json              # 资源探测清单 + 各状态（474 首）
+├── final_report.txt               # 项目最终执行统计报告（第四阶段产物）
 ├── Hymn_Downloads/                # 474 首诗歌本地目录
 ├── hymn_crawler_plan.md           # 开发计划文档
 ├── SESSION_SUMMARY.md             # 本文件（会话恢复/新会话启动文档）
@@ -123,25 +126,37 @@ from crawler_core.probe import (
 ```
 
 ### crawler_fast.py 菜单（主入口）
-- 选项 1-6：Step1 / Step2 / 资源探测 / 下载 / 全流程 / 补全失败
+- 选项 1-7：Step1 / Step2 / 资源探测 / 下载 / **校验与报告(step4)** / 全流程(Step1→Step2→探测→下载→校验) / 补全失败(仅当存在失败时显示)
 - 启动时自动：`init_db()` + `print_db_status()` + `print_url_map_status()` + `print_probe_report_status()`
 - `print_probe_report_status()` 已过滤 `_error` 版本、显示 download/integrity 分布
 
-## 第四阶段待办（新会话开启时的启动任务）
-### 🔴 核心交付
-- [ ] 编写 `step4_verify_and_report.py`
-- [ ] 数据完整性校验：DB 记录数(474) vs 本地 Hymn_Downloads 目录数(474)
-- [ ] 多媒体资源对账：遍历每首目录，检查五线谱/简谱/钢琴/人声文件是否存在（可复用 `verify_file_integrity` 与 `integrity_status`）
-- [ ] 失败任务重试：#62 人聲版处理（重试/标记）
-- [ ] 增量更新：已下载成功跳过
-- [ ] 生成 `final_report.txt`：抓取总数/文本完整率/多媒体成功率(按类型)/失败清单
-- [ ] 项目验收与归档
+## 第四阶段（已完成 ✅ 2026-08-02）
+### 🔴 核心交付（全部完成）
+- [x] 编写 `step4_verify_and_report.py`
+- [x] 数据完整性校验：DB(474) vs 目录(474) vs url_map(474) 三方完全一致，双向零差异
+- [x] 多媒体资源对账（按版本聚合）：五线谱/简谱/鋼琴版 100% 完整；人聲版 461/462（#62 服务器 404 缺失）；合唱部版 140、四部合唱版 47 均 100%
+- [x] 失败任务归档：#62 人聲版为服务器端 404，已标记归档、不重试
+- [x] DB 路径交叉校验：无悬挂引用（DB 全部相对路径命中磁盘文件）
+- [x] 生成 `final_report.txt`（资源总数 2070，完整 2069，99%）
+- [x] 项目验收与归档；step4 集成进 crawler_fast.py 菜单（选项 5=独立校验，选项 6=全流程末尾校验）
+
+> 📌 final_report 关键结论：`资源总数 2070 / 完整 2069 (99%)`，唯一缺失 #62 人聲版（服务器端 404 事实）。
 
 ### 🟡 计划文档遗留的优化项
-- [ ] 目录命名清理：`001_1　頌讚獨一真神` 含全角空格+编号前缀，建议统一 `001_頌讚獨一真神`（涉及 474 个目录，改造成本高）
-- [ ] Step 2 速度优化（去 sleep 用精确等待）
-- [ ] 内存分批入库（每 50 首 flush）
-- [ ] Step 2 断点续爬（记录已处理编号）
+- [x] ~~目录命名清理~~：实测 474 目录**无全角空格/半角空格**，无需处理
+- [x] **Step 2 速度优化**：已用精确等待替代固定 `sleep(0.8)+sleep(0.5)` 与 Tab 点击后 `sleep(0.2)`（extractor.py)。仅保留源考折叠面板展开的 `sleep(0.3)`（UI 动画）。实测 3 首 8.5s、5 首 12s（约 0.4s/首 提速），预估较原 ~3s/首 快约 5 倍
+- [x] **Step 2 断点续爬**：extractor.py 新增 progress 文件机制（`Hymn_Downloads/step2_progress.json`，每成功 1 首立即持久化；`resume=False`/`clear_progress()` 可全量重跑）。已实测：5 首成功建立进度，二次运行 5 首全部跳过、耗时 0.0s
+- [x] ~~内存分批入库（每 50 首 flush）~~：已决定不做（474 首内存约数 MB，无必要）
+
+### ⚠️ url_map.txt 追踪状态（已解决 2026-08-02）
+- `url_map.txt` 现**已在 git 跟踪内**：`.gitignore` 增加白名单 `!/Hymn_Downloads/url_map.txt` 并已 `git add`。
+- 应急重建命令仍保留：`python3 step4_verify_and_report.py --rebuild-map`（从 DB staff_img_path 重建）。
+
+## ⚠️ 已修复的 bug（2026-08-02 全量执行 Step 2 时发现）
+- **`save_to_db` UPSERT 覆盖资源路径/状态**：Step 2 全量重跑时，`_parse_one` 返回的空 `staff_img_path`/`numbered_img_path`/`audio_versions` 与默认 `pending`/`unchecked` 经 UPSERT 覆盖了第三阶段已回写的路径和 completed/passed 状态（一度 0/474）。
+- **修复**：`save_to_db` 的 ON CONFLICT 对路径字段用 `CASE ... 新值为空则保留旧值`，对状态字段在 `('', 'pending')`/`('', 'unchecked')` 时保留旧值。已修复验证通过（模拟 Step 2 空数据 UPSERT 不再清空 #1 路径/状态）。
+- **恢复**：全量重跑后曾用 `_backfill_paths_to_db` + `sync_download_status_to_db` + `batch_update_integrity` 从磁盘/probe_report.json 恢复，最终全量复验 **474/474 健康**（staff/num/audio 路径 + 状态全部对照 probe 正确）。
+- **教训**：Step 2 不能直接对已有资源数据的库全量重跑（现已安全，但重跑前建议先确认 save_to_db 已是修复版）。
 
 ## 关键决策记录
 1. 音频 URL 用 MD5 哈希，无法拼接，必须 Selenium 页面点击捕获 `audio#player.src`
@@ -152,3 +167,4 @@ from crawler_core.probe import (
 6. `audio_versions` 在**数据库**中改为相对路径字符串（v4 变更），`probe_report.json` 仍为 URL 对象
 7. 所有路径相对项目根目录（SCRIPT_DIR），跨机器可移植
 8. #62 人聲版为服务器端 404（网页有按钮但文件缺失），非代码 bug，需标记归档
+9. **全流程（菜单6）重跑原则（2026-08-02 确认）**：重跑以**刷新状态字段**（download_status/integrity_status）为主，不涉及其他字段（路径/音频版本等保持不变）；**仅当源站有更新**（如探测发现新音频版本）时才更新其他字段。当前实现已符合：`save_to_db` CASE 保护路径/状态不覆盖；`run_download` 已存在文件跳过、仅更新状态并校验。

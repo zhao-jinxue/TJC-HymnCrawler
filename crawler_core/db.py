@@ -243,12 +243,20 @@ def save_to_db(hymn_data):
                 verse_5 = excluded.verse_5, verse_6 = excluded.verse_6,
                 verse_7 = excluded.verse_7, verse_8 = excluded.verse_8,
                 verse_9 = excluded.verse_9, verse_10 = excluded.verse_10,
-                staff_img_path = excluded.staff_img_path,
-                numbered_img_path = excluded.numbered_img_path,
-                audio_versions = excluded.audio_versions,
-                audio_version_list = excluded.audio_version_list,
-                download_status = excluded.download_status,
-                integrity_status = excluded.integrity_status,
+                -- 路径/状态类字段：新值为空时保留旧值（防止文本提取覆盖已回写的资源路径）
+                staff_img_path = CASE WHEN excluded.staff_img_path IS NULL OR excluded.staff_img_path = ''
+                                      THEN tjc_hymn.staff_img_path ELSE excluded.staff_img_path END,
+                numbered_img_path = CASE WHEN excluded.numbered_img_path IS NULL OR excluded.numbered_img_path = ''
+                                         THEN tjc_hymn.numbered_img_path ELSE excluded.numbered_img_path END,
+                audio_versions = CASE WHEN excluded.audio_versions IS NULL OR excluded.audio_versions IN ('', '{}')
+                                      THEN tjc_hymn.audio_versions ELSE excluded.audio_versions END,
+                audio_version_list = CASE WHEN excluded.audio_version_list IS NULL OR excluded.audio_version_list IN ('', '[]')
+                                          THEN tjc_hymn.audio_version_list ELSE excluded.audio_version_list END,
+                -- 状态字段同理：Step 2 文本提取的默认 pending/unchecked 不得覆盖下载/校验结果
+                download_status = CASE WHEN excluded.download_status IS NULL OR excluded.download_status IN ('', 'pending')
+                                       THEN tjc_hymn.download_status ELSE excluded.download_status END,
+                integrity_status = CASE WHEN excluded.integrity_status IS NULL OR excluded.integrity_status IN ('', 'unchecked')
+                                        THEN tjc_hymn.integrity_status ELSE excluded.integrity_status END,
                 updated_at = datetime('now', 'localtime')
             '''
     params = [

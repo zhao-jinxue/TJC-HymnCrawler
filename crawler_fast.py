@@ -18,6 +18,7 @@ from crawler_core.scanner import Scanner
 from crawler_core.extractor import Extractor, load_url_map
 from crawler_core.probe import run_probe, load_probe_report
 from crawler_core.downloader import run_download
+from step4_verify_and_report import main as run_step4
 
 
 # ================= 打印横线 =================
@@ -115,10 +116,11 @@ def main():
         ("2", "仅 Step 2：提取详情页文本（从 url_map.txt 读）"),
         ("3", "仅 资源探测（PDF HEAD + 音频页面点击）"),
         ("4", "仅 下载多媒体资源（根据 probe_report.json）"),
-        ("5", "全流程：Step 1 → Step 2 → 资源探测 → 下载"),
+        ("5", "校验与报告（第四阶段：数据对账 + 资源核验 + final_report）"),
+        ("6", "全流程：Step 1 → Step 2 → 资源探测 → 下载 → 校验与报告"),
     ]
     if failed_count > 0:
-        items.append(("6", f"补全失败：重试提取 {failed_count} 首失败诗歌"))
+        items.append(("7", f"补全失败：重试提取 {failed_count} 首失败诗歌"))
     items.append(("0", "退出"))
 
     print("📋 请选择要执行的步骤：\n")
@@ -128,23 +130,23 @@ def main():
 
     while True:
         try:
-            choice = input("请输入选项 [0-6] (默认 5): ").strip()
+            choice = input("请输入选项 [0-7] (默认 5): ").strip()
         except (EOFError, KeyboardInterrupt):
             choice = "0"
             print()
         if choice == "":
             choice = "5"
             break
-        elif choice in ("0", "1", "2", "3", "4", "5", "6"):
+        elif choice in ("0", "1", "2", "3", "4", "5", "6", "7"):
             break
         else:
-            print("   无效选项，请输入 0-6")
+            print("   无效选项，请输入 0-7")
 
     print()
     total_start = time.time()
 
     # ---- Step 1 ----
-    if choice in ("1", "5"):
+    if choice in ("1", "6"):
         scanner = Scanner()
         songs = scanner.scan()
         scanner.close()
@@ -153,7 +155,7 @@ def main():
             return
 
     # ---- Step 2 ----
-    if choice in ("2", "5"):
+    if choice in ("2", "6"):
         songs = load_url_map()
         if not songs:
             print("❌ url_map.txt 无数据，请先执行 Step 1。")
@@ -165,8 +167,8 @@ def main():
         print(f"   ✅ Step 2：成功 {result['success']} 首，失败 {result['failed']} 首")
 
     # ---- 资源探测 ----
-    if choice in ("3", "5"):
-        if choice == "5":
+    if choice in ("3", "6"):
+        if choice == "6":
             while True:
                 try:
                     ans = input("👉 是否执行资源探测（PDF + 音频）？[Y/n] ").strip().lower()
@@ -186,8 +188,8 @@ def main():
             probe_report = run_probe()
 
     # ---- 下载 ----
-    if choice in ("4", "5"):
-        if choice == "5":
+    if choice in ("4", "6"):
+        if choice == "6":
             while True:
                 try:
                     ans = input("👉 是否下载多媒体资源？[Y/n] ").strip().lower()
@@ -205,8 +207,13 @@ def main():
         else:
             run_download()
 
+    # ---- 校验与报告 ----
+    # 选项 5：独立执行校验；选项 6：全流程的最后一步
+    if choice in ("5", "6"):
+        run_step4()
+
     # ---- 补全 ----
-    if choice == "6":
+    if choice == "7":
         failed_songs = get_failed_songs()
         if not failed_songs:
             print("✅ 没有需要补全的诗歌。")
