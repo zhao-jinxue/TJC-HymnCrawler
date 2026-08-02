@@ -1,0 +1,38 @@
+[
+  {
+    "file": "243_五线谱.pdf",
+    "sha256": "989de6e3259ee4eb67d196e3298cf8f193872941a46fe0a16875f89bac34c43c"
+  },
+  {
+    "file": "243_人聲版.mp3",
+    "sha256": "65768ef961276182ed5f416246f0eabf829b4b3371e1bff40f59b8e20221de98"
+  },
+  {
+    "file": "243_合唱-1部版.m4a",
+    "sha256": "8fcf828a92638cfe3c84c39fd3eb91bad79e7610215602ceffc26b5a23674e29"
+  },
+  {
+    "file": "243_合唱-2部版.m4a",
+    "sha256": "761b6ae233816c387f2dadf4dfd68c95d8341dee7e9b0b9d7082d25b62eb5521"
+  },
+  {
+    "file": "243_合唱-3部版.m4a",
+    "sha256": "8a099de42df162e3891f723a1e93e24d91cf9fdb3c6a1932e402c57914a605e2"
+  },
+  {
+    "file": "243_合唱-4部版.m4a",
+    "sha256": "0f44da982009f62be282a6047a5405449de08a8d2f04f3fcd5e663bea6c344ff"
+  },
+  {
+    "file": "243_四部合唱版.m4a",
+    "sha256": "4ab2c8ad0ce2d42e8c721af1c137bf83042b647b6f69c9db360897e3c86a8354"
+  },
+  {
+    "file": "243_简谱.pdf",
+    "sha256": "87a7f721c3e6dbd156f112cc5848748be68840fa4e7a708f15e39192d2982cc8"
+  },
+  {
+    "file": "243_鋼琴版.m4a",
+    "sha256": "dd62ecc28390acf493f085a1dd506a51191bfda14681e0a898df23827f3fd6ee"
+  }
+]

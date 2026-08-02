@@ -1,0 +1,22 @@
+[
+  {
+    "file": "82_五线谱.pdf",
+    "sha256": "d6753d7cbfdcd0ed19dcc7fc19a9958a15cf7515ee14698c1392943b65250b73"
+  },
+  {
+    "file": "82_人聲版.mp3",
+    "sha256": "20fd6cde5753c49c7c0af0a489a55c3d008ff99846f11c65b6f89edd65320fee"
+  },
+  {
+    "file": "82_四部合唱版.m4a",
+    "sha256": "d0645d819a481b0b487d94258ce02e8a93d01bfa58cf649921ad6a71009d01aa"
+  },
+  {
+    "file": "82_简谱.pdf",
+    "sha256": "f79cb021377945d33c393c58ff7bbeaa49ef8e93669c822bfbb9d074d9c84088"
+  },
+  {
+    "file": "82_鋼琴版.m4a",
+    "sha256": "077e8bf936bfec0c1efb1b8884c306e801b442cf9a016060fca58d607f464d8f"
+  }
+]

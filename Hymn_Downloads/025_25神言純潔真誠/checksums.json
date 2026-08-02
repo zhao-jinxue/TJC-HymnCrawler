@@ -1,0 +1,38 @@
+[
+  {
+    "file": "25_五线谱.pdf",
+    "sha256": "1f770e02fed65bf3e8f1717c15635446133a10cf740b9c722972ce239326bb3a"
+  },
+  {
+    "file": "25_人聲版.mp3",
+    "sha256": "951f234680a4c3bcb4e3c8f1bdc98c8711e83d78c01e0a30c47995eede78d586"
+  },
+  {
+    "file": "25_合唱-1部版.m4a",
+    "sha256": "466cc93ec4d384aa85229a082e17a81af705c6494b864a30cce34c8fd1cf7fad"
+  },
+  {
+    "file": "25_合唱-2部版.m4a",
+    "sha256": "516b34ca6c91d8e381f8f65745ecc7d6da29b3b1055be06058ee7ccae23bbd75"
+  },
+  {
+    "file": "25_合唱-3部版.m4a",
+    "sha256": "74c65863d521b6cb0b39bb3557c45dc84bc5ffe50efbf889b8bd2f90d3f2d354"
+  },
+  {
+    "file": "25_合唱-4部版.m4a",
+    "sha256": "bb882474b56feadd0bb92f07fce279c4ee37373353c6e09a53c206b9f5f6723b"
+  },
+  {
+    "file": "25_四部合唱版.m4a",
+    "sha256": "56bb4897a8067f58971e5a46ebf2d096c755605eda5fd4216ac6213168322499"
+  },
+  {
+    "file": "25_简谱.pdf",
+    "sha256": "44bf44080966d791ca272ef69997fa187134d6033e53485f7749cba55d5da5fc"
+  },
+  {
+    "file": "25_鋼琴版.m4a",
+    "sha256": "2cf326d45fb0814a3752b2e59310c98b6f7ae40f78f8b590383d3fb1cbd1189d"
+  }
+]

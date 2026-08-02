@@ -1,0 +1,13 @@
+# 忽略 Python 缓存
+__pycache__/
+*.py[cod]
+*$py.class
+
+# 忽略 Hymn_Downloads 下的大文件（音频/PDF/视频/文本），但保留哈希清单
+/Hymn_Downloads/**
+!/Hymn_Downloads/**/
+!/Hymn_Downloads/**/*.json
+
+# 数据库文件（probe_report.json 保留跟踪，作为 db 重建的保险）
+*.db
+*.db-journal

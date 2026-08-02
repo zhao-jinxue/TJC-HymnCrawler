@@ -1,0 +1,14 @@
+#!/bin/bash
+# pre-commit 钩子：提交前自动重新生成 Hymn_Downloads 的 SHA-256 哈希清单，
+# 使"大文件被修改"能通过 checksums.json 的变化被 git 感知。
+set -euo pipefail
+
+cd "$(git rev-parse --show-toplevel)"
+
+# 生成清单（跳过不存在的情况）
+python3 generate_checksums.py
+
+# 重新暂存所有受影响的清单文件
+git add Hymn_Downloads/*/checksums.json
+
+exit 0

@@ -1,0 +1,38 @@
+[
+  {
+    "file": "8_五线谱.pdf",
+    "sha256": "63174bf844dc2f6a875cccf50785c69f23b76cc8d70e1e280d6364483f239ef1"
+  },
+  {
+    "file": "8_人聲版.mp3",
+    "sha256": "703a8d8df4b7c15afe97506861e1c19e83f02b37e5f538cf31a061de70f6d082"
+  },
+  {
+    "file": "8_合唱-1部版.m4a",
+    "sha256": "79686ac860ca4a6348d7bbe7176345bbde5715bc5d7a48510fb447e755108103"
+  },
+  {
+    "file": "8_合唱-2部版.m4a",
+    "sha256": "59f84c99d2f49c4ba0eff5ad6b181d571cc36c7f9fa981484470ab425403287e"
+  },
+  {
+    "file": "8_合唱-3部版.m4a",
+    "sha256": "e8b6ab816000e175a20ef9eff4832afc1e8394f602d21184eb90d28c86bd236e"
+  },
+  {
+    "file": "8_合唱-4部版.m4a",
+    "sha256": "e942823d2e355a1ca68d0eed716c5b05fcb6d819449fdbedba67bfdf9fe7b051"
+  },
+  {
+    "file": "8_四部合唱版.m4a",
+    "sha256": "fb10dd7549165be1f68a328263dacff1c551b41c681e8ee73bba4e5cd20fcead"
+  },
+  {
+    "file": "8_简谱.pdf",
+    "sha256": "3520debe3b3cdad3b185831367a2b61918b6f096d66462b1217feba7c37a8ef7"
+  },
+  {
+    "file": "8_鋼琴版.m4a",
+    "sha256": "a5253a01f4bc9c54dab685532d55dfe2f58acfc0626020f0566d7e406355a502"
+  }
+]
