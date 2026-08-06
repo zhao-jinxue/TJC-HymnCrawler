@@ -12,7 +12,7 @@ import sys
 from pathlib import Path
 
 BASE = Path(__file__).resolve().parent / "Hymn_Downloads"
-EXTS = {".pdf", ".mp3", ".m4a", ".mp4", ".txt"}
+EXTS = {".pdf", ".mp3", ".m4a", ".mp4", ".txt", ".png"}
 
 # .gitignore 会忽略 Hymn_Downloads 下的非 .json 文件，
 # 因此只有 checksums.json 会被 git 跟踪。

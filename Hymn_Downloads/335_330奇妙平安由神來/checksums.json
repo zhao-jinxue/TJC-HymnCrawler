@@ -4,6 +4,10 @@
     "sha256": "35072f92e9344e9e09a1bcf382288895c5662ffe46d14dd78ec7e3fe7dbbbf08"
   },
   {
+    "file": "330_五线谱.png",
+    "sha256": "12f11e8402293973ec9d06526faa77987d596cc7f693a5759ca6c3031aa43e40"
+  },
+  {
     "file": "330_人聲版.mp3",
     "sha256": "8bb8ee82a64f7b5c70e36a196a4a91abdad1e67f7992567db9086951de5109dc"
   },
@@ -30,6 +34,10 @@
   {
     "file": "330_简谱.pdf",
     "sha256": "ee16f9dc76dd927cdd6b5d8ab6f38a3513f277fbaa98a4fb24d7034e10a12de2"
+  },
+  {
+    "file": "330_简谱.png",
+    "sha256": "d6212dd4c3f84e1d45d11bbfc3c9183d5d38ae1146b9c403f9981928e4477912"
   },
   {
     "file": "330_鋼琴版.m4a",

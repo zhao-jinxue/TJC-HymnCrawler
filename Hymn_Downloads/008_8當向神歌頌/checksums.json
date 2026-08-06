@@ -4,6 +4,10 @@
     "sha256": "63174bf844dc2f6a875cccf50785c69f23b76cc8d70e1e280d6364483f239ef1"
   },
   {
+    "file": "8_五线谱.png",
+    "sha256": "c69a2df97ad88c26e0ceac1ad68d16d063272a4a5b1f757f347d498fc2190d57"
+  },
+  {
     "file": "8_人聲版.mp3",
     "sha256": "703a8d8df4b7c15afe97506861e1c19e83f02b37e5f538cf31a061de70f6d082"
   },
@@ -30,6 +34,10 @@
   {
     "file": "8_简谱.pdf",
     "sha256": "3520debe3b3cdad3b185831367a2b61918b6f096d66462b1217feba7c37a8ef7"
+  },
+  {
+    "file": "8_简谱.png",
+    "sha256": "023b492237fd14b347e2a6406c528effa0907969ee7d246861e9585ce0099a7d"
   },
   {
     "file": "8_鋼琴版.m4a",

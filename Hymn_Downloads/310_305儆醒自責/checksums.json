@@ -4,8 +4,16 @@
     "sha256": "192e6ef6315bdd32a058fa89f906846a401a216d04363e07a38c1704e12fd8b4"
   },
   {
+    "file": "305_五线谱.png",
+    "sha256": "3c084428b7d4fb78b4f89a528024eac11889f57195a5b9e25fd9d410daaf0a53"
+  },
+  {
     "file": "305_简谱.pdf",
     "sha256": "2abc5539561845c9057930982e764a007a521ebbf0077d5efd8b64921ba22c54"
+  },
+  {
+    "file": "305_简谱.png",
+    "sha256": "7a374d46b40dcdfd2103d7ef8dfaf989bf6580ce17a615b3368dc132b2ba4722"
   },
   {
     "file": "305_鋼琴版.mp3",

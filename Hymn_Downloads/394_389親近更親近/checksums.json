@@ -4,6 +4,10 @@
     "sha256": "3b63835bcbaff6273208801f5350b59d81aed3ca1a0e1d810bb7ba2a0e57024c"
   },
   {
+    "file": "389_五线谱.png",
+    "sha256": "44ccd1566946aae924fb67a4d8e05f5087bacfdcdb4f8c9ed0e490887365f47e"
+  },
+  {
     "file": "389_合唱-1部版.m4a",
     "sha256": "8ee6219a382d39f21f882a8695542b041152611d25cfda94e6aa66a2464119dd"
   },
@@ -26,6 +30,14 @@
   {
     "file": "389_简谱.pdf",
     "sha256": "e8fa9b04de8dd7d26594609ae76bd9e5ca38da80906fc1232666e8a703bace1a"
+  },
+  {
+    "file": "389_简谱_p1.png",
+    "sha256": "459c5edc5d9d0a1562df57e7a1e972a425dbbab73e55231a4052f31dd5aefb4d"
+  },
+  {
+    "file": "389_简谱_p2.png",
+    "sha256": "65dcc8ab312aba793ea8f9b826bbcf6f4dc31a581180d3f608721794aca1d72b"
   },
   {
     "file": "389_鋼琴版.mp3",

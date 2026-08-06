@@ -4,12 +4,20 @@
     "sha256": "c478929121fe5a7304262c20ec7c5c1064c7297dd39632f6ab337b3d079cca6a"
   },
   {
+    "file": "377_五线谱.png",
+    "sha256": "89d1289ac4de094b46a4387c59518aa2dd8f3baf405eb732da2d9910156532db"
+  },
+  {
     "file": "377_人聲版.mp3",
     "sha256": "673e341acd98c41a74ad812e34cf4ce5b9bbf8335acb838c4fa6195c0a1ae02c"
   },
   {
     "file": "377_简谱.pdf",
     "sha256": "3d16ad0e323d4dc6d21bc274434488e3e2c21e87f4003bece0f3a7535462187e"
+  },
+  {
+    "file": "377_简谱.png",
+    "sha256": "85a1c2ee82613928af89654559bc637d78c7b0d829841bbec574d6677d6a5be9"
   },
   {
     "file": "377_鋼琴版.m4a",

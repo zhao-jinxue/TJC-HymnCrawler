@@ -4,8 +4,16 @@
     "sha256": "f8c0d79fa70cdf7d280627373334cc85407cf08ce9175b1c1ce6c68300208ce1"
   },
   {
+    "file": "386_五线谱.png",
+    "sha256": "ce888f4b8a1a2f43c291afebfd5ff188f5315e7a784b60334f4e738dc971e131"
+  },
+  {
     "file": "386_简谱.pdf",
     "sha256": "688f8468408a010eda8bff3a38039f0ae44ccf1d2d65e77a4ecebf5359fbe7cd"
+  },
+  {
+    "file": "386_简谱.png",
+    "sha256": "2b4a075cb77db2fada3efc82a0ccebf7b918ab9eedf6c9905e2aa7fc3bf73b13"
   },
   {
     "file": "386_鋼琴版.mp3",

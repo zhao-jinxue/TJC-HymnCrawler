@@ -4,11 +4,19 @@
     "sha256": "62ce80edead05c8dfb00217cbced9d340b421d987d6ac8875406e32ffa2b006d"
   },
   {
+    "file": "249_五线谱.png",
+    "sha256": "8ec43ecb46c576c7fb676d54db111823e8492d1c15f5ad98bceca0d59713c043"
+  },
+  {
     "file": "249_人聲版.mp3",
     "sha256": "f091aa5dc102fe5af13b2e6fec19483d9884a3101f129a28fd97c073508411f5"
   },
   {
     "file": "249_简谱.pdf",
     "sha256": "4cddd13fb0431b2dd5e231a24b43210bdd9e9278a1da1ee486688354709f4fdd"
+  },
+  {
+    "file": "249_简谱.png",
+    "sha256": "5854116d3528b5567045ca03a6f7e77cf289967934429f302718090bf56c7ab3"
   }
 ]

@@ -4,12 +4,20 @@
     "sha256": "7796d9e2cdaee728c53de9d6b2f08f0c8f15bf2bc392b614024f506e41be9c6f"
   },
   {
+    "file": "346_五线谱.png",
+    "sha256": "6aae7556ad218c4ebfff1a53088e9495a481d1f86d834e3e2b6a3cdea428d49b"
+  },
+  {
     "file": "346_人聲版.mp3",
     "sha256": "1c53ce9f6a23615a6edde35c3c3eac61681c58313732134de29b371f7f43325e"
   },
   {
     "file": "346_简谱.pdf",
     "sha256": "ce1a48bb9f628dc7286675e38e9194aeb5ac53719997007c37fdead56cc5bd6b"
+  },
+  {
+    "file": "346_简谱.png",
+    "sha256": "70ce5fec2df44ac6729752023dcc1faf03b0c640c05743c6afcf9f6c2410f27a"
   },
   {
     "file": "346_鋼琴版.m4a",

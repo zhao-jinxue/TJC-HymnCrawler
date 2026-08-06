@@ -4,12 +4,20 @@
     "sha256": "d8712257b440d975db82a0e4e76b65fdfadd5b92bff8dbe52ba5bb82c0881609"
   },
   {
+    "file": "433_五线谱.png",
+    "sha256": "2e4628be5074edc8699f2e79ddc7e92e135db6fe3a17f66edb26109f016b3af8"
+  },
+  {
     "file": "433_人聲版.mp3",
     "sha256": "f920fb493e7912954ba4d6410efd721289cc0edd7e8b1a0b52a74c70b5268706"
   },
   {
     "file": "433_简谱.pdf",
     "sha256": "6e7b9fcb7989a89067837d6ce1a6f1b07ac1796468853d44ec381bfdaa9038b8"
+  },
+  {
+    "file": "433_简谱.png",
+    "sha256": "8c81f645466729f9a9ab2897d20598b64c1fa67a4e737936747fc338459f5303"
   },
   {
     "file": "433_鋼琴版.m4a",

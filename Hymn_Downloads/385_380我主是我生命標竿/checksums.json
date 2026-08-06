@@ -4,12 +4,24 @@
     "sha256": "8a45050a3ff803b22314f98bc2d79ff53853e10ab83a6544a3ab0481037d2cab"
   },
   {
+    "file": "380_五线谱.png",
+    "sha256": "7c9e25c4b01ad1ee1b3fe3c006a7a50c590000f00527829add01d4eaa09282e8"
+  },
+  {
     "file": "380_人聲版.mp3",
     "sha256": "33f0d84e46d356286cb28a86c0121d3180e12801e7e7269733c267262f523150"
   },
   {
     "file": "380_简谱.pdf",
     "sha256": "07dceea4d34f100bfb3aa3d5851f33c20b7bcc7acac224c36c7af5a9b4c10d68"
+  },
+  {
+    "file": "380_简谱_p1.png",
+    "sha256": "17a72ebea86a8201c31550496c0022ddf9a29238d8b797ac28f20c59af687e56"
+  },
+  {
+    "file": "380_简谱_p2.png",
+    "sha256": "28a37f562d5bd529cd35f42b1a5e554c789d864c121520c3e6f7b43a63df7239"
   },
   {
     "file": "380_鋼琴版.m4a",
