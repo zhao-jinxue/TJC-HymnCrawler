@@ -4,6 +4,10 @@
     "sha256": "0dfaed052fb650ca60d225c155522aecd6a68af390ca68595657fe00f3ee53e4"
   },
   {
+    "file": "392_五线谱.png",
+    "sha256": "00bd5c75b19884068c5844ef658ee536aef9b7f6ba31b55de048fc2e4787590d"
+  },
+  {
     "file": "392_五线谱_p1.png",
     "sha256": "ee6d4b0a633dfa0f43ea06ba260090309f3a5ec9b4fc59aeb871e9c7efde9f45"
   },
@@ -18,6 +22,10 @@
   {
     "file": "392_简谱.pdf",
     "sha256": "86065a074d1407278e1422bca95b7d429c040097e6b599dec2105c438eba1f23"
+  },
+  {
+    "file": "392_简谱.png",
+    "sha256": "dfa44930e10d0c6230c610019cce4fe31ff0c76032627e233bd7a23934e90b7c"
   },
   {
     "file": "392_简谱_p1.png",
