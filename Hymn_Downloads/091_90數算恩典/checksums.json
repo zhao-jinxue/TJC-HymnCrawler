@@ -8,14 +8,6 @@
     "sha256": "110e31ce6f2cf1c974a39c0341324a2f7a61747e85b1021da352f8e2622f40fb"
   },
   {
-    "file": "90_五线谱_p1.png",
-    "sha256": "e925b194eaeae92422387e276eec577ff602073c3ab88fbb5b38bd8b5b754efd"
-  },
-  {
-    "file": "90_五线谱_p2.png",
-    "sha256": "05da3c8cc751fb1e539a2a0ecac78765e1bebef6bac75407ee3dbc0a1ab60771"
-  },
-  {
     "file": "90_人聲版.mp3",
     "sha256": "dfbc82cd2617b59db674021e421d50e18e2c70049df098842ffd4f9118e80767"
   },
@@ -26,14 +18,6 @@
   {
     "file": "90_简谱.png",
     "sha256": "0fd3fa0f003b243a13792ddfa233807dc502eccf0b964fc1b22c8416eed5f881"
-  },
-  {
-    "file": "90_简谱_p1.png",
-    "sha256": "f01f1d3da0559cf855415e1d95f668f9f7eef4e0cb846ee909a7afb98a805f56"
-  },
-  {
-    "file": "90_简谱_p2.png",
-    "sha256": "30a1ed7ec3a51a19707d16280aa6d826c7c3ab78600042f9da9d315d84f6af6a"
   },
   {
     "file": "90_鋼琴版.m4a",
