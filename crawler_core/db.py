@@ -1,6 +1,7 @@
 # crawler_core/db.py
 # 数据库管理 - 含迁移与初始化
 # v4: +download_status +integrity_status
+# v5: +staff_png_path +numbered_png_path（图片转 PNG 的保存路径）
 
 import json
 import os
@@ -10,7 +11,7 @@ from .config import DB_PATH
 
 
 def init_db():
-    """初始化数据库，迁移到最新结构（v4: +download_status +integrity_status）"""
+    """初始化数据库，迁移到最新结构（v5: 含 PNG 图片路径字段）"""
     conn = sqlite3.connect(DB_PATH)
     try:
         c = conn.cursor()
@@ -28,8 +29,9 @@ def init_db():
                 _migrate_v2_to_v4(c)
             else:
                 _migrate_v3_to_v4(c)
+                _migrate_v5_png_fields(c)
                 _backfill_from_probe(c, conn)
-                print("📊 数据库结构已是最新版（v4）。")
+                print("📊 数据库结构已是最新版（v5）。")
         else:
             _create_table_v4(c)
 
@@ -134,6 +136,25 @@ def _migrate_v3_to_v4(c):
         print("📦 数据库新增 download_status + integrity_status 字段。")
 
 
+def _migrate_v5_png_fields(c):
+    """v5: 幂等补添 staff_png_path / numbered_png_path（图片转 PNG 的保存路径）"""
+    c.execute("PRAGMA table_info(tjc_hymn)")
+    columns = {col[1] for col in c.fetchall()}
+    conn = c.connection
+    altered = False
+
+    if "staff_png_path" not in columns:
+        c.execute("ALTER TABLE tjc_hymn ADD COLUMN staff_png_path TEXT")
+        altered = True
+    if "numbered_png_path" not in columns:
+        c.execute("ALTER TABLE tjc_hymn ADD COLUMN numbered_png_path TEXT")
+        altered = True
+
+    if altered:
+        conn.commit()
+        print("📦 数据库新增 staff_png_path + numbered_png_path 字段（v5）。")
+
+
 def _backfill_from_probe(c, conn):
     """从 probe_report.json 回填 audio_versions / audio_version_list / download_status"""
     pr_path = os.path.join(os.path.dirname(DB_PATH), "probe_report.json")
@@ -192,7 +213,7 @@ def _backfill_from_probe(c, conn):
 # ================= 建表 =================
 
 def _create_table_v4(c):
-    """创建 v4 版 tjc_hymn 表"""
+    """创建 v5 版 tjc_hymn 表（v4 字段 + PNG 图片路径字段）"""
     c.execute('''CREATE TABLE IF NOT EXISTS tjc_hymn (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 hymn_number TEXT UNIQUE NOT NULL,
@@ -214,10 +235,12 @@ def _create_table_v4(c):
                 staff_img_path TEXT,
                 numbered_img_path TEXT,
                 audio_versions TEXT DEFAULT '{}',
+                updated_at TIMESTAMP DEFAULT (datetime('now', 'localtime')),
                 audio_version_list TEXT DEFAULT '[]',
+                staff_png_path TEXT,
+                numbered_png_path TEXT,
                 download_status TEXT DEFAULT 'pending',
-                integrity_status TEXT DEFAULT 'unchecked',
-                updated_at TIMESTAMP DEFAULT (datetime('now', 'localtime'))
+                integrity_status TEXT DEFAULT 'unchecked'
             )''')
 
 
