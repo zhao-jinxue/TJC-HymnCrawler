@@ -15,7 +15,8 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import TimeoutException, NoSuchElementException
 
 # ================= 配置区 =================
-DB_NAME = "tjc_hymn_test.db"
+PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))  # 项目根（test/ 的上级）
+DB_NAME = os.path.join(PROJECT_ROOT, "tjc_hymn_test.db")
 
 # 测试目标：前 6 首 + 4 首指定的同名诗歌 (共 10 首)
 TEST_TARGETS: list[dict[str, Any]] = [

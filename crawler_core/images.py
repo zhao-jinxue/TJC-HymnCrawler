@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """
 crawler_core/images.py — PDF 转窄边距 PNG + 双页拼接（原 step5_pdf2png.py）
 
@@ -23,7 +22,7 @@ crawler_core/images.py — PDF 转窄边距 PNG + 双页拼接（原 step5_pdf2p
 import argparse
 import json
 import os
-import subprocess
+import subprocess  # nosec B404 - 仅调用固定系统命令(pdftoppm/pdfinfo), 非用户输入拼接
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 os.chdir(ROOT)
@@ -78,7 +77,7 @@ def find_all_pdfs(base_dir):
 
 def get_page_count(pdf_path):
     """用 pdfinfo 获取页数"""
-    r = subprocess.run(
+    r = subprocess.run(  # nosec B603, B607 - 固定命令 pdfinfo + 参数化参数(非 shell 拼接, 无注入面)
         ["pdfinfo", pdf_path], capture_output=True, text=True, check=False
     )
     if r.returncode != 0:
@@ -200,7 +199,7 @@ def convert_one(pdf_path, dpi, margin, force):
         cmd = ["pdftoppm", "-png", "-r", str(dpi), "-singlefile", pdf_path, base]
     else:
         cmd = ["pdftoppm", "-png", "-r", str(dpi), pdf_path, base]
-    r = subprocess.run(cmd, capture_output=True, text=True, check=False)
+    r = subprocess.run(cmd, capture_output=True, text=True, check=False)  # nosec B603 - 固定命令 pdftoppm + 参数化参数(非 shell 拼接, 无注入面)
     if r.returncode != 0:
         return "fail", "pdftoppm失败: " + r.stderr.strip()[:200]
 

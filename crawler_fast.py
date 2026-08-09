@@ -14,6 +14,8 @@ from crawler_core.db import (
     init_db,
     print_db_status,
     print_url_map_status,
+)
+from crawler_core.db import (
     update_png_paths as run_step7,
 )
 from crawler_core.downloader import run_download

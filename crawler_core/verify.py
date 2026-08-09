@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """
 crawler_core/verify.py — 数据校验与报告（原 step4_verify_and_report.py）
 

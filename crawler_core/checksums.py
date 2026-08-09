@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """
 crawler_core/checksums.py — checksums.json 哈希清单维护
 

@@ -9,7 +9,7 @@
 import os
 import sys
 
-ROOT = os.path.dirname(os.path.abspath(__file__))
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))  # 项目根（test/ 的上级）
 sys.path.insert(0, ROOT)
 os.chdir(ROOT)
 

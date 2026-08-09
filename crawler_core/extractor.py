@@ -177,7 +177,7 @@ class Extractor:
                 if raw:
                     clean = re.sub(r'^\d+(?:_[a-zA-Z])?\s*', '', raw)
                     result["title"] = clean if clean else "Unknown"
-        except Exception:  # noqa: S110, BLE001 - 元素可能不存在, 容错跳过
+        except Exception:  # noqa: S110, BLE001 nosec B110 - 元素可能不存在, 容错跳过
             pass
 
         # 作词/作曲
@@ -187,7 +187,7 @@ class Extractor:
                 result["lyricist"] = author_els[0].text.strip() or "Unknown"
             if len(author_els) >= 2:
                 result["composer"] = author_els[1].text.strip() or "Unknown"
-        except Exception:  # noqa: S110, BLE001 - 元素可能不存在, 容错跳过
+        except Exception:  # noqa: S110, BLE001 nosec B110 - 元素可能不存在, 容错跳过
             pass
 
         # 源考
@@ -202,13 +202,13 @@ class Extractor:
                         if "collapsed" in cls or "closed" in cls:
                             trigger.click()
                             time.sleep(0.3)
-                    except Exception:  # noqa: S110, BLE001 - 折叠面板可能不可点, 容错跳过
+                    except Exception:  # noqa: S110, BLE001 nosec B110 - 折叠面板可能不可点, 容错跳过
                         pass
                     content = box.find_element(By.CSS_SELECTOR, ".content")
                     raw = content.text.strip()
                     result["source_info"] = raw[4:].strip() if raw.startswith("詩歌源考") else raw
                     break
-        except Exception:  # noqa: S110, BLE001 - 源考区块可能不存在, 容错跳过
+        except Exception:  # noqa: S110, BLE001 nosec B110 - 源考区块可能不存在, 容错跳过
             pass
 
         # 歌词
@@ -220,7 +220,7 @@ class Extractor:
                     text = driver.find_element(By.CSS_SELECTOR, ".lyrics_box").text.strip()
                     if text:
                         lyrics_parts.append(text)
-                except Exception:  # noqa: S110, BLE001 - 无歌词框时容错
+                except Exception:  # noqa: S110, BLE001 nosec B110 - 无歌词框时容错
                     pass
             else:
                 for tab in tabs:
@@ -228,7 +228,7 @@ class Extractor:
                         tab.click()
                         # 用精确等待替代固定 sleep(0.2)：点击后轮询歌词非空即继续
                         WebDriverWait(driver, 2).until(_lyrics_ready)
-                    except Exception:  # noqa: S112, BLE001 - 单个 Tab 点击失败时跳过该 Tab
+                    except Exception:  # noqa: S112, BLE001 nosec B112 - 单个 Tab 点击失败时跳过该 Tab
                         continue
                     boxes = driver.find_elements(By.CSS_SELECTOR, ".lyrics_box")
                     for box in boxes:
@@ -236,7 +236,7 @@ class Extractor:
                         if text and text not in lyrics_parts:
                             lyrics_parts.append(text)
                             break
-        except Exception:  # noqa: S110, BLE001 - 歌词区解析失败, 返回空歌词
+        except Exception:  # noqa: S110, BLE001 nosec B110 - 歌词区解析失败, 返回空歌词
             pass
 
         result["verse_count"] = min(len(lyrics_parts), 10)

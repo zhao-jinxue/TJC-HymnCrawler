@@ -59,7 +59,7 @@ def _migrate_v1_to_v4(c, columns):
                                "download_status", "integrity_status")]
     oc = ", ".join(old_cols)
 
-    # nosec B608 - 列名来自 PRAGMA 白名单过滤(非用户输入), SQL 值均参数化
+    # 列名来自 PRAGMA 白名单过滤(非用户输入), SQL 值均参数化
     sql = f"""
         INSERT INTO tjc_hymn ({oc}, audio_versions, audio_version_list)
         SELECT {oc},
@@ -553,7 +553,7 @@ def print_db_status():
         # ---- 文件存在性校验汇总 ----
         total_missing = sum(len(v) for v in missing_files.values())
         if total_missing == 0:
-            print(f"   🗂️ 文件一致性: 数据库引用的文件全部存在 ✅")
+            print("   🗂️ 文件一致性: 数据库引用的文件全部存在 ✅")
         else:
             print(f"   🗂️ 文件一致性: 发现 {total_missing} 个缺失文件 ⚠️")
             for key, paths in missing_files.items():

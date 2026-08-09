@@ -25,7 +25,8 @@ HEADERS = {
     "Referer": BASE_URL
 }
 
-SAVE_ROOT = "Hymn_Downloads"
+PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))  # 项目根（test/ 的上级）
+SAVE_ROOT = os.path.join(PROJECT_ROOT, "Hymn_Downloads")
 os.makedirs(SAVE_ROOT, exist_ok=True)
 
 existing_local_dirs: set[str] = set()

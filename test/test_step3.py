@@ -27,7 +27,7 @@ from selenium.common.exceptions import TimeoutException
 
 
 BASE_URL = "https://sacredmusic.tjc.org.tw"
-SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+SCRIPT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))  # 项目根（test/ 的上级）
 SAVE_ROOT = os.path.join(SCRIPT_DIR, "Hymn_Downloads")
 MAP_FILE = os.path.join(SAVE_ROOT, "url_map.txt")
 
