@@ -11,8 +11,10 @@ __pycache__/
 # url_map.txt（编号->目录名映射）加入跟踪，防止丢失（可用 step4 --rebuild-map 重建）
 !/Hymn_Downloads/url_map.txt
 
-# step2_progress.json 为断点续爬临时状态，不跟踪（需置于上面的 !json 白名单之后）
+# step2/5/7 的 *_progress.json 为断点续跑临时状态，不跟踪（需置于上面的 !json 白名单之后）
 /Hymn_Downloads/step2_progress.json
+/Hymn_Downloads/step5_progress.json
+/Hymn_Downloads/step7_progress.json
 
 # 数据库文件（probe_report.json 保留跟踪，作为 db 重建的保险）
 *.db-journal

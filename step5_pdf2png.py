@@ -11,7 +11,8 @@ step5_pdf2png.py — 批量将 Hymn_Downloads/ 下所有 PDF 转换为「窄边�
 
 用法:
   python3 step5_pdf2png.py               # 增量: 仅转换 PNG 不存在 或 PDF 更新的
-  python3 step5_pdf2png.py --force       # 全量重新转换并覆盖
+  python3 step5_pdf2png.py --force       # 全量重新转换并覆盖(同时保留进度判断)
+  python3 step5_pdf2png.py --reset-progress  # 清空进度文件, 配合 --force 全量重做
   python3 step5_pdf2png.py --dpi 300     # 自定义分辨率(默认300)
   python3 step5_pdf2png.py --margin 40   # 自定义窄边距像素(默认40)
   python3 step5_pdf2png.py --limit 3     # 只处理前 N 个(测试用)
@@ -20,8 +21,16 @@ step5_pdf2png.py — 批量将 Hymn_Downloads/ 下所有 PDF 转换为「窄边�
   - 单页 PDF 生成 "<基名>.png"
   - 双页 PDF 生成 "<基名>.png"(拼接整图), 分页小图 _p1/_p2 删除
   - 全程不动数据库, 数据库图片路径由 step7_png_db.py 以新增字段方式回填
+
+断点续跑（中间文件）:
+  - 进度文件: Hymn_Downloads/step5_progress.json
+    {"version": 1, "completed": [已完成的PDF相对路径...]}
+  - 运行开始加载进度; 处理成功/跳过(已是最新)后记入 completed 并增量落盘
+  - 中断后重跑: completed 中的 PDF 直接跳过, 不必重扫全部判断
+  - 注意: 源 PDF 变更后(如 --force)不会自动重做, 需 --reset-progress + --force
 """
 import argparse
+import json
 import os
 import subprocess
 
@@ -31,6 +40,39 @@ os.chdir(ROOT)
 DEFAULT_DPI = 300
 DEFAULT_MARGIN = 40
 WHITE_THRESHOLD = 245  # 低于该灰度值视为内容
+PROGRESS_FILE = os.path.join("Hymn_Downloads", "step5_progress.json")
+PROGRESS_FLUSH_EVERY = 20  # 每 N 个新增完成项落盘一次(防中断丢进度)
+PROGRESS_VERSION = 1
+
+
+def load_progress():
+    """加载进度: {相对路径: 状态}"""
+    if not os.path.exists(PROGRESS_FILE):
+        return {}
+    try:
+        with open(PROGRESS_FILE, "r", encoding="utf-8") as fh:
+            data = json.load(fh)
+        if data.get("version") != PROGRESS_VERSION:
+            return {}
+        return {p: "done" for p in data.get("completed", [])}
+    except Exception:
+        return {}
+
+
+def save_progress(completed_list):
+    """写进度文件"""
+    tmp = PROGRESS_FILE + ".tmp"
+    with open(tmp, "w", encoding="utf-8") as fh:
+        json.dump({"version": PROGRESS_VERSION, "completed": completed_list},
+                  fh, ensure_ascii=False, indent=2)
+    os.replace(tmp, PROGRESS_FILE)  # 原子替换, 防中断损坏
+
+
+def reset_progress():
+    """清空进度文件"""
+    if os.path.exists(PROGRESS_FILE):
+        os.remove(PROGRESS_FILE)
+        print("已清空进度文件")
 
 
 def find_all_pdfs(base_dir):
@@ -123,7 +165,6 @@ def join_pages(dirpath, base):
 
 def clean_orphan_pages(dirpath):
     """清理无同名整图的分页小图(防残留)"""
-    from PIL import Image
     files = set(os.listdir(dirpath))
     removed = 0
     for fn in list(files):
@@ -201,14 +242,29 @@ def convert_one(pdf_path, dpi, margin, force):
     return "ok", "; ".join(trim_info)
 
 
-def run(dpi=DEFAULT_DPI, margin=DEFAULT_MARGIN, force=False, limit=0):
+def run(dpi=DEFAULT_DPI, margin=DEFAULT_MARGIN, force=False, limit=0, reset=False):
     """程序化入口: 供 crawler_fast.py 调用; 命令行入口走 main()"""
+    if reset:
+        reset_progress()
+
     pdfs = find_all_pdfs("Hymn_Downloads")
     total = len(pdfs)
     print(f"扫描到 PDF 总数: {total}")
     if total == 0:
         print("未找到 PDF, 退出")
-        return {"ok": 0, "skip": 0, "fail": 0, "total": 0}
+        return {"ok": 0, "skip": 0, "fail": 0, "total": 0, "resume": 0}
+
+    # 加载断点进度
+    progress = load_progress()
+    resume_skip = 0
+    if progress and not force and limit == 0:
+        # 增量模式下, 进度文件里已完成的自动跳过(不重复判断)
+        pending = [p for p in pdfs if os.path.relpath(p) not in progress]
+        resume_skip = len(pdfs) - len(pending)
+        if resume_skip:
+            print(f"断点续跑: 跳过 {resume_skip} 个进度文件中已完成的 PDF")
+        pdfs = pending
+        total = len(pdfs)
 
     if limit > 0:
         pdfs = pdfs[:limit]
@@ -216,20 +272,45 @@ def run(dpi=DEFAULT_DPI, margin=DEFAULT_MARGIN, force=False, limit=0):
     else:
         print(f"模式: {'全量覆盖' if force else '增量(跳过已处理)'} | DPI={dpi} | 边距={margin}px")
 
+    # 进度内集合(用于增量落盘)
+    completed = list(progress.keys())
+    dirty_since_flush = 0
+
     ok = fail = skip = 0
     fail_list = []
     for idx, pdf in enumerate(pdfs, 1):
+        rel = os.path.relpath(pdf)
+        # 已记录进度 -> 跳过(断点续跑)
+        if rel in progress and not force:
+            skip += 1
+            continue
+
         status, detail = convert_one(pdf, dpi, margin, force)
         if status == "ok":
             ok += 1
-            print(f"[{idx}/{total}] OK   {os.path.relpath(pdf)} | {detail}")
+            print(f"[{idx}/{total}] OK   {rel} | {detail}")
         elif status == "skip":
             skip += 1
-            print(f"[{idx}/{total}] SKIP {os.path.relpath(pdf)}")
+            print(f"[{idx}/{total}] SKIP {rel}")
         else:
             fail += 1
-            fail_list.append(os.path.relpath(pdf))
-            print(f"[{idx}/{total}] FAIL {os.path.relpath(pdf)} | {detail}")
+            fail_list.append(rel)
+            print(f"[{idx}/{total}] FAIL {rel} | {detail}")
+
+        # OK 与 SKIP(已是最新) 都算完成, 记入进度
+        if status in ("ok", "skip"):
+            if rel not in completed:
+                completed.append(rel)
+                dirty_since_flush += 1
+                if dirty_since_flush >= PROGRESS_FLUSH_EVERY:
+                    save_progress(completed)
+                    dirty_since_flush = 0
+
+    # 最终落盘
+    if dirty_since_flush > 0 and completed:
+        save_progress(completed)
+    if completed and os.path.exists(PROGRESS_FILE):
+        print(f"断点进度已保存: {len(completed)} 个已完成")
 
     print("\n===== 统计 =====")
     print(f"总数: {total} | 成功: {ok} | 跳过: {skip} | 失败: {fail}")
@@ -247,17 +328,18 @@ def run(dpi=DEFAULT_DPI, margin=DEFAULT_MARGIN, force=False, limit=0):
         for f in fail_list:
             print("  " + f)
     print("完成")
-    return {"ok": ok, "skip": skip, "fail": fail, "total": total}
+    return {"ok": ok, "skip": skip, "fail": fail, "total": total, "resume": resume_skip}
 
 
 def main():
     parser = argparse.ArgumentParser(description="批量 PDF -> 窄边距 PNG")
-    parser.add_argument("--force", action="store_true", help="全量重新转换并覆盖")
+    parser.add_argument("--force", action="store_true", help="全量重新转换并覆盖(进度文件仍生效)")
+    parser.add_argument("--reset-progress", action="store_true", help="清空进度文件(配合 --force 全量重做)")
     parser.add_argument("--dpi", type=int, default=DEFAULT_DPI, help="分辨率(默认300)")
     parser.add_argument("--margin", type=int, default=DEFAULT_MARGIN, help="窄边距像素(默认40)")
     parser.add_argument("--limit", type=int, default=0, help="只处理前 N 个(测试用, 0=全部)")
     args = parser.parse_args()
-    run(dpi=args.dpi, margin=args.margin, force=args.force, limit=args.limit)
+    run(dpi=args.dpi, margin=args.margin, force=args.force, limit=args.limit, reset=args.reset_progress)
 
 
 if __name__ == "__main__":
