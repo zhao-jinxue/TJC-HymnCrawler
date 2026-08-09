@@ -235,13 +235,13 @@ def _create_table_v4(c):
                 verse_10 TEXT DEFAULT '',
                 staff_img_path TEXT,
                 numbered_img_path TEXT,
-                audio_versions TEXT DEFAULT '{}',
-                updated_at TIMESTAMP DEFAULT (datetime('now', 'localtime')),
-                audio_version_list TEXT DEFAULT '[]',
                 staff_png_path TEXT,
                 numbered_png_path TEXT,
+                audio_versions TEXT DEFAULT '{}',
+                audio_version_list TEXT DEFAULT '[]',
                 download_status TEXT DEFAULT 'pending',
-                integrity_status TEXT DEFAULT 'unchecked'
+                integrity_status TEXT DEFAULT 'unchecked',
+                updated_at TIMESTAMP DEFAULT (datetime('now', 'localtime'))
             )''')
 
 
@@ -479,6 +479,10 @@ def print_db_status():
         has_staff = c.fetchone()[0]
         c.execute("SELECT COUNT(*) FROM tjc_hymn WHERE numbered_img_path != ''")
         has_numbered = c.fetchone()[0]
+        c.execute("SELECT COUNT(*) FROM tjc_hymn WHERE staff_png_path != ''")
+        has_staff_png = c.fetchone()[0]
+        c.execute("SELECT COUNT(*) FROM tjc_hymn WHERE numbered_png_path != ''")
+        has_numbered_png = c.fetchone()[0]
         c.execute("SELECT COUNT(*) FROM tjc_hymn WHERE audio_version_list != '[]' AND audio_version_list != ''")
         has_audio = c.fetchone()[0]
 
@@ -503,8 +507,10 @@ def print_db_status():
         print(f"📊 数据库状态（{DB_PATH}）：")
         print(f"   总记录: {total} 首")
         print(f"   有歌词: {has_lyrics}/{total}")
-        print(f"   五线谱: {has_staff}/{total} {'✅' if has_staff > 0 else '❌'}")
-        print(f"   简谱:   {has_numbered}/{total} {'✅' if has_numbered > 0 else '❌'}")
+        print(f"   五线谱PDF: {has_staff}/{total} {'✅' if has_staff > 0 else '❌'}")
+        print(f"   简谱PDF:   {has_numbered}/{total} {'✅' if has_numbered > 0 else '❌'}")
+        print(f"   五线谱图片: {has_staff_png}/{total} {'✅' if has_staff_png > 0 else '❌'}")
+        print(f"   简谱图片:   {has_numbered_png}/{total} {'✅' if has_numbered_png > 0 else '❌'}")
         print(f"   有音频: {has_audio}/{total} {'✅' if has_audio > 0 else '❌'}")
         if version_counts:
             print("   音频版本分布:")
