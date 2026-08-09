@@ -22,7 +22,7 @@ from crawler_core.downloader import run_download
 from crawler_core.driver import init_driver
 from crawler_core.extractor import Extractor, load_url_map
 from crawler_core.images import run as run_step5
-from crawler_core.probe import load_probe_report, run_probe
+from crawler_core.probe import load_probe_report, run_probe, run_probe_missing
 from crawler_core.scanner import Scanner
 from crawler_core.verify import main as run_step4
 
@@ -96,6 +96,36 @@ def print_probe_report_status():
         print("   完整性状态分布:")
         for s, c in sorted(is_counts.items(), key=lambda x: -x[1]):
             print(f"     {s}: {c}")
+
+
+# ================= 探测模式选择 =================
+
+def _ask_probe_mode():
+    """资源探测方式选择：探测报告已有缺失音频时，让用户选全量重探或仅补缺失"""
+    report = load_probe_report()
+    if not report:
+        return run_probe()
+    missing = [e for e in report if not e.get("audio_versions")]
+    if not missing:
+        print("✅ probe_report.json 无缺失音频（全部条目都有 audio_versions）")
+        return report
+    if len(report) == len(missing):
+        print("ℹ️ 所有条目都缺音频，直接全量重探。")
+        return run_probe(force=True)
+    print(f"  ⚠️ probe_report.json 有 {len(missing)} 首缺失音频: "
+          f"{[e['hymn_number'] for e in missing]}")
+    while True:
+        try:
+            ans = input("  补探方式？[1] 全量重探全部 [2] 仅补缺失音频 (默认 2): ").strip()
+        except (EOFError, KeyboardInterrupt):
+            ans = "2"
+            print()
+        if ans == "1":
+            return run_probe(force=True)
+        elif ans in ("", "2"):
+            return run_probe_missing()
+        else:
+            print("   请输入 1 或 2")
 
 
 # ================= 主菜单 =================
@@ -186,7 +216,7 @@ def main():
                     ans = "n"
                     print()
                 if ans in ("y", "yes"):
-                    probe_report = run_probe(force=True)
+                    probe_report = _ask_probe_mode()
                     break
                 elif ans in ("", "n", "no"):
                     print("⏭️ 跳过资源探测（使用现有 probe_report.json）")
@@ -195,7 +225,11 @@ def main():
                 else:
                     print("   请输入 Y 或 N")
         else:
-            probe_report = run_probe()
+            if os.path.exists(PROBE_REPORT):
+                # 已有探测报告：提供增量补探选项（仅补缺失音频更省时）
+                probe_report = _ask_probe_mode()
+            else:
+                probe_report = run_probe()
 
     # ---- 下载 ----
     if choice in ("4", "7"):

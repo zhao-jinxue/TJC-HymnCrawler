@@ -54,6 +54,67 @@ def load_probe_report():
         return json.load(f)
 
 
+def run_probe_missing():
+    """增量补探缺失音频：仅对 probe_report.json 中 audio_versions 为空的诗歌重新捕获音频
+
+    与全量重探（run_probe(force=True)）不同，本函数：
+      - 保留已有的 PDF / 已采到的音频数据，只重试缺失音频的条目
+      - 避免对全部 474 首重新做 Selenium 页面点击（省时）
+    返回更新后的 probe_report 清单。
+    """
+    if not os.path.exists(PROBE_REPORT):
+        print("❌ probe_report.json 不存在，请先执行资源探测")
+        return []
+
+    with open(PROBE_REPORT, 'r', encoding='utf-8') as f:
+        report = json.load(f)
+
+    # 找出 audio_versions 为空的条目（缺失音频待补）
+    missing = [e for e in report if not e.get("audio_versions")]
+    if not missing:
+        print("✅ probe_report.json 无缺失音频（全部条目都有 audio_versions）")
+        return report
+
+    # 从 url_map.txt 加载 url，构建待补 song 列表
+    songs = {s["hymn_number"]: s for s in _load_songs()}
+    pending = []
+    for e in missing:
+        h = e["hymn_number"]
+        base = songs.get(h, {})
+        pending.append({
+            "hymn_number": h,
+            "title": base.get("title", e.get("title", "")),
+            "url": base.get("url", f"{BASE_URL}/hymn/{h}"),
+        })
+
+    print(f"\n🔍 发现 {len(missing)} 首缺失音频，开始增量补探...")
+    print(f"待补: {[s['hymn_number'] for s in pending]}")
+
+    # 仅对缺失的诗歌做 Selenium 音频捕获
+    fixed = _probe_audios(pending, max_workers=4)
+
+    # 合并回 probe_report（_probe_audios 返回 song 列表, 提取各首的 audio_versions）
+    fixed_map = {s["hymn_number"]: s["audio_versions"] for s in fixed}
+    updated = 0
+    for e in report:
+        h = e["hymn_number"]
+        if h in fixed_map:
+            e["audio_versions"] = fixed_map[h]
+            if fixed_map[h]:
+                updated += 1
+
+    # 写回 probe_report.json
+    with open(PROBE_REPORT, 'w', encoding='utf-8') as f:
+        json.dump(report, f, ensure_ascii=False, indent=2)
+    print(f"💾 probe_report.json 已更新（{updated}/{len(missing)} 首补回音频）")
+
+    remaining = [e["hymn_number"] for e in report if not e.get("audio_versions")]
+    if remaining:
+        print(f"⚠️ 仍缺音频: {remaining}")
+    _print_summary(report)
+    return report
+
+
 def _do_probe():
     """执行完整的资源探测流程"""
 
