@@ -181,15 +181,15 @@ def main():
         if choice == "7":
             while True:
                 try:
-                    ans = input("👉 是否执行资源探测（PDF + 音频）？[Y/n] ").strip().lower()
+                    ans = input("👉 是否执行资源探测（PDF + 音频）？[y/N] ").strip().lower()
                 except (EOFError, KeyboardInterrupt):
                     ans = "n"
                     print()
-                if ans in ("", "y", "yes"):
+                if ans in ("y", "yes"):
                     probe_report = run_probe(force=True)
                     break
-                elif ans in ("n", "no"):
-                    print("⏭️ 跳过资源探测")
+                elif ans in ("", "n", "no"):
+                    print("⏭️ 跳过资源探测（使用现有 probe_report.json）")
                     probe_report = load_probe_report()
                     break
                 else:
@@ -230,8 +230,8 @@ def main():
         run_step5()
         print("\n----- Step 7: 图片路径写入数据库新增字段 -----")
         run_step7()
-        print("\n----- Step 6: 更新 checksums.json 哈希清单 -----")
-        run_step6()
+        print("\n----- Step 6: 增量更新 checksums.json PNG 哈希（已有条目跳过） -----")
+        run_step6(incremental=True)
 
     # ---- 补全 ----
     if choice == "8":
