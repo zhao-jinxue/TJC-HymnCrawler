@@ -7,7 +7,7 @@ import json
 import os
 import sqlite3
 
-from .config import DB_PATH
+from .config import DB_PATH, SAVE_ROOT
 
 
 def init_db():
@@ -580,3 +580,147 @@ def print_url_map_status():
     else:
         print("📋 url_map.txt：不存在")
         return []
+
+
+# ================= PNG 图片路径入库（原 step7_png_db.py，合并） =================
+
+PROGRESS_FILE = os.path.join(SAVE_ROOT, "step7_progress.json")
+PROGRESS_VERSION = 1
+PROGRESS_FLUSH_EVERY = 50
+
+
+def load_png_progress():
+    """加载 PNG 回填进度: {hymn_number: 'done'}"""
+    if not os.path.exists(PROGRESS_FILE):
+        return {}
+    try:
+        with open(PROGRESS_FILE, "r", encoding="utf-8") as fh:
+            data = json.load(fh)
+        if data.get("version") != PROGRESS_VERSION:
+            return {}
+        return {h: "done" for h in data.get("completed", [])}
+    except Exception:  # noqa: BLE001 - 进度文件损坏时从头开始
+        return {}
+
+
+def save_png_progress(completed_list):
+    """写 PNG 进度文件(原子替换)"""
+    tmp = PROGRESS_FILE + ".tmp"
+    with open(tmp, "w", encoding="utf-8") as fh:
+        json.dump({"version": PROGRESS_VERSION, "completed": completed_list},
+                  fh, ensure_ascii=False, indent=2)
+    os.replace(tmp, PROGRESS_FILE)
+
+
+def reset_png_progress():
+    """清空 PNG 进度文件"""
+    if os.path.exists(PROGRESS_FILE):
+        os.remove(PROGRESS_FILE)
+        print("已清空 PNG 回填进度文件")
+
+
+def resolve_png(pdf_path):
+    """PDF 路径 -> 对应 PNG 路径(同名, 双页已拼接为同名整图)"""
+    if not pdf_path:
+        return None
+    png = pdf_path[:-4] + ".png"  # xxx.pdf -> xxx.png
+    if os.path.exists(png):
+        return png
+    return None
+
+
+def backfill_png(conn, progress, force=False):
+    """从 PDF 路径推导并回填 PNG 路径到 staff_png_path/numbered_png_path
+
+    Args:
+        conn: 数据库连接
+        progress: 进度集合 {hymn_number: 'done'}
+        force: True 时忽略进度全量回填
+    Returns:
+        (staff_ok, numbered_ok, staff_miss, numbered_miss, resumed)
+    """
+    cur = conn.cursor()
+    cur.execute("SELECT hymn_number, staff_img_path, numbered_img_path FROM tjc_hymn")
+    rows = cur.fetchall()
+    staff_ok = numbered_ok = staff_miss = numbered_miss = 0
+    resumed = 0
+
+    completed = list(progress.keys())
+    dirty = 0
+
+    for num, staff_pdf, numbered_pdf in rows:
+        # 断点: 已完成的编号直接跳过
+        if num in progress and not force:
+            resumed += 1
+            continue
+
+        sp = resolve_png(staff_pdf)
+        if sp:
+            cur.execute("UPDATE tjc_hymn SET staff_png_path=? WHERE hymn_number=?", (sp, num))
+            staff_ok += 1
+        elif staff_pdf:
+            staff_miss += 1
+
+        np_ = resolve_png(numbered_pdf)
+        if np_:
+            cur.execute("UPDATE tjc_hymn SET numbered_png_path=? WHERE hymn_number=?", (np_, num))
+            numbered_ok += 1
+        elif numbered_pdf:
+            numbered_miss += 1
+
+        # 已回填的记入进度(增量落盘)
+        if num not in completed:
+            completed.append(num)
+            dirty += 1
+            if dirty >= PROGRESS_FLUSH_EVERY:
+                conn.commit()          # 先提交数据
+                save_png_progress(completed)
+                dirty = 0
+
+    conn.commit()
+    if dirty > 0 and completed:
+        save_png_progress(completed)
+    return staff_ok, numbered_ok, staff_miss, numbered_miss, resumed
+
+
+def delete_pages():
+    """删除 _p1/_p2 分页小图(仅当同名整图存在)"""
+    deleted = skipped = 0
+    for dirpath, _d, files in os.walk(SAVE_ROOT):
+        for f in files:
+            if not f.endswith(("_p1.png", "_p2.png")):
+                continue
+            base = f.replace("_p1.png", "").replace("_p2.png", "")
+            whole = base + ".png"
+            if whole in files:
+                os.remove(os.path.join(dirpath, f))
+                deleted += 1
+            else:
+                skipped += 1  # 无整图则保留, 防误删
+    return deleted, skipped
+
+
+def update_png_paths(force=False, reset=False):
+    """PNG 图片路径入库入口（原 step7_png_db.run()）:
+      幂等补字段(迁移已含) + 回填 PNG 路径 + 清理分页图 + 断点进度"""
+    if reset:
+        reset_png_progress()
+
+    progress = load_png_progress()
+    if progress and not force:
+        print(f"断点续跑: 已有 {len(progress)} 个编号的进度记录")
+
+    conn = sqlite3.connect(DB_PATH)
+    try:
+        _migrate_v5_png_fields(conn.cursor())  # 幂等确保字段存在
+        s_ok, n_ok, s_miss, n_miss, resumed = backfill_png(conn, progress, force=force)
+    finally:
+        conn.close()
+    print(f"[回填] staff_png_path {s_ok} 条, numbered_png_path {n_ok} 条"
+          + (f", 跳过(进度) {resumed} 条" if resumed else ""))
+    if s_miss or n_miss:
+        print(f"[回填] 警告: staff 缺失 {s_miss}, numbered 缺失 {n_miss}")
+    deleted, skipped = delete_pages()
+    print(f"[清理] 删除分页图 {deleted} 张, 保留(无整图) {skipped} 张")
+    print("完成")
+    return {"staff": s_ok, "numbered": n_ok, "deleted_pages": deleted, "resumed": resumed}

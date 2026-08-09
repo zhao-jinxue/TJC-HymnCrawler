@@ -13,8 +13,8 @@ ROOT = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, ROOT)
 os.chdir(ROOT)
 
-from step4_verify_and_report import parse_hymn_number_from_path
-from step7_png_db import resolve_png
+from crawler_core.verify import parse_hymn_number_from_path
+from crawler_core.db import resolve_png
 
 
 # ---------- step4: 路径解析编号 ----------
@@ -46,7 +46,7 @@ class TestResolvePng:
 # ---------- step4: 目录列表编号（对纯逻辑的间接覆盖） ----------
 class TestDirList:
     def test_ab_suffix_parse(self):
-        from step4_verify_and_report import list_hymn_dirs
+        from crawler_core.verify import list_hymn_dirs
         dirs = list_hymn_dirs()
         # 474 首应有 51_a 这类变体
         assert "51_a" in dirs

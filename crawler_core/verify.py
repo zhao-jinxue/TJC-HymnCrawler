@@ -1,34 +1,36 @@
 #!/usr/bin/env python3
-"""第四阶段：项目收尾与数据校验
-================================
-对前三阶段产出做全局一致性校验，并生成 final_report.txt。
+# -*- coding: utf-8 -*-
+"""
+crawler_core/verify.py — 数据校验与报告（原 step4_verify_and_report.py）
 
-功能：
-1. 三方对账：数据库记录数 vs 本地目录数 vs url_map.txt 行数，编号集合双向差集
-2. 多媒体资源对账（按版本聚合）：遍历每目录，按类型统计存在率/完整率/缺失/损坏
-3. DB 路径交叉校验：DB 中 staff/numbered/audio 相对路径对应的磁盘文件是否存在（防悬挂引用）
-4. 失败任务归档：#62 人聲版为服务器端 404，标记归档，不重试
-5. 风险说明：url_map.txt 不在 git 跟踪（可从 DB 重建），checksums.json 为哈希清单非资源
-6. 生成 final_report.txt
+职责:
+  1. 三方对账：数据库记录数 vs 本地目录数 vs url_map.txt 行数
+  2. 多媒体资源对账（按版本聚合）：存在率/完整率/缺失/损坏
+  3. DB 路径交叉校验：DB 相对路径对应的磁盘文件是否存在（防悬挂引用）
+  4. 失败任务归档：#62 人聲版为服务器端 404，标记归档，不重试
+  5. 生成 final_report.txt
+  6. rebuild_url_map(): 从 DB 重建 url_map.txt
 
 原则：只读不改（不重命名目录、不重试 #62、不修改数据库状态）。
 复用：crawler_core.downloader.verify_file_integrity 做单文件完整性校验。
-"""
 
+用法:
+  python3 -m crawler_core.verify                 # 执行校验并生成报告
+  python3 -m crawler_core.verify --rebuild-map   # 从 DB 重建 url_map.txt
+  from crawler_core.verify import main, rebuild_url_map
+"""
 import json
 import os
 import sqlite3
 import sys
 from collections import defaultdict
 
-ROOT = os.path.dirname(os.path.abspath(__file__))
+from .config import DB_PATH, MAP_FILE, PROBE_REPORT, SAVE_ROOT
+from .downloader import verify_file_integrity
+
+# 项目根目录（用于拼接 DB 相对路径 / 报告输出路径）
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 os.chdir(ROOT)
-
-# 允许从项目根目录直接 import crawler_core
-sys.path.insert(0, ROOT)
-
-from crawler_core.config import DB_PATH, MAP_FILE, PROBE_REPORT, SAVE_ROOT
-from crawler_core.downloader import verify_file_integrity
 
 # 资源文件扩展名（排除 checksums.json 等非资源文件）
 RESOURCE_EXTS = {".pdf", ".m4a", ".mp3"}
@@ -143,7 +145,7 @@ def load_db_paths():
 
 def main():
     print("=" * 60)
-    print("🔍 第四阶段：项目收尾与数据校验")
+    print("🔍 数据校验与报告（原第四阶段）")
     print("=" * 60)
 
     # ---------- 1. 三方对账 ----------
@@ -345,7 +347,7 @@ def main():
     lines.append("五、风险与说明")
     lines.append("  - url_map.txt 不在 git 跟踪内（.gitignore 规则 /Hymn_Downloads/** 忽略），")
     lines.append("    该文件是 编号->目录名 的唯一映射，有丢失风险；")
-    lines.append("    可从数据库 staff_img_path 相对路径重建（step4 支持 --rebuild-map）。")
+    lines.append("    可从数据库 staff_img_path 相对路径重建（verify 支持 --rebuild-map）。")
     lines.append(f"  - checksums.json 共 {len([1 for dp in dirs.values() if os.path.exists(os.path.join(dp, 'checksums.json'))])} 个已被 git 跟踪（SHA-256 哈希清单），非资源文件。")
     lines.append("  - 目录命名已规范（无全角空格/空格，格式 001_1頌讚獨一真神），无需清理。")
     lines.append("  - 数据库 audio_versions 存【相对路径字符串】，probe_report.json 存【线上 URL 对象】，二者勿混。")
@@ -370,7 +372,7 @@ def main():
         print(f"   损坏 {len(corrupt_files)} 个文件（详见报告）")
     if dangling:
         print(f"   ⚠️ 悬挂引用 {len(dangling)} 处（详见报告）")
-    print("\n🎉 第四阶段校验完成。")
+    print("\n🎉 数据校验完成。")
 
 
 def rebuild_url_map():

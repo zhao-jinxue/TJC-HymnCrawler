@@ -5,8 +5,8 @@ set -euo pipefail
 
 cd "$(git rev-parse --show-toplevel)"
 
-# 生成清单（跳过不存在的情况）
-python3 generate_checksums.py
+# 生成清单（跳过不存在的情况；已并入 crawler_core.checksums 模块）
+python3 -m crawler_core.checksums
 
 # 重新暂存所有受影响的清单文件
 git add Hymn_Downloads/*/checksums.json

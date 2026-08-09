@@ -1,39 +1,31 @@
 #!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 """
-step5_pdf2png.py — 批量将 Hymn_Downloads/ 下所有 PDF 转换为「窄边距 PNG」
+crawler_core/images.py — PDF 转窄边距 PNG + 双页拼接（原 step5_pdf2png.py）
 
-功能:
+职责:
   - 递归扫描 Hymn_Downloads/ 下所有 .pdf
   - pdftoppm 300DPI 转 PNG(单页为同名 .png; 多页先转 name_p1/p2.png)
   - 自动检测内容包围盒, 裁掉四周空白, 保留窄边距
   - 多页(双页)PDF: 将 _p1.png(上) + _p2.png(下) 上下拼接为同名 .png, 并删除分页小图
 
 用法:
-  python3 step5_pdf2png.py               # 增量: 仅转换 PNG 不存在 或 PDF 更新的
-  python3 step5_pdf2png.py --force       # 全量重新转换并覆盖(同时保留进度判断)
-  python3 step5_pdf2png.py --reset-progress  # 清空进度文件, 配合 --force 全量重做
-  python3 step5_pdf2png.py --dpi 300     # 自定义分辨率(默认300)
-  python3 step5_pdf2png.py --margin 40   # 自定义窄边距像素(默认40)
-  python3 step5_pdf2png.py --limit 3     # 只处理前 N 个(测试用)
-
-兼容性说明:
-  - 单页 PDF 生成 "<基名>.png"
-  - 双页 PDF 生成 "<基名>.png"(拼接整图), 分页小图 _p1/_p2 删除
-  - 全程不动数据库, 数据库图片路径由 step7_png_db.py 以新增字段方式回填
+  python3 -m crawler_core.images                # 增量: 仅转换 PNG 不存在 或 PDF 更新的
+  python3 -m crawler_core.images --force        # 全量重新转换并覆盖
+  python3 -m crawler_core.images --reset-progress  # 清空进度文件, 配合 --force 全量重做
+  python3 -m crawler_core.images --limit 3      # 只处理前 N 个(测试用)
+  from crawler_core.images import run           # 程序化入口
 
 断点续跑（中间文件）:
   - 进度文件: Hymn_Downloads/step5_progress.json
-    {"version": 1, "completed": [已完成的PDF相对路径...]}
-  - 运行开始加载进度; 处理成功/跳过(已是最新)后记入 completed 并增量落盘
-  - 中断后重跑: completed 中的 PDF 直接跳过, 不必重扫全部判断
-  - 注意: 源 PDF 变更后(如 --force)不会自动重做, 需 --reset-progress + --force
+    记录已完成转换的 PDF 相对路径; --reset-progress + --force 全量重做
 """
 import argparse
 import json
 import os
 import subprocess
 
-ROOT = os.path.dirname(os.path.abspath(__file__))
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 os.chdir(ROOT)
 
 DEFAULT_DPI = 300

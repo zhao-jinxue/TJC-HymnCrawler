@@ -6,6 +6,7 @@ import json
 import os
 import time
 
+from crawler_core.checksums import run as run_step6
 from crawler_core.config import PROBE_REPORT
 from crawler_core.db import (
     count_failed,
@@ -13,16 +14,15 @@ from crawler_core.db import (
     init_db,
     print_db_status,
     print_url_map_status,
+    update_png_paths as run_step7,
 )
 from crawler_core.downloader import run_download
 from crawler_core.driver import init_driver
 from crawler_core.extractor import Extractor, load_url_map
+from crawler_core.images import run as run_step5
 from crawler_core.probe import load_probe_report, run_probe
 from crawler_core.scanner import Scanner
-from step4_verify_and_report import main as run_step4
-from step5_pdf2png import run as run_step5
-from step6_update_img import run as run_step6
-from step7_png_db import run as run_step7
+from crawler_core.verify import main as run_step4
 
 # ================= 打印横线 =================
 
