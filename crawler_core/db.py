@@ -486,6 +486,31 @@ def print_db_status():
         c.execute("SELECT COUNT(*) FROM tjc_hymn WHERE audio_version_list != '[]' AND audio_version_list != ''")
         has_audio = c.fetchone()[0]
 
+        # ---- DB 路径 vs 磁盘文件交叉校验（v5 增强）----
+        # 检查"数据库有记录，但记录指向的文件是否真实存在"（防悬挂引用）
+        c.execute("SELECT staff_img_path, numbered_img_path, staff_png_path, numbered_png_path, audio_versions FROM tjc_hymn")
+        missing_files = {
+            "五线谱PDF": [], "简谱PDF": [], "五线谱图片": [], "简谱图片": [], "音频": []
+        }
+        for row in c.fetchall():
+            staff_pdf, numbered_pdf, staff_png, numbered_png, av_json = row
+            for field, key in (
+                (staff_pdf, "五线谱PDF"),
+                (numbered_pdf, "简谱PDF"),
+                (staff_png, "五线谱图片"),
+                (numbered_png, "简谱图片"),
+            ):
+                if field and not os.path.exists(field):
+                    missing_files[key].append(field)
+            if av_json:
+                try:
+                    av = json.loads(av_json)
+                except (json.JSONDecodeError, TypeError):
+                    av = {}
+                for ver, rel in av.items():
+                    if rel and not os.path.exists(rel):
+                        missing_files["音频"].append(f"{ver}: {rel}")
+
         # 统计具体版本分布
         c.execute("SELECT audio_version_list FROM tjc_hymn WHERE audio_version_list != '[]'")
         version_counts = {}
@@ -524,6 +549,19 @@ def print_db_status():
             print("   完整性状态:")
             for s, cnt in sorted(is_counts.items(), key=lambda x: -x[1]):
                 print(f"     {s}: {cnt}")
+
+        # ---- 文件存在性校验汇总 ----
+        total_missing = sum(len(v) for v in missing_files.values())
+        if total_missing == 0:
+            print(f"   🗂️ 文件一致性: 数据库引用的文件全部存在 ✅")
+        else:
+            print(f"   🗂️ 文件一致性: 发现 {total_missing} 个缺失文件 ⚠️")
+            for key, paths in missing_files.items():
+                if paths:
+                    print(f"      {key} 缺失 {len(paths)} 个:")
+                    for p in paths[:5]:
+                        print(f"         - {p}")
+
         if total > 0 and has_lyrics < total:
             print(f"   ⚠️ 其中 {total - has_lyrics} 首歌词提取失败")
     except Exception as e:  # noqa: BLE001 - 初始化前打印友好提示
