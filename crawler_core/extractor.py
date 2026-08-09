@@ -64,56 +64,62 @@ class Extractor:
             driver = init_driver()
             close_driver = True
 
-        # 断点续爬：过滤已成功编号
-        done = set()
-        if resume:
-            done = load_progress()
+        try:
+            # 断点续爬：过滤已成功编号
+            done = set()
+            if resume:
+                done = load_progress()
 
-        pending = []
-        for s in songs:
-            if s["hymn_number"] in done:
-                continue
-            pending.append(s)
+            pending = []
+            for s in songs:
+                if s["hymn_number"] in done:
+                    continue
+                pending.append(s)
 
-        total = len(pending)
-        skipped = len(songs) - len(pending)
-        if skipped > 0:
-            print(f"\n⏭️ 断点续爬：已跳过 {skipped} 首已成功处理（progress 文件存在）。")
-            print(f"   如需全量重跑：删除 {PROGRESS_FILE} 或调用 clear_progress()")
+            total = len(pending)
+            skipped = len(songs) - len(pending)
+            if skipped > 0:
+                print(f"\n⏭️ 断点续爬：已跳过 {skipped} 首已成功处理（progress 文件存在）。")
+                print(f"   如需全量重跑：删除 {PROGRESS_FILE} 或调用 clear_progress()")
 
-        print(f"\n📝 Step 2: 提取 {total} 首详情")
-        success = 0
-        fail = 0
-        start = time.time()
+            print(f"\n📝 Step 2: 提取 {total} 首详情")
+            success = 0
+            fail = 0
+            start = time.time()
 
-        for i, song in enumerate(pending):
-            print(f"  [{i+1}/{total}] {song['hymn_number']}...", end="", flush=True)
-            data = self._parse_one(driver, song)
-            save_to_db(data)
+            for i, song in enumerate(pending):
+                print(f"  [{i+1}/{total}] {song['hymn_number']}...", end="", flush=True)
+                try:
+                    data = self._parse_one(driver, song)
+                    save_to_db(data)
+                except Exception as e:  # noqa: BLE001 - 单首异常不中断整体, 记录后继续
+                    fail += 1
+                    print(f" ⚠️ {type(e).__name__}: {e}")
+                    continue
 
-            if data["verse_count"] > 0:
-                success += 1
-                done.add(song["hymn_number"])
-                # 每成功一首立即持久化，保证异常中断后可从下次继续
-                save_progress(done)
-                print(f" ✅ {data['title']} ({data['verse_count']}节)")
-            else:
-                fail += 1
-                print(" ❌")
+                if data["verse_count"] > 0:
+                    success += 1
+                    done.add(song["hymn_number"])
+                    # 每成功一首立即持久化，保证异常中断后可从下次继续
+                    save_progress(done)
+                    print(f" ✅ {data['title']} ({data['verse_count']}节)")
+                else:
+                    fail += 1
+                    print(" ❌")
 
-            if (i + 1) % 10 == 0:
-                elapsed = time.time() - start
-                speed = (i + 1) / elapsed
-                rem = (total - i - 1) / speed if speed > 0 else 0
-                print(f"\n  📈 {i+1}/{total} | {speed:.1f}首/s | 预计剩余 {rem:.0f}s")
+                if (i + 1) % 10 == 0:
+                    elapsed = time.time() - start
+                    speed = (i + 1) / elapsed
+                    rem = (total - i - 1) / speed if speed > 0 else 0
+                    print(f"\n  📈 {i+1}/{total} | {speed:.1f}首/s | 预计剩余 {rem:.0f}s")
 
-        elapsed = time.time() - start
-        print(f"\n🏁 Step 2: 成功 {success} | 失败 {fail} | 跳过 {skipped} | 耗时 {elapsed:.1f}s")
+            elapsed = time.time() - start
+            print(f"\n🏁 Step 2: 成功 {success} | 失败 {fail} | 跳过 {skipped} | 耗时 {elapsed:.1f}s")
 
-        if close_driver:
-            driver.quit()
-
-        return {"success": success, "failed": fail, "skipped": skipped}
+            return {"success": success, "failed": fail, "skipped": skipped}
+        finally:
+            if close_driver:
+                driver.quit()
 
     def _parse_one(self, driver, song):
         """解析单首诗歌"""

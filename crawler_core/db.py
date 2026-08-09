@@ -12,28 +12,33 @@ from .config import DB_PATH
 def init_db():
     """初始化数据库，迁移到最新结构（v4: +download_status +integrity_status）"""
     conn = sqlite3.connect(DB_PATH)
-    c = conn.cursor()
+    try:
+        c = conn.cursor()
 
-    c.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='tjc_hymn'")
-    has_table = c.fetchone()
+        c.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='tjc_hymn'")
+        has_table = c.fetchone()
 
-    if has_table:
-        c.execute("PRAGMA table_info(tjc_hymn)")
-        columns = {col[1] for col in c.fetchall()}
+        if has_table:
+            c.execute("PRAGMA table_info(tjc_hymn)")
+            columns = {col[1] for col in c.fetchall()}
 
-        if "piano_audio_path" in columns and "audio_versions" not in columns:
-            _migrate_v1_to_v4(c, columns)
-        elif "audio_versions" in columns and "audio_version_list" not in columns:
-            _migrate_v2_to_v4(c)
+            if "piano_audio_path" in columns and "audio_versions" not in columns:
+                _migrate_v1_to_v4(c, columns)
+            elif "audio_versions" in columns and "audio_version_list" not in columns:
+                _migrate_v2_to_v4(c)
+            else:
+                _migrate_v3_to_v4(c)
+                _backfill_from_probe(c, conn)
+                print("📊 数据库结构已是最新版（v4）。")
         else:
-            _migrate_v3_to_v4(c)
-            _backfill_from_probe(c, conn)
-            print("📊 数据库结构已是最新版（v4）。")
-    else:
-        _create_table_v4(c)
+            _create_table_v4(c)
 
-    conn.commit()
-    conn.close()
+        conn.commit()
+    except Exception:
+        conn.rollback()  # 迁移失败时回滚, 避免残留部分变更
+        raise
+    finally:
+        conn.close()
 
 
 # ================= 迁移函数 =================
@@ -221,58 +226,60 @@ def _create_table_v4(c):
 def save_to_db(hymn_data):
     """保存单首数据到数据库 (UPSERT)，自动维护 audio_version_list"""
     conn = sqlite3.connect(DB_PATH)
-    c = conn.cursor()
+    try:
+        c = conn.cursor()
 
-    av = hymn_data.get("audio_versions", {})
-    audio_json = json.dumps(av, ensure_ascii=False)
-    version_list_json = json.dumps(list(av.keys()), ensure_ascii=False)
-    ds = hymn_data.get("download_status", "pending")
-    ins = hymn_data.get("integrity_status", "unchecked")
+        av = hymn_data.get("audio_versions", {})
+        audio_json = json.dumps(av, ensure_ascii=False)
+        version_list_json = json.dumps(list(av.keys()), ensure_ascii=False)
+        ds = hymn_data.get("download_status", "pending")
+        ins = hymn_data.get("integrity_status", "unchecked")
 
-    sql = '''INSERT INTO tjc_hymn
-             (hymn_number, title, lyricist, composer, source_info, verse_count,
-              verse_1, verse_2, verse_3, verse_4, verse_5,
-              verse_6, verse_7, verse_8, verse_9, verse_10,
-              staff_img_path, numbered_img_path,
-              audio_versions, audio_version_list,
-              download_status, integrity_status)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-             ON CONFLICT(hymn_number) DO UPDATE SET
-                title = excluded.title, lyricist = excluded.lyricist,
-                composer = excluded.composer, source_info = excluded.source_info,
-                verse_count = excluded.verse_count,
-                verse_1 = excluded.verse_1, verse_2 = excluded.verse_2,
-                verse_3 = excluded.verse_3, verse_4 = excluded.verse_4,
-                verse_5 = excluded.verse_5, verse_6 = excluded.verse_6,
-                verse_7 = excluded.verse_7, verse_8 = excluded.verse_8,
-                verse_9 = excluded.verse_9, verse_10 = excluded.verse_10,
-                -- 路径/状态类字段：新值为空时保留旧值（防止文本提取覆盖已回写的资源路径）
-                staff_img_path = CASE WHEN excluded.staff_img_path IS NULL OR excluded.staff_img_path = ''
-                                      THEN tjc_hymn.staff_img_path ELSE excluded.staff_img_path END,
-                numbered_img_path = CASE WHEN excluded.numbered_img_path IS NULL OR excluded.numbered_img_path = ''
-                                         THEN tjc_hymn.numbered_img_path ELSE excluded.numbered_img_path END,
-                audio_versions = CASE WHEN excluded.audio_versions IS NULL OR excluded.audio_versions IN ('', '{}')
-                                      THEN tjc_hymn.audio_versions ELSE excluded.audio_versions END,
-                audio_version_list = CASE WHEN excluded.audio_version_list IS NULL OR excluded.audio_version_list IN ('', '[]')
-                                          THEN tjc_hymn.audio_version_list ELSE excluded.audio_version_list END,
-                -- 状态字段同理：Step 2 文本提取的默认 pending/unchecked 不得覆盖下载/校验结果
-                download_status = CASE WHEN excluded.download_status IS NULL OR excluded.download_status IN ('', 'pending')
-                                       THEN tjc_hymn.download_status ELSE excluded.download_status END,
-                integrity_status = CASE WHEN excluded.integrity_status IS NULL OR excluded.integrity_status IN ('', 'unchecked')
-                                        THEN tjc_hymn.integrity_status ELSE excluded.integrity_status END,
-                updated_at = datetime('now', 'localtime')
-            '''
-    params = [
-        hymn_data["hymn_number"], hymn_data["title"],
-        hymn_data["lyricist"], hymn_data["composer"],
-        hymn_data["source_info"], hymn_data["verse_count"]
-    ]
-    params.extend(hymn_data["verses"])
-    params.extend([hymn_data["staff_img_path"], hymn_data["numbered_img_path"],
-                   audio_json, version_list_json, ds, ins])
-    c.execute(sql, params)
-    conn.commit()
-    conn.close()
+        sql = '''INSERT INTO tjc_hymn
+                 (hymn_number, title, lyricist, composer, source_info, verse_count,
+                  verse_1, verse_2, verse_3, verse_4, verse_5,
+                  verse_6, verse_7, verse_8, verse_9, verse_10,
+                  staff_img_path, numbered_img_path,
+                  audio_versions, audio_version_list,
+                  download_status, integrity_status)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                 ON CONFLICT(hymn_number) DO UPDATE SET
+                    title = excluded.title, lyricist = excluded.lyricist,
+                    composer = excluded.composer, source_info = excluded.source_info,
+                    verse_count = excluded.verse_count,
+                    verse_1 = excluded.verse_1, verse_2 = excluded.verse_2,
+                    verse_3 = excluded.verse_3, verse_4 = excluded.verse_4,
+                    verse_5 = excluded.verse_5, verse_6 = excluded.verse_6,
+                    verse_7 = excluded.verse_7, verse_8 = excluded.verse_8,
+                    verse_9 = excluded.verse_9, verse_10 = excluded.verse_10,
+                    -- 路径/状态类字段：新值为空时保留旧值（防止文本提取覆盖已回写的资源路径）
+                    staff_img_path = CASE WHEN excluded.staff_img_path IS NULL OR excluded.staff_img_path = ''
+                                          THEN tjc_hymn.staff_img_path ELSE excluded.staff_img_path END,
+                    numbered_img_path = CASE WHEN excluded.numbered_img_path IS NULL OR excluded.numbered_img_path = ''
+                                             THEN tjc_hymn.numbered_img_path ELSE excluded.numbered_img_path END,
+                    audio_versions = CASE WHEN excluded.audio_versions IS NULL OR excluded.audio_versions IN ('', '{}')
+                                          THEN tjc_hymn.audio_versions ELSE excluded.audio_versions END,
+                    audio_version_list = CASE WHEN excluded.audio_version_list IS NULL OR excluded.audio_version_list IN ('', '[]')
+                                              THEN tjc_hymn.audio_version_list ELSE excluded.audio_version_list END,
+                    -- 状态字段同理：Step 2 文本提取的默认 pending/unchecked 不得覆盖下载/校验结果
+                    download_status = CASE WHEN excluded.download_status IS NULL OR excluded.download_status IN ('', 'pending')
+                                           THEN tjc_hymn.download_status ELSE excluded.download_status END,
+                    integrity_status = CASE WHEN excluded.integrity_status IS NULL OR excluded.integrity_status IN ('', 'unchecked')
+                                            THEN tjc_hymn.integrity_status ELSE excluded.integrity_status END,
+                    updated_at = datetime('now', 'localtime')
+                '''
+        params = [
+            hymn_data["hymn_number"], hymn_data["title"],
+            hymn_data["lyricist"], hymn_data["composer"],
+            hymn_data["source_info"], hymn_data["verse_count"]
+        ]
+        params.extend(hymn_data["verses"])
+        params.extend([hymn_data["staff_img_path"], hymn_data["numbered_img_path"],
+                       audio_json, version_list_json, ds, ins])
+        c.execute(sql, params)
+        conn.commit()
+    finally:
+        conn.close()
 
 
 # ================= 状态同步 =================

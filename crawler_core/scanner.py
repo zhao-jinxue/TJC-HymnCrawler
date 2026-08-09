@@ -157,4 +157,12 @@ class Scanner:
         print(f"💾 新增 {len(self.created_dirs)} 条记录到映射表")
 
     def close(self):
-        self.driver.quit()
+        """关闭浏览器驱动（幂等：多次调用/驱动已失效时不抛异常）"""
+        if self.driver is None:
+            return
+        try:
+            self.driver.quit()
+        except Exception:  # noqa: S110, BLE001 - close 为清理操作, 失败不应影响主流程
+            pass
+        finally:
+            self.driver = None

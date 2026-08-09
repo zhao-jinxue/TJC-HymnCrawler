@@ -152,8 +152,10 @@ def main():
     # ---- Step 1 ----
     if choice in ("1", "7"):
         scanner = Scanner()
-        songs = scanner.scan()
-        scanner.close()
+        try:
+            songs = scanner.scan()
+        finally:
+            scanner.close()
         if not songs:
             print("❌ 未获取到数据，退出。")
             return
@@ -166,9 +168,11 @@ def main():
             return
         ext = Extractor()
         driver = init_driver()
-        result = ext.extract_all(songs, driver)
-        driver.quit()
-        print(f"   ✅ Step 2：成功 {result['success']} 首，失败 {result['failed']} 首")
+        try:
+            result = ext.extract_all(songs, driver)
+            print(f"   ✅ Step 2：成功 {result['success']} 首，失败 {result['failed']} 首")
+        finally:
+            driver.quit()
 
     # ---- 资源探测 ----
     if choice in ("3", "7"):
@@ -248,9 +252,11 @@ def main():
                 if ans in ("", "y", "yes"):
                     ext = Extractor()
                     driver = init_driver()
-                    result = ext.extract_all(failed_songs, driver)
-                    driver.quit()
-                    print(f"   ✅ 补全完成：成功 {result['success']}，失败 {result['failed']}")
+                    try:
+                        result = ext.extract_all(failed_songs, driver)
+                        print(f"   ✅ 补全完成：成功 {result['success']}，失败 {result['failed']}")
+                    finally:
+                        driver.quit()
                     break
                 elif ans in ("n", "no"):
                     break
@@ -265,4 +271,10 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except KeyboardInterrupt:
+        print("\n⚠️ 用户中断，已保存的部分进度可断点续跑。")
+    except Exception as e:  # noqa: BLE001 - 顶层兜底, 保证从容退出且已持久化数据不丢失
+        print(f"\n❌ 程序异常退出：{type(e).__name__}: {e}")
+        print("   已完成步骤已持久化，重新运行可断点续跑。")

@@ -7,7 +7,11 @@ from selenium.webdriver.chrome.service import Service
 
 
 def init_driver():
-    """初始化 Chrome 驱动 - 极致加速配置"""
+    """初始化 Chrome 驱动 - 极致加速配置
+
+    浏览器/驱动缺失或启动失败时抛出友好异常（带修复指引），
+    而非浏览器原始报错，便于用户快速定位环境问题。
+    """
     options = Options()
     options.add_argument("--headless=new")
     options.add_argument("--no-sandbox")
@@ -29,6 +33,15 @@ def init_driver():
     options.add_argument("--silent")
 
     service = Service()
-    driver = webdriver.Chrome(service=service, options=options)
+    try:
+        driver = webdriver.Chrome(service=service, options=options)
+    except Exception as e:
+        raise RuntimeError(
+            "Chrome 浏览器驱动初始化失败，请检查环境："
+            "1) 已安装 Google Chrome；"
+            "2) chromedriver 与 Chrome 版本匹配（可用 `chromedriver --version` 与 Chrome 版本对比）；"
+            "3) 虚拟环境已安装 selenium。"
+            f"原始错误: {type(e).__name__}: {e}"
+        ) from e
     driver.set_page_load_timeout(8)
     return driver
