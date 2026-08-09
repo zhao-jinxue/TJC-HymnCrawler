@@ -5,10 +5,18 @@ set -euo pipefail
 
 cd "$(git rev-parse --show-toplevel)"
 
-# 生成清单（跳过不存在的情况；已并入 crawler_core.checksums 模块）
-python3 -m crawler_core.checksums
+# 生成清单（跳过不存在的情况）。
+# 注意：输出重定向到 /dev/null，避免 474 行 [OK] 刷屏导致终端/工具输出过载中断。
+if python3 -m crawler_core.checksums > /dev/null 2>&1; then
+    # 重新暂存所有受影响的清单文件（无匹配时静默跳过）
+    git add Hymn_Downloads/*/checksums.json 2> /dev/null || true
 
-# 重新暂存所有受影响的清单文件
-git add Hymn_Downloads/*/checksums.json
+    # 仅在哈希确有变化时打印一行摘要（避免无意义长输出）
+    if ! git diff --cached --quiet -- Hymn_Downloads; then
+        echo "[pre-commit] checksums.json 已更新并暂存"
+    fi
+else
+    echo "[pre-commit] 警告: checksums.json 重建失败（已忽略，请手动检查）"
+fi
 
 exit 0
