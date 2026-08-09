@@ -18,3 +18,4 @@ __pycache__/
 
 # 数据库文件（probe_report.json 保留跟踪，作为 db 重建的保险）
 *.db-journal
+
