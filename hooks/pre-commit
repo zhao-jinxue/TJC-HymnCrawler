@@ -1,22 +1,17 @@
 #!/bin/bash
-# pre-commit 钩子：提交前自动重新生成 Hymn_Downloads 的 SHA-256 哈希清单，
-# 使"大文件被修改"能通过 checksums.json 的变化被 git 感知。
+# pre-commit 钩子：提交前快速提醒并发 git 操作（不执行长耗时任务）。
+#
+# 背景：早期版本在提交时全量重建 checksums.json（计算 3017 个文件 SHA-256，
+# 耗时数十秒），导致提交命令在自动化工具中触发超时中断。
+# 现改为轻量模式：仅检测是否有未暂存的 checksums.json 改动并提示手动更新。
 set -euo pipefail
 
 cd "$(git rev-parse --show-toplevel)"
 
-# 生成清单（跳过不存在的情况）。
-# 注意：输出重定向到 /dev/null，避免 474 行 [OK] 刷屏导致终端/工具输出过载中断。
-if python3 -m crawler_core.checksums > /dev/null 2>&1; then
-    # 重新暂存所有受影响的清单文件（无匹配时静默跳过）
-    git add Hymn_Downloads/*/checksums.json 2> /dev/null || true
-
-    # 仅在哈希确有变化时打印一行摘要（避免无意义长输出）
-    if ! git diff --cached --quiet -- Hymn_Downloads; then
-        echo "[pre-commit] checksums.json 已更新并暂存"
-    fi
-else
-    echo "[pre-commit] 警告: checksums.json 重建失败（已忽略，请手动检查）"
+# 若 Hymn_Downloads 下有未暂存的 checksums.json 改动，给出提示（不自动更新）
+if ! git diff --quiet -- Hymn_Downloads 2>/dev/null; then
+    echo "[pre-commit] 提示: Hymn_Downloads 中的大文件哈希未同步到 checksums.json"
+    echo "[pre-commit] 如需更新，请手动执行: python3 -m crawler_core.checksums && git add Hymn_Downloads"
 fi
 
 exit 0
