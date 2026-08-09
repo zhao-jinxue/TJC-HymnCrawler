@@ -9,6 +9,7 @@ from urllib.parse import urljoin
 import urllib3
 from bs4 import BeautifulSoup
 from selenium.webdriver.common.by import By
+from selenium.webdriver.remote.webdriver import WebDriver
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
 
@@ -21,7 +22,7 @@ urllib3.disable_warnings()
 class Scanner:
 
     def __init__(self):
-        self.driver = init_driver()
+        self.driver: WebDriver | None = init_driver()
         self.all_songs = []
         self.created_dirs = []
         self.seen_urls = set()
@@ -51,19 +52,23 @@ class Scanner:
         print("📋 Step 1: 扫描列表页")
         print(f"{'='*50}")
 
+        driver = self.driver
+        if driver is None:
+            raise RuntimeError("浏览器驱动未初始化，请检查 Scanner 创建流程")
+
         while current_url and page_count <= 100:
             page_start = time.time()
             print(f"\n--- 第 {page_count} 页 ---")
 
             try:
-                self.driver.get(current_url)
-                WebDriverWait(self.driver, 8).until(
+                driver.get(current_url)
+                WebDriverWait(driver, 8).until(
                     EC.presence_of_element_located((By.CSS_SELECTOR, "div.music"))
                 )
             except Exception:  # noqa: BLE001 - 等待/导航超时, 继续下一页
                 print("  ⚠️ 等待超时，继续...")
 
-            soup = BeautifulSoup(self.driver.page_source, 'html.parser')
+            soup = BeautifulSoup(driver.page_source, 'html.parser')
             items = soup.select('div.list > div.music')
             p_elapsed = time.time() - page_start
             print(f"  本页 {len(items)} 首 | 耗时: {p_elapsed:.2f}s")
@@ -78,7 +83,7 @@ class Scanner:
                     continue
 
                 raw_title = title_tag.get_text(strip=True)
-                href = link_tag.get('href')
+                href = str(link_tag.get('href') or "")  # bs4 类型桩欠完善, 显式转 str
                 full_url = urljoin(BASE_URL, href)
 
                 if full_url in self.seen_urls:
@@ -102,7 +107,8 @@ class Scanner:
             pagination_div = soup.find('div', class_='page_box')
             if pagination_div:
                 pages = pagination_div.find_all('div', class_='page')
-                if pages and 'page_enb' in pages[-1].get('class', []):
+                last_classes = pages[-1].get("class") if pages else None
+                if pages and isinstance(last_classes, list) and 'page_enb' in last_classes:
                     print("  🔚 最后一页")
                     break
 
