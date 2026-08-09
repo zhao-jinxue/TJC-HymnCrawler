@@ -29,9 +29,10 @@ def init_db():
                 _migrate_v2_to_v4(c)
             else:
                 _migrate_v3_to_v4(c)
-                _migrate_v5_png_fields(c)
-                _backfill_from_probe(c, conn)
-                print("📊 数据库结构已是最新版（v5）。")
+            # 所有迁移路径统一幂等补 PNG 图片字段（v5）
+            _migrate_v5_png_fields(c)
+            _backfill_from_probe(c, conn)
+            print("📊 数据库结构已是最新版（v5）。")
         else:
             _create_table_v4(c)
 
