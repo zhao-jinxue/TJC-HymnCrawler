@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """
 step5_pdf2png.py — 批量将 Hymn_Downloads/ 下所有 PDF 转换为「窄边距 PNG」
 
@@ -55,7 +54,7 @@ def load_progress():
         if data.get("version") != PROGRESS_VERSION:
             return {}
         return {p: "done" for p in data.get("completed", [])}
-    except Exception:
+    except Exception:  # noqa: BLE001 - 进度文件损坏时从头开始
         return {}
 
 
@@ -88,7 +87,7 @@ def find_all_pdfs(base_dir):
 def get_page_count(pdf_path):
     """用 pdfinfo 获取页数"""
     r = subprocess.run(
-        ["pdfinfo", pdf_path], capture_output=True, text=True
+        ["pdfinfo", pdf_path], capture_output=True, text=True, check=False
     )
     if r.returncode != 0:
         return 1
@@ -197,7 +196,7 @@ def convert_one(pdf_path, dpi, margin, force):
             if not os.path.exists(t) or os.path.getmtime(t) < pdf_mtime:
                 all_fresh = False
                 break
-        if all_fresh:
+        if all_fresh:  # noqa: SIM102 - 两层条件语义不同, 保持清晰
             # 双页还需确认拼接整图存在
             if page_count == 1 or os.path.exists(base + ".png"):
                 return "skip", "已存在且为最新"
@@ -209,7 +208,7 @@ def convert_one(pdf_path, dpi, margin, force):
         cmd = ["pdftoppm", "-png", "-r", str(dpi), "-singlefile", pdf_path, base]
     else:
         cmd = ["pdftoppm", "-png", "-r", str(dpi), pdf_path, base]
-    r = subprocess.run(cmd, capture_output=True, text=True)
+    r = subprocess.run(cmd, capture_output=True, text=True, check=False)
     if r.returncode != 0:
         return "fail", "pdftoppm失败: " + r.stderr.strip()[:200]
 
@@ -298,7 +297,7 @@ def run(dpi=DEFAULT_DPI, margin=DEFAULT_MARGIN, force=False, limit=0, reset=Fals
             print(f"[{idx}/{total}] FAIL {rel} | {detail}")
 
         # OK 与 SKIP(已是最新) 都算完成, 记入进度
-        if status in ("ok", "skip"):
+        if status in ("ok", "skip"):  # noqa: SIM102 - 嵌套条件便于阅读, 保持现状
             if rel not in completed:
                 completed.append(rel)
                 dirty_since_flush += 1

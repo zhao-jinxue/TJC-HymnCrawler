@@ -3,17 +3,18 @@
 # 根据 probe_report.json 的清单并发下载所有资源
 # v2: +文件完整性校验 +同步状态到数据库
 
+import json
 import os
 import time
-import json
-import struct
+
 import requests
 import urllib3
+
 urllib3.disable_warnings()
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
-from .config import SAVE_ROOT, PROBE_REPORT, HEADERS
-from .db import sync_download_status_to_db, batch_update_integrity
+from .config import HEADERS, PROBE_REPORT, SAVE_ROOT
+from .db import batch_update_integrity, sync_download_status_to_db
 
 
 def run_download(probe_report=None):
@@ -100,7 +101,7 @@ def run_download(probe_report=None):
                 return (item, True)
             else:
                 return (item, False)
-        except Exception as e:
+        except Exception:  # noqa: BLE001 - 网络/写入异常视为下载失败, 返回 False
             return (item, False)
 
     with ThreadPoolExecutor(max_workers=10) as pool:
@@ -108,7 +109,7 @@ def run_download(probe_report=None):
         done = 0
         for f in as_completed(futures):
             item, ok = f.result()
-            done += 1
+            done += 1  # noqa: SIM113 - 显式计数器便于进度显示(每20个刷新)
             if ok:
                 success += 1
             else:
@@ -121,7 +122,7 @@ def run_download(probe_report=None):
                       f"耗时 {elapsed:.0f}s | {done/elapsed:.1f}文件/s")
 
     elapsed = time.time() - start
-    print(f"\n📊 下载完成！")
+    print("\n📊 下载完成！")
     print(f"   成功: {success}/{total_files} ({100*success//total_files}%)")
     print(f"   失败: {fail}")
     print(f"   耗时: {elapsed:.1f}s | 速度: {total_files/elapsed:.1f}文件/s")
@@ -176,7 +177,7 @@ def verify_file_integrity(filepath):
         else:
             return size > 0
 
-    except (IOError, OSError):
+    except OSError:
         return False
 
 
@@ -259,7 +260,7 @@ def _verify_and_sync(probe_report):
         verified_count = len(integrity_results)
         print(f"\n🔍 文件完整性校验：{verified_count} 首诗歌")
         print(f"   完整: {passed} | 损坏: {failed}")
-        print(f"💾 integrity_status 已同步到数据库。")
+        print("💾 integrity_status 已同步到数据库。")
     else:
         print("\n🔍 文件完整性校验：暂无待校验的诗歌。")
 
@@ -326,10 +327,10 @@ def _update_download_status(probe_report):
         s = m.get("download_status", "unknown")
         status_counts[s] = status_counts.get(s, 0) + 1
 
-    print(f"\n📋 download_status 分布：")
+    print("\n📋 download_status 分布：")
     for s, cnt in sorted(status_counts.items(), key=lambda x: -x[1]):
         print(f"   {s}: {cnt} ({100*cnt//len(probe_report)}%)")
-    print(f"💾 probe_report.json 已更新。")
+    print("💾 probe_report.json 已更新。")
 
 
 # ================= 工具函数 =================
@@ -365,7 +366,8 @@ def _backfill_paths_to_db(probe_report):
     """将 probe_report.json 中的 PDF 路径和音频信息回写到数据库
        路径存储为相对于项目根目录（SCRIPT_DIR）的相对路径"""
     import sqlite3
-    from .config import MAP_FILE, DB_PATH
+
+    from .config import DB_PATH, MAP_FILE
 
     # 计算项目根目录
     SCRIPT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))

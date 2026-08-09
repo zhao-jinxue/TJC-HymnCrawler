@@ -2,18 +2,19 @@
 # Step 2: 提取诗歌详情页文本
 # v2: 精确等待替代固定 sleep（提速）+ 断点续爬（progress 文件持久化）
 
+import json
 import os
 import re
 import time
-import json
-from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
-from selenium.common.exceptions import TimeoutException, NoSuchElementException
 
-from .config import BASE_URL, MAP_FILE, SAVE_ROOT
-from .driver import init_driver
+from selenium.common.exceptions import TimeoutException
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.support.ui import WebDriverWait
+
+from .config import MAP_FILE, SAVE_ROOT
 from .db import save_to_db
+from .driver import init_driver
 
 # 断点进度文件（记录已成功处理的 hymn_number，被 .gitignore 忽略）
 PROGRESS_FILE = os.path.join(SAVE_ROOT, "step2_progress.json")
@@ -27,7 +28,7 @@ def load_progress():
         with open(PROGRESS_FILE, "r", encoding="utf-8") as f:
             data = json.load(f)
         return set(data.get("done", []))
-    except Exception:
+    except Exception:  # noqa: BLE001 - 进度文件损坏时从头开始
         return set()
 
 
@@ -98,7 +99,7 @@ class Extractor:
                 print(f" ✅ {data['title']} ({data['verse_count']}节)")
             else:
                 fail += 1
-                print(f" ❌")
+                print(" ❌")
 
             if (i + 1) % 10 == 0:
                 elapsed = time.time() - start
@@ -136,7 +137,7 @@ class Extractor:
             driver.get(url)
         except TimeoutException:
             pass
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - 页面访问异常时降级返回空
             print(f" ⚠️ {e}")
             return result
 
@@ -170,7 +171,7 @@ class Extractor:
                 if raw:
                     clean = re.sub(r'^\d+(?:_[a-zA-Z])?\s*', '', raw)
                     result["title"] = clean if clean else "Unknown"
-        except:
+        except Exception:  # noqa: S110, BLE001 - 元素可能不存在, 容错跳过
             pass
 
         # 作词/作曲
@@ -180,7 +181,7 @@ class Extractor:
                 result["lyricist"] = author_els[0].text.strip() or "Unknown"
             if len(author_els) >= 2:
                 result["composer"] = author_els[1].text.strip() or "Unknown"
-        except:
+        except Exception:  # noqa: S110, BLE001 - 元素可能不存在, 容错跳过
             pass
 
         # 源考
@@ -195,13 +196,13 @@ class Extractor:
                         if "collapsed" in cls or "closed" in cls:
                             trigger.click()
                             time.sleep(0.3)
-                    except:
+                    except Exception:  # noqa: S110, BLE001 - 折叠面板可能不可点, 容错跳过
                         pass
                     content = box.find_element(By.CSS_SELECTOR, ".content")
                     raw = content.text.strip()
                     result["source_info"] = raw[4:].strip() if raw.startswith("詩歌源考") else raw
                     break
-        except:
+        except Exception:  # noqa: S110, BLE001 - 源考区块可能不存在, 容错跳过
             pass
 
         # 歌词
@@ -213,7 +214,7 @@ class Extractor:
                     text = driver.find_element(By.CSS_SELECTOR, ".lyrics_box").text.strip()
                     if text:
                         lyrics_parts.append(text)
-                except:
+                except Exception:  # noqa: S110, BLE001 - 无歌词框时容错
                     pass
             else:
                 for tab in tabs:
@@ -221,7 +222,7 @@ class Extractor:
                         tab.click()
                         # 用精确等待替代固定 sleep(0.2)：点击后轮询歌词非空即继续
                         WebDriverWait(driver, 2).until(_lyrics_ready)
-                    except:
+                    except Exception:  # noqa: S112, BLE001 - 单个 Tab 点击失败时跳过该 Tab
                         continue
                     boxes = driver.find_elements(By.CSS_SELECTOR, ".lyrics_box")
                     for box in boxes:
@@ -229,7 +230,7 @@ class Extractor:
                         if text and text not in lyrics_parts:
                             lyrics_parts.append(text)
                             break
-        except:
+        except Exception:  # noqa: S110, BLE001 - 歌词区解析失败, 返回空歌词
             pass
 
         result["verse_count"] = min(len(lyrics_parts), 10)

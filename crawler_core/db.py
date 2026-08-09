@@ -2,10 +2,11 @@
 # 数据库管理 - 含迁移与初始化
 # v4: +download_status +integrity_status
 
-import os
 import json
+import os
 import sqlite3
-from .config import DB_PATH, SAVE_ROOT
+
+from .config import DB_PATH
 
 
 def init_db():
@@ -93,7 +94,7 @@ def _migrate_v2_to_v4(c):
                 keys = json.dumps(list(av.keys()), ensure_ascii=False)
                 c.execute("UPDATE tjc_hymn SET audio_version_list = ? WHERE rowid = ?", (keys, rowid))
                 updated += 1
-        except:
+        except (json.JSONDecodeError, TypeError):  # 历史数据可能非 JSON, 跳过
             pass
     conn.commit()
     print(f"✅ 已为 {updated} 条记录生成 audio_version_list。")
@@ -390,7 +391,7 @@ def get_failed_songs():
     try:
         c.execute("SELECT hymn_number, title FROM tjc_hymn WHERE verse_count = 0")
         failed_records = c.fetchall()
-    except Exception:
+    except Exception:  # noqa: BLE001 - 表未初始化时视为无失败记录
         failed_records = []
     finally:
         conn.close()
@@ -425,7 +426,7 @@ def count_failed():
     try:
         c.execute("SELECT COUNT(*) FROM tjc_hymn WHERE verse_count = 0")
         return c.fetchone()[0]
-    except Exception:
+    except Exception:  # noqa: BLE001 - 表未初始化时返回 0
         return 0
     finally:
         conn.close()
@@ -455,7 +456,7 @@ def print_db_status():
             try:
                 for v in json.loads(vl):
                     version_counts[v] = version_counts.get(v, 0) + 1
-            except:
+            except (json.JSONDecodeError, TypeError):  # 非 JSON 数据, 跳过该版本
                 pass
 
         # 统计 download_status 分布
@@ -473,20 +474,20 @@ def print_db_status():
         print(f"   简谱:   {has_numbered}/{total} {'✅' if has_numbered > 0 else '❌'}")
         print(f"   有音频: {has_audio}/{total} {'✅' if has_audio > 0 else '❌'}")
         if version_counts:
-            print(f"   音频版本分布:")
+            print("   音频版本分布:")
             for v, cnt in sorted(version_counts.items(), key=lambda x: -x[1]):
                 print(f"     {v}: {cnt} ({100*cnt//total}%)")
         if ds_counts:
-            print(f"   下载状态:")
+            print("   下载状态:")
             for s, cnt in sorted(ds_counts.items(), key=lambda x: -x[1]):
                 print(f"     {s}: {cnt}")
         if is_counts:
-            print(f"   完整性状态:")
+            print("   完整性状态:")
             for s, cnt in sorted(is_counts.items(), key=lambda x: -x[1]):
                 print(f"     {s}: {cnt}")
         if total > 0 and has_lyrics < total:
             print(f"   ⚠️ 其中 {total - has_lyrics} 首歌词提取失败")
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001 - 初始化前打印友好提示
         print(f"📊 数据库状态：尚未初始化（{e}）")
     finally:
         conn.close()

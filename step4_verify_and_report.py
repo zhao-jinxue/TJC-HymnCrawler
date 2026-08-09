@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """第四阶段：项目收尾与数据校验
 ================================
 对前三阶段产出做全局一致性校验，并生成 final_report.txt。
@@ -16,11 +15,11 @@
 复用：crawler_core.downloader.verify_file_integrity 做单文件完整性校验。
 """
 
-import os
-import sys
 import json
+import os
 import sqlite3
-from collections import Counter, defaultdict
+import sys
+from collections import defaultdict
 
 ROOT = os.path.dirname(os.path.abspath(__file__))
 os.chdir(ROOT)
@@ -28,7 +27,7 @@ os.chdir(ROOT)
 # 允许从项目根目录直接 import crawler_core
 sys.path.insert(0, ROOT)
 
-from crawler_core.config import SAVE_ROOT, DB_PATH, MAP_FILE, PROBE_REPORT
+from crawler_core.config import DB_PATH, MAP_FILE, PROBE_REPORT, SAVE_ROOT
 from crawler_core.downloader import verify_file_integrity
 
 # 资源文件扩展名（排除 checksums.json 等非资源文件）
@@ -135,7 +134,7 @@ def load_db_paths():
         if av_json:
             try:
                 av = json.loads(av_json)
-            except Exception:
+            except (json.JSONDecodeError, TypeError):  # 历史数据非 JSON 时视为空
                 av = {}
         rows[h] = {"staff": staff or "", "numbered": numbered or "", "audio": av or {}}
     conn.close()
@@ -156,7 +155,6 @@ def main():
 
     dir_nums = set(dirs.keys())
     map_nums = set(url_map.keys())
-    probe_nums = set(probe_map.keys())
 
     db_dir_diff = dir_nums - db_nums
     dir_db_diff = db_nums - dir_nums
@@ -311,7 +309,7 @@ def main():
     lines = []
     lines.append("=" * 60)
     lines.append("真耶穌教會聖樂网 爬虫项目 最终执行报告")
-    lines.append("生成时间: %s" % __import__("datetime").datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+    lines.append(f"生成时间: {__import__('datetime').datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     lines.append("=" * 60)
     lines.append("")
     lines.append("一、抓取总览")

@@ -3,14 +3,15 @@
 import os
 import re
 import time
+from urllib.parse import urljoin
+
 import urllib3
 from bs4 import BeautifulSoup
-from urllib.parse import urljoin
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.support.ui import WebDriverWait
 
 # --- 调试配置：关闭不安全请求的警告 ---
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
@@ -40,7 +41,7 @@ def load_existing_directories():
                     if len(parts) >= 2:
                         existing_local_dirs.add(parts[1])
             print(f"✅ 已从映射表加载 {len(existing_local_dirs)} 个已有目录记录。")
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - 映射表缺失时降级处理
             print(f"⚠️ 读取映射表失败: {e}")
 
     try:
@@ -49,7 +50,7 @@ def load_existing_directories():
             if os.path.isdir(item_path) and item != ".git":
                 existing_local_dirs.add(item)
         print(f"✅ 已扫描本地文件夹，当前共记录 {len(existing_local_dirs)} 个目录。")
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001 - 本地目录扫描异常降级
         print(f"⚠️ 扫描本地目录失败: {e}")
         
     return existing_local_dirs
@@ -64,7 +65,7 @@ def get_hymn_list(start_url, existing_dirs):
     page_count = 1
     MAX_PAGES = 100 
     
-    print(f"🚀 开始扫描列表页 (Selenium 模式)...")
+    print("🚀 开始扫描列表页 (Selenium 模式)...")
 
     chrome_options = Options()
     chrome_options.add_argument("--headless")
@@ -85,7 +86,7 @@ def get_hymn_list(start_url, existing_dirs):
                 WebDriverWait(driver, 10).until(
                     EC.presence_of_element_located((By.CSS_SELECTOR, "div.music"))
                 )
-            except:
+            except Exception:  # noqa: BLE001 - 页面加载超时视为已到末页
                 print("⚠️ 页面加载超时，可能已到达最后一页。")
                 break
 
@@ -166,7 +167,7 @@ def get_hymn_list(start_url, existing_dirs):
                         })
                         existing_dirs.add(final_dir_name)
                         print(f"✅ 已创建: {final_dir_name}")
-                    except Exception as e:
+                    except Exception as e:  # noqa: BLE001 - 单个目录创建失败不中断
                         print(f"❌ 创建目录失败 {final_dir_name}: {e}")
 
             # --- 翻页逻辑优化：利用 page_enb 判断末页 ---
@@ -188,7 +189,7 @@ def get_hymn_list(start_url, existing_dirs):
             page_count += 1
             time.sleep(2)
 
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001 - 抓取过程整体出错时打印并收尾
         print(f"❌ 抓取过程出错: {e}")
     finally:
         driver.quit()
@@ -206,10 +207,9 @@ def save_map(created_dirs):
     
     try:
         with open(url_map_file, mode, encoding='utf-8') as f:
-            for item in created_dirs:
-                f.write(f"{item['id']}|{item['name']}|{item['url']}\n")
+            f.writelines(f"{item['id']}|{item['name']}|{item['url']}\n" for item in created_dirs)
         print(f"\n💾 新增 {len(created_dirs)} 条记录到映射表。")
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001 - 保存失败打印错误
         print(f"❌ 保存映射表失败: {e}")
 
 def run_step1():
@@ -219,7 +219,7 @@ def run_step1():
     existing_local_dirs = load_existing_directories()
     songs, created = get_hymn_list(LIST_URL, existing_local_dirs)
     
-    print(f"\n--- 扫描结果汇总 ---")
+    print("\n--- 扫描结果汇总 ---")
     print(f"共发现诗歌: {len(songs)} 首")
     print(f"本次新增目录: {len(created)} 个")
     

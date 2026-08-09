@@ -2,27 +2,27 @@
 # 🚀 终极极速版 - 统一入口
 # 组装 crawler_core 各模块，提供菜单式交互
 
-import os
-import sys
 import json
+import os
 import time
 
-from crawler_core.config import SAVE_ROOT, PROBE_REPORT, MAP_FILE
+from crawler_core.config import PROBE_REPORT
 from crawler_core.db import (
-    init_db, print_db_status, print_url_map_status,
-    count_failed, get_failed_songs,
-    sync_download_status_to_db
+    count_failed,
+    get_failed_songs,
+    init_db,
+    print_db_status,
+    print_url_map_status,
 )
-from crawler_core.driver import init_driver
-from crawler_core.scanner import Scanner
-from crawler_core.extractor import Extractor, load_url_map
-from crawler_core.probe import run_probe, load_probe_report
 from crawler_core.downloader import run_download
+from crawler_core.driver import init_driver
+from crawler_core.extractor import Extractor, load_url_map
+from crawler_core.probe import load_probe_report, run_probe
+from crawler_core.scanner import Scanner
 from step4_verify_and_report import main as run_step4
 from step5_pdf2png import run as run_step5
 from step6_update_img import run as run_step6
 from step7_png_db import run as run_step7
-
 
 # ================= 打印横线 =================
 
@@ -81,17 +81,17 @@ def print_probe_report_status():
     print(f"   有音频: {audio}/{total} ({100*audio//total}%)" +
           (f" ⚠️ 缺: {no_audio}" if no_audio else " ✅"))
     if audio_key_count:
-        print(f"   音频版本分布:")
+        print("   音频版本分布:")
         for v, c in sorted(audio_key_count.items(), key=lambda x: -x[1]):
             print(f"     {v}: {c} ({100*c//total}%)")
     if audio_error_count > 0:
         print(f"   ⚠️ 探测异常（_error）: {audio_error_count} 首")
     if ds_counts:
-        print(f"   下载状态分布:")
+        print("   下载状态分布:")
         for s, c in sorted(ds_counts.items(), key=lambda x: -x[1]):
             print(f"     {s}: {c}")
     if is_counts:
-        print(f"   完整性状态分布:")
+        print("   完整性状态分布:")
         for s, c in sorted(is_counts.items(), key=lambda x: -x[1]):
             print(f"     {s}: {c}")
 

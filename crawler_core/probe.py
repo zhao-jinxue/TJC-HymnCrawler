@@ -1,20 +1,22 @@
 # crawler_core/probe.py
 # 资源探测 - PDF (HEAD) + 音频 (Selenium 点击捕获)
 
+import json
 import os
 import re
 import time
-import json
+
 import requests
 import urllib3
+
 urllib3.disable_warnings()
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.support.ui import WebDriverWait
 
-from .config import BASE_URL, PROBE_REPORT, MAP_FILE
+from .config import BASE_URL, MAP_FILE, PROBE_REPORT
 
 
 def run_probe(force=False):
@@ -54,7 +56,6 @@ def load_probe_report():
 
 def _do_probe():
     """执行完整的资源探测流程"""
-    from .driver import init_driver
 
     # 加载诗歌列表
     songs = _load_songs()
@@ -111,12 +112,12 @@ def _load_songs():
 
 def _probe_pdfs(songs):
     """多线程 PDF 探测"""
-    print(f"\n📌 [PDF] 多线程验证乐谱 PDF...")
+    print("\n📌 [PDF] 多线程验证乐谱 PDF...")
 
     def head_ok(url):
         try:
             return requests.head(url, timeout=5, allow_redirects=True, verify=False).status_code == 200
-        except:
+        except Exception:  # noqa: BLE001 - 网络异常视为探测失败
             return False
 
     staff_ok, num_ok = {}, {}
@@ -167,7 +168,7 @@ def _probe_audios(songs, max_workers=4):
         for f in as_completed(futures):
             h, amap = f.result()
             results[h] = amap
-            done += 1
+            done += 1  # noqa: SIM113 - 显式计数器便于进度打印
             if done % 10 == 0 or done == total:
                 speed = done / (time.time() - start) if (time.time() - start) > 0 else 0
                 print(f"    ⏳ {done}/{total} | 有音频: {sum(1 for v in results.values() if v)} | "
@@ -229,7 +230,7 @@ def _capture_song_audio(driver, song):
                 }
 
         return (h, audio_map)
-    except Exception as e:
+    except Exception:  # noqa: BLE001 - 单首音频捕获失败不影响整体
         return (h, {})
 
 
@@ -246,13 +247,13 @@ def _print_summary(manifest):
             vcount[v] = vcount.get(v, 0) + 1
 
     print(f"\n{'='*55}")
-    print(f"📊 资源探测统计")
+    print("📊 资源探测统计")
     print(f"{'='*55}")
     print(f"  总数:    {total} 首")
     print(f"  五线谱:  {staff}/{total} ({100*staff//total}%)")
     print(f"  简谱:    {num}/{total} ({100*num//total}%)")
     print(f"  有音频:  {audio}/{total} ({100*audio//total}%)")
     if vcount:
-        print(f"  音频版本分布:")
+        print("  音频版本分布:")
         for v, cnt in sorted(vcount.items(), key=lambda x: -x[1]):
             print(f"    {v}: {cnt} ({100*cnt//total}%)")

@@ -1,15 +1,15 @@
 # step2_extract_text.py
-import os
 import re
-import time
 import sqlite3
+import time
+
 from selenium import webdriver
-from selenium.webdriver.chrome.service import Service
+from selenium.common.exceptions import NoSuchElementException, TimeoutException
 from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-from selenium.common.exceptions import TimeoutException, NoSuchElementException
+from selenium.webdriver.support.ui import WebDriverWait
 
 """
     id INTEGER PRIMARY KEY AUTOINCREMENT,                   # ID
@@ -128,7 +128,7 @@ class HymnExtractor:
             self.driver.get(url)
         except TimeoutException:
             pass
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - 页面请求异常时降级返回空结果
             print(f"   ⚠️ 页面请求异常: {e}")
             return result
 
@@ -156,7 +156,7 @@ class HymnExtractor:
                 # 例如 "21 美哉，主耶穌" -> "美哉，主耶穌"
                 clean_title = re.sub(r'^\d+(?:_[a-zA-Z])?\s*', '', raw_title)
                 result["title"] = clean_title if clean_title else "Unknown"
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - 标题提取失败使用默认值
             print(f"   ⚠️ 标题提取失败: {e}")
 
         # 2. 提取作词/作曲
@@ -166,7 +166,7 @@ class HymnExtractor:
                 result["lyricist"] = author_els[0].text.strip() or "Unknown"
             if len(author_els) > 1:
                 result["composer"] = author_els[1].text.strip() or "Unknown"
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - 作者提取失败使用默认值
             print(f"   ⚠️ 作者提取失败: {e}")
 
         # 3. 提取源考 (处理折叠面板)
@@ -195,7 +195,7 @@ class HymnExtractor:
                     # 清理掉标题文字，只保留正文
                     result["source_info"] = raw_source.replace("詩歌源考", "").strip()
                     break
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - 源考提取失败保持为空
             print(f"   ⚠️ 源考提取失败: {e}")
 
         # 4. 提取歌词 (处理 Tab)
@@ -218,7 +218,7 @@ class HymnExtractor:
                         if text and text not in lyrics_parts:
                             lyrics_parts.append(text)
                             break
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - 歌词提取失败时返回空歌词
             print(f"   ⚠️ 歌词提取失败: {e}")
 
         # 将歌词填入 result["verses"] 列表，并统计节数

@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """
 step7_png_db.py — 图片以新增字段方式入库 + 清理分页小图
 
@@ -66,7 +65,7 @@ def load_progress():
         if data.get("version") != PROGRESS_VERSION:
             return {}
         return {h: "done" for h in data.get("completed", [])}
-    except Exception:
+    except Exception:  # noqa: BLE001 - 进度文件损坏时从头开始
         return {}
 
 

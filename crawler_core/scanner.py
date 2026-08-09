@@ -4,14 +4,15 @@
 import os
 import re
 import time
+from urllib.parse import urljoin
+
 import urllib3
 from bs4 import BeautifulSoup
-from urllib.parse import urljoin
 from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.support.ui import WebDriverWait
 
-from .config import BASE_URL, LIST_URL, SAVE_ROOT, MAP_FILE, HEADERS
+from .config import BASE_URL, LIST_URL, MAP_FILE, SAVE_ROOT
 from .driver import init_driver
 
 urllib3.disable_warnings()
@@ -47,7 +48,7 @@ class Scanner:
         start = time.time()
 
         print(f"\n{'='*50}")
-        print(f"📋 Step 1: 扫描列表页")
+        print("📋 Step 1: 扫描列表页")
         print(f"{'='*50}")
 
         while current_url and page_count <= 100:
@@ -59,7 +60,7 @@ class Scanner:
                 WebDriverWait(self.driver, 8).until(
                     EC.presence_of_element_located((By.CSS_SELECTOR, "div.music"))
                 )
-            except:
+            except Exception:  # noqa: BLE001 - 等待/导航超时, 继续下一页
                 print("  ⚠️ 等待超时，继续...")
 
             soup = BeautifulSoup(self.driver.page_source, 'html.parser')
@@ -152,8 +153,7 @@ class Scanner:
             return
         mode = 'a' if os.path.exists(MAP_FILE) else 'w'
         with open(MAP_FILE, mode, encoding='utf-8') as f:
-            for item in self.created_dirs:
-                f.write(f"{item['id']}|{item['name']}|{item['url']}\n")
+            f.writelines(f"{item['id']}|{item['name']}|{item['url']}\n" for item in self.created_dirs)
         print(f"💾 新增 {len(self.created_dirs)} 条记录到映射表")
 
     def close(self):

@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """
 step6_update_img.py — 更新 checksums.json（图片哈希清单维护）
 
