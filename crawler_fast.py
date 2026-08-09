@@ -120,8 +120,8 @@ def main():
         ("3", "仅 资源探测（PDF HEAD + 音频页面点击）"),
         ("4", "仅 下载多媒体资源（根据 probe_report.json）"),
         ("5", "校验与报告（第四阶段：数据对账 + 资源核验 + final_report）"),
-        ("7", "仅 转图片：PDF→窄边距 PNG + 双页拼接 + 图片路径入库 + 哈希清单"),
-        ("6", "全流程：Step 1 → Step 2 → 资源探测 → 下载 → 校验 → 转图片入库"),
+        ("6", "仅 转图片：PDF→窄边距 PNG + 双页拼接 + 图片路径入库 + 哈希清单"),
+        ("7", "全流程：Step 1 → Step 2 → 资源探测 → 下载 → 校验 → 转图片入库"),
     ]
     if failed_count > 0:
         items.append(("8", f"补全失败：重试提取 {failed_count} 首失败诗歌"))
@@ -150,7 +150,7 @@ def main():
     total_start = time.time()
 
     # ---- Step 1 ----
-    if choice in ("1", "6"):
+    if choice in ("1", "7"):
         scanner = Scanner()
         songs = scanner.scan()
         scanner.close()
@@ -159,7 +159,7 @@ def main():
             return
 
     # ---- Step 2 ----
-    if choice in ("2", "6"):
+    if choice in ("2", "7"):
         songs = load_url_map()
         if not songs:
             print("❌ url_map.txt 无数据，请先执行 Step 1。")
@@ -171,8 +171,8 @@ def main():
         print(f"   ✅ Step 2：成功 {result['success']} 首，失败 {result['failed']} 首")
 
     # ---- 资源探测 ----
-    if choice in ("3", "6"):
-        if choice == "6":
+    if choice in ("3", "7"):
+        if choice == "7":
             while True:
                 try:
                     ans = input("👉 是否执行资源探测（PDF + 音频）？[Y/n] ").strip().lower()
@@ -192,8 +192,8 @@ def main():
             probe_report = run_probe()
 
     # ---- 下载 ----
-    if choice in ("4", "6"):
-        if choice == "6":
+    if choice in ("4", "7"):
+        if choice == "7":
             while True:
                 try:
                     ans = input("👉 是否下载多媒体资源？[Y/n] ").strip().lower()
@@ -212,13 +212,13 @@ def main():
             run_download()
 
     # ---- 校验与报告 ----
-    # 选项 5：独立执行校验；选项 6：全流程的中间一步（其后转图片入库）
-    if choice in ("5", "6"):
+    # 选项 5：独立执行校验；选项 7：全流程的中间一步（其后转图片入库）
+    if choice in ("5", "7"):
         run_step4()
 
     # ---- 转图片入库（Step5 + Step7 + Step6）----
-    # 选项 7：独立执行；选项 6：全流程的最后一步
-    if choice in ("7", "6"):
+    # 选项 6：独立执行；选项 7：全流程的最后一步
+    if choice in ("6", "7"):
         print("\n🖼️  转图片入库：PDF → 窄边距 PNG → 图片路径入库 → 哈希清单...")
         print("----- Step 5: PDF → 窄边距 PNG（含双页拼接） -----")
         run_step5()
