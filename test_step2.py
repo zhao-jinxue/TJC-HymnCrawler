@@ -4,6 +4,8 @@ import os
 import re
 import time
 import sqlite3
+from typing import Any
+
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.chrome.options import Options
@@ -16,7 +18,7 @@ from selenium.common.exceptions import TimeoutException, NoSuchElementException
 DB_NAME = "tjc_hymn_test.db"
 
 # 测试目标：前 6 首 + 4 首指定的同名诗歌 (共 10 首)
-TEST_TARGETS = [
+TEST_TARGETS: list[dict[str, Any]] = [
     {"seq_num": "001", "hymn_number": "1", "url": "https://sacredmusic.tjc.org.tw/hymn/1"},
     {"seq_num": "002", "hymn_number": "2", "url": "https://sacredmusic.tjc.org.tw/hymn/2"},
     {"seq_num": "003", "hymn_number": "3", "url": "https://sacredmusic.tjc.org.tw/hymn/3"},
@@ -76,8 +78,8 @@ def init_driver():
 
 def parse_hymn_detail(driver, url):
     """解析详情页，适配 Vue 动态结构、Tab 切换及资源提取"""
-    result = {
-        "title": "Unknown", "lyricist": "Unknown", 
+    result: dict[str, Any] = {
+        "title": "Unknown", "lyricist": "Unknown",
         "composer": "Unknown", "source": "Unknown", "lyrics": "",
         "scores": [], "audios": []  # 新增：乐谱列表 和 音频列表
     }

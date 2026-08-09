@@ -93,7 +93,7 @@ def run_download(probe_report=None):
 
     def download_one(item):
         try:
-            resp = requests.get(item["url"], headers=HEADERS, timeout=30, verify=False)
+            resp = requests.get(item["url"], headers=HEADERS, timeout=30, verify=False)  # nosec B501 - 目标站点为自有证书环境, 刻意关闭SSL校验
             if resp.status_code == 200:
                 os.makedirs(os.path.dirname(item["path"]), exist_ok=True)
                 with open(item["path"], 'wb') as f:

@@ -240,7 +240,6 @@
   - **PIL (pillow)**：图片裁边/拼接（虚拟环境已装 12.3.0）
   - **poppler 工具**：`pdftoppm`（PDF→PNG）、`pdfinfo`、`pdftotext`（系统级）
 - **代码质量工具（已装）**：ruff 0.16.2、bandit 1.9.4、mypy 2.3.0、pytest 9.1.1
-- 代码检查结论：ruff 0 错误（排除 test*）、bandit 无真实漏洞（B501/B608 为刻意取舍+白名单列名）、mypy 生产代码 0 错误、pytest 0 用例（test_step* 为独立脚本）
 
 ---
 
@@ -335,11 +334,11 @@
 - [x] **pre-commit 抹除 PNG 哈希**：`generate_checksums.py` EXTS 加入 `.png`
 - [x] **代码检查 142 项**：A 层 ruff 自动 52 + B 层人工 49，全部修复，ruff 0 错误
 
-### 🔄 待优化（已知保留项）
-- [ ] `#62 人聲版`：服务器端 404 事实，保持归档
-- [ ] bandit B501/B608：爬虫刻意取舍（自有证书）+ 白名单列名，如需可加 `# nosec` 显式标注
-- [ ] `test_step*.py` 为独立脚本非 pytest 用例；如需要可改造为 pytest 测试（当前 pytest 0 用例）
-- [ ] mypy 测试文件 3 处类型警告（生产代码 0 错误，可用 `--exclude test*` 消除）
+### ✅ 已知项已全部完结（2026-08-09）
+- [x] `#62 人聲版`：服务器端 404 事实，保持归档（无代码改动）
+- [x] **bandit 显式标注**：downloader.py B501、probe.py B501 加 `# nosec B501`；db.py B608 用"前置注释 + 变量化 SQL"加 `# nosec B608`（B501/B608 已全部抑制）
+- [x] **pytest 用例落地**：新增 `test_smoke.py`（6 个纯单元冒烟用例：路径解析/PNG 推导/目录编号），`pytest -v` 全部通过；test_step1/2/3 保留为独立脚本（需网络+浏览器，不适合 pytest）
+- [x] **mypy 测试文件清零**：test_step1.py 补 `existing_local_dirs: set[str]`、test_step2.py 补 `TEST_TARGETS: list[dict[str, Any]]` 与 `result: dict[str, Any]`，mypy 默认配置 `Success: no issues found in 3 source files`
 
 ---
 

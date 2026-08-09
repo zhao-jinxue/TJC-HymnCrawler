@@ -116,7 +116,7 @@ def _probe_pdfs(songs):
 
     def head_ok(url):
         try:
-            return requests.head(url, timeout=5, allow_redirects=True, verify=False).status_code == 200
+            return requests.head(url, timeout=5, allow_redirects=True, verify=False).status_code == 200  # nosec B501 - 自有证书环境, 刻意关闭SSL校验
         except Exception:  # noqa: BLE001 - 网络异常视为探测失败
             return False
 

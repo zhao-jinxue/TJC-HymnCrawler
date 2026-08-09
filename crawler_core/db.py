@@ -51,7 +51,8 @@ def _migrate_v1_to_v4(c, columns):
                                "download_status", "integrity_status")]
     oc = ", ".join(old_cols)
 
-    c.execute(f"""
+    # nosec B608 - 列名来自 PRAGMA 白名单过滤(非用户输入), SQL 值均参数化
+    sql = f"""
         INSERT INTO tjc_hymn ({oc}, audio_versions, audio_version_list)
         SELECT {oc},
                CASE WHEN piano_audio_path != '' OR vocal_audio_path != ''
@@ -70,7 +71,8 @@ def _migrate_v1_to_v4(c, columns):
                    ELSE '[]'
                END
         FROM tjc_hymn_old
-    """)
+    """
+    c.execute(sql)  # nosec B608 - 列名来自 PRAGMA 白名单过滤(非用户输入), SQL 值均参数化
     c.execute("DROP TABLE tjc_hymn_old")
     conn.commit()
 

@@ -28,7 +28,7 @@ HEADERS = {
 SAVE_ROOT = "Hymn_Downloads"
 os.makedirs(SAVE_ROOT, exist_ok=True)
 
-existing_local_dirs = set()
+existing_local_dirs: set[str] = set()
 
 
 def load_existing_directories():
