@@ -5,8 +5,9 @@ step5_pdf2png.py — 批量将 Hymn_Downloads/ 下所有 PDF 转换为「窄边�
 
 功能:
   - 递归扫描 Hymn_Downloads/ 下所有 .pdf
-  - pdftoppm 300DPI 转 PNG(单页守为同名 .png, 多页守为 name_p1/p2.png)
+  - pdftoppm 300DPI 转 PNG(单页为同名 .png; 多页先转 name_p1/p2.png)
   - 自动检测内容包围盒, 裁掉四周空白, 保留窄边距
+  - 多页(双页)PDF: 将 _p1.png(上) + _p2.png(下) 上下拼接为同名 .png, 并删除分页小图
 
 用法:
   python3 step5_pdf2png.py               # 增量: 仅转换 PNG 不存在 或 PDF 更新的
@@ -14,11 +15,15 @@ step5_pdf2png.py — 批量将 Hymn_Downloads/ 下所有 PDF 转换为「窄边�
   python3 step5_pdf2png.py --dpi 300     # 自定义分辨率(默认300)
   python3 step5_pdf2png.py --margin 40   # 自定义窄边距像素(默认40)
   python3 step5_pdf2png.py --limit 3     # 只处理前 N 个(测试用)
+
+兼容性说明:
+  - 单页 PDF 生成 "<基名>.png"
+  - 双页 PDF 生成 "<基名>.png"(拼接整图), 分页小图 _p1/_p2 删除
+  - 全程不动数据库, 数据库图片路径由 step7_png_db.py 以新增字段方式回填
 """
 import argparse
 import os
 import subprocess
-import sys
 
 ROOT = os.path.dirname(os.path.abspath(__file__))
 os.chdir(ROOT)
@@ -78,12 +83,66 @@ def trim_to_margin(png_path, margin):
     return (w, h), im2.size
 
 
+def join_pages(dirpath, base):
+    """双页拼接: <基名>_p1.png(上) + <基名>_p2.png(下) -> <基名>.png
+
+    返回 (status, info):
+      status: 'ok' 拼接成功 / 'skip' 无需拼接 / 'missing' 缺分页
+    """
+    p1 = os.path.join(dirpath, base + "_p1.png")
+    p2 = os.path.join(dirpath, base + "_p2.png")
+    out = os.path.join(dirpath, base + ".png")
+
+    if not (os.path.exists(p1) and os.path.exists(p2)):
+        return "missing", "缺分页图"
+
+    # 增量: 整图比两个分页都新则跳过
+    if os.path.exists(out):
+        t_out = os.path.getmtime(out)
+        if t_out >= os.path.getmtime(p1) and t_out >= os.path.getmtime(p2):
+            return "skip", "拼接整图已是最新"
+
+    from PIL import Image
+    im1 = Image.open(p1).convert("RGB")
+    im2 = Image.open(p2).convert("RGB")
+    w = max(im1.width, im2.width)
+    h = im1.height + im2.height
+    canvas = Image.new("RGB", (w, h), (255, 255, 255))
+    canvas.paste(im1, ((w - im1.width) // 2, 0))
+    canvas.paste(im2, ((w - im2.width) // 2, im1.height))
+    canvas.save(out, dpi=(300, 300))
+    im1.close()
+    im2.close()
+
+    # 拼接成功后删除分页小图
+    for pg in (p1, p2):
+        if os.path.exists(pg):
+            os.remove(pg)
+    return "ok", f"{w}x{h}"
+
+
+def clean_orphan_pages(dirpath):
+    """清理无同名整图的分页小图(防残留)"""
+    from PIL import Image
+    files = set(os.listdir(dirpath))
+    removed = 0
+    for fn in list(files):
+        if fn.endswith(("_p1.png", "_p2.png")):
+            base = fn.replace("_p1.png", "").replace("_p2.png", "")
+            if base + ".png" in files:
+                os.remove(os.path.join(dirpath, fn))
+                removed += 1
+    return removed
+
+
 def convert_one(pdf_path, dpi, margin, force):
     """转换单个 PDF; 返回 (状态, 说明)"""
     base = pdf_path[:-4]  # 去掉 .pdf
+    dirpath = os.path.dirname(base)
+    basename = os.path.basename(base)
     page_count = get_page_count(pdf_path)
 
-    # 目标文件列表
+    # 单页: 目标为该同名 .png; 双页: 目标为分页 _p1/_p2(后续拼接)
     if page_count == 1:
         targets = [base + ".png"]
     else:
@@ -98,7 +157,9 @@ def convert_one(pdf_path, dpi, margin, force):
                 all_fresh = False
                 break
         if all_fresh:
-            return "skip", "已存在且为最新"
+            # 双页还需确认拼接整图存在
+            if page_count == 1 or os.path.exists(base + ".png"):
+                return "skip", "已存在且为最新"
 
     # pdftoppm 转换:
     #  单页 -> -singlefile 输出 base.png (不追加页码后缀)
@@ -129,34 +190,36 @@ def convert_one(pdf_path, dpi, margin, force):
         orig, new = trim_to_margin(t, margin)
         trim_info.append(f"{os.path.basename(t)} {orig[0]}x{orig[1]}->{new[0]}x{new[1]}")
 
+    # 双页: 拼接整图 + 清理分页
+    if page_count > 1:
+        jstatus, jinfo = join_pages(dirpath, basename)
+        if jstatus == "ok":
+            trim_info.append(f"拼接 {jinfo}")
+        elif jstatus == "fail":
+            return "fail", "拼接失败"
+
     return "ok", "; ".join(trim_info)
 
 
-def main():
-    parser = argparse.ArgumentParser(description="批量 PDF -> 窄边距 PNG")
-    parser.add_argument("--force", action="store_true", help="全量重新转换并覆盖")
-    parser.add_argument("--dpi", type=int, default=DEFAULT_DPI, help="分辨率(默认300)")
-    parser.add_argument("--margin", type=int, default=DEFAULT_MARGIN, help="窄边距像素(默认40)")
-    parser.add_argument("--limit", type=int, default=0, help="只处理前 N 个(测试用, 0=全部)")
-    args = parser.parse_args()
-
+def run(dpi=DEFAULT_DPI, margin=DEFAULT_MARGIN, force=False, limit=0):
+    """程序化入口: 供 crawler_fast.py 调用; 命令行入口走 main()"""
     pdfs = find_all_pdfs("Hymn_Downloads")
     total = len(pdfs)
     print(f"扫描到 PDF 总数: {total}")
     if total == 0:
         print("未找到 PDF, 退出")
-        return
+        return {"ok": 0, "skip": 0, "fail": 0, "total": 0}
 
-    if args.limit > 0:
-        pdfs = pdfs[: args.limit]
-        print(f"测试模式: 仅处理前 {args.limit} 个")
+    if limit > 0:
+        pdfs = pdfs[:limit]
+        print(f"测试模式: 仅处理前 {limit} 个")
     else:
-        print(f"模式: {'全量覆盖' if args.force else '增量(跳过已处理)'} | DPI={args.dpi} | 边距={args.margin}px")
+        print(f"模式: {'全量覆盖' if force else '增量(跳过已处理)'} | DPI={dpi} | 边距={margin}px")
 
     ok = fail = skip = 0
     fail_list = []
     for idx, pdf in enumerate(pdfs, 1):
-        status, detail = convert_one(pdf, args.dpi, args.margin, args.force)
+        status, detail = convert_one(pdf, dpi, margin, force)
         if status == "ok":
             ok += 1
             print(f"[{idx}/{total}] OK   {os.path.relpath(pdf)} | {detail}")
@@ -170,11 +233,31 @@ def main():
 
     print("\n===== 统计 =====")
     print(f"总数: {total} | 成功: {ok} | 跳过: {skip} | 失败: {fail}")
+
+    # 清理残留分页图(无论转换与否, 保证目录整洁)
+    cleaned = 0
+    for dirpath, _d, files in os.walk("Hymn_Downloads"):
+        if any(f.endswith(("_p1.png", "_p2.png")) for f in files):
+            cleaned += clean_orphan_pages(dirpath)
+    if cleaned:
+        print(f"清理残留分页小图: {cleaned} 张")
+
     if fail_list:
         print("失败清单:")
         for f in fail_list:
             print("  " + f)
     print("完成")
+    return {"ok": ok, "skip": skip, "fail": fail, "total": total}
+
+
+def main():
+    parser = argparse.ArgumentParser(description="批量 PDF -> 窄边距 PNG")
+    parser.add_argument("--force", action="store_true", help="全量重新转换并覆盖")
+    parser.add_argument("--dpi", type=int, default=DEFAULT_DPI, help="分辨率(默认300)")
+    parser.add_argument("--margin", type=int, default=DEFAULT_MARGIN, help="窄边距像素(默认40)")
+    parser.add_argument("--limit", type=int, default=0, help="只处理前 N 个(测试用, 0=全部)")
+    args = parser.parse_args()
+    run(dpi=args.dpi, margin=args.margin, force=args.force, limit=args.limit)
 
 
 if __name__ == "__main__":

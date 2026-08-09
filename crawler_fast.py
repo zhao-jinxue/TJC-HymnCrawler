@@ -19,6 +19,9 @@ from crawler_core.extractor import Extractor, load_url_map
 from crawler_core.probe import run_probe, load_probe_report
 from crawler_core.downloader import run_download
 from step4_verify_and_report import main as run_step4
+from step5_pdf2png import run as run_step5
+from step6_update_img import run as run_step6
+from step7_png_db import run as run_step7
 
 
 # ================= 打印横线 =================
@@ -117,10 +120,11 @@ def main():
         ("3", "仅 资源探测（PDF HEAD + 音频页面点击）"),
         ("4", "仅 下载多媒体资源（根据 probe_report.json）"),
         ("5", "校验与报告（第四阶段：数据对账 + 资源核验 + final_report）"),
-        ("6", "全流程：Step 1 → Step 2 → 资源探测 → 下载 → 校验与报告"),
+        ("6", "全流程：Step 1 → Step 2 → 资源探测 → 下载 → 校验 → 转图片入库"),
+        ("7", "仅 转图片：PDF→窄边距 PNG + 双页拼接 + 图片路径入库 + 哈希清单"),
     ]
     if failed_count > 0:
-        items.append(("7", f"补全失败：重试提取 {failed_count} 首失败诗歌"))
+        items.append(("8", f"补全失败：重试提取 {failed_count} 首失败诗歌"))
     items.append(("0", "退出"))
 
     print("📋 请选择要执行的步骤：\n")
@@ -130,17 +134,17 @@ def main():
 
     while True:
         try:
-            choice = input("请输入选项 [0-7] (默认 5): ").strip()
+            choice = input("请输入选项 [0-8] (默认 5): ").strip()
         except (EOFError, KeyboardInterrupt):
             choice = "0"
             print()
         if choice == "":
             choice = "5"
             break
-        elif choice in ("0", "1", "2", "3", "4", "5", "6", "7"):
+        elif choice in ("0", "1", "2", "3", "4", "5", "6", "7", "8"):
             break
         else:
-            print("   无效选项，请输入 0-7")
+            print("   无效选项，请输入 0-8")
 
     print()
     total_start = time.time()
@@ -208,12 +212,23 @@ def main():
             run_download()
 
     # ---- 校验与报告 ----
-    # 选项 5：独立执行校验；选项 6：全流程的最后一步
+    # 选项 5：独立执行校验；选项 6：全流程的中间一步（其后转图片入库）
     if choice in ("5", "6"):
         run_step4()
 
+    # ---- 转图片入库（Step5 + Step7 + Step6）----
+    # 选项 7：独立执行；选项 6：全流程的最后一步
+    if choice in ("7", "6"):
+        print("\n🖼️  转图片入库：PDF → 窄边距 PNG → 图片路径入库 → 哈希清单...")
+        print("----- Step 5: PDF → 窄边距 PNG（含双页拼接） -----")
+        run_step5()
+        print("\n----- Step 7: 图片路径写入数据库新增字段 -----")
+        run_step7()
+        print("\n----- Step 6: 更新 checksums.json 哈希清单 -----")
+        run_step6()
+
     # ---- 补全 ----
-    if choice == "7":
+    if choice == "8":
         failed_songs = get_failed_songs()
         if not failed_songs:
             print("✅ 没有需要补全的诗歌。")

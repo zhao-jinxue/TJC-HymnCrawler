@@ -87,7 +87,8 @@ def delete_pages():
     return deleted, skipped
 
 
-def main():
+def run():
+    """程序化入口: 供 crawler_fast.py 调用"""
     conn = sqlite3.connect(DB)
     added = ensure_fields(conn)
     print(f"[字段] 新增: {added if added else '无(已存在)'}")
@@ -99,6 +100,11 @@ def main():
     deleted, skipped = delete_pages()
     print(f"[清理] 删除分页图 {deleted} 张, 保留(无整图) {skipped} 张")
     print("完成")
+    return {"staff": s_ok, "numbered": n_ok, "deleted_pages": deleted}
+
+
+def main():
+    run()
 
 
 if __name__ == "__main__":

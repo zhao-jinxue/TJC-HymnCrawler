@@ -1,12 +1,17 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-step6_update_img.py — 更新数据库图片路径 + 追加 checksums.json
+step6_update_img.py — 更新 checksums.json（图片哈希清单维护）
 
-任务1: 将 tjc_hymn.db 的 staff_img_path / numbered_img_path 从 PDF 改为 PNG
-       - 单页: <编号>_五线谱.png  / <编号>_简谱.png
-       - 双页: <编号>_五线谱_p1.png / <编号>_简谱_p1.png (取第一页)
-任务2: 遍历每个子目录的 checksums.json, 追加/更新所有 PNG 的 {file, sha256}
+职责(本版本精简):
+  遍历 Hymn_Downloads 下每个子目录, 将目录内所有 PNG 的 {file, sha256}
+  追加/更新到该目录的 checksums.json。
+  由 generate_checksums.py 兜底重建(pre-commit hook 也会调用该脚本),
+  本脚本保障"PNG 增删后哈希清单同步"。
+
+兼容性说明:
+  - 不再改写 tjc_hymn.db 的 staff_img_path/numbered_img_path(保持 PDF 路径);
+    图片路径由 step7_png_db.py 以新增字段 staff_png_path/numbered_png_path 维护。
 
 用法:
   python3 step6_update_img.py
@@ -14,12 +19,9 @@ step6_update_img.py — 更新数据库图片路径 + 追加 checksums.json
 import hashlib
 import json
 import os
-import sqlite3
 
 ROOT = os.path.dirname(os.path.abspath(__file__))
 os.chdir(ROOT)
-
-DB = "tjc_hymn.db"
 
 
 def sha256_of(path):
@@ -31,55 +33,8 @@ def sha256_of(path):
     return h.hexdigest()
 
 
-def resolve_png_from_pdf(pdf_path):
-    """从 PDF 路径推导对应 PNG 路径(单页同名; 双页取 _p1)"""
-    if not pdf_path:
-        return None
-    stem = pdf_path[:-4]  # 去掉 .pdf
-    cand1 = stem + ".png"
-    if os.path.exists(cand1):
-        return cand1
-    cand2 = stem + "_p1.png"
-    if os.path.exists(cand2):
-        return cand2
-    return None
-
-
-def update_db():
-    """任务1: 更新数据库图片路径 PDF -> PNG"""
-    conn = sqlite3.connect(DB)
-    cur = conn.cursor()
-    cur.execute("SELECT hymn_number, staff_img_path, numbered_img_path FROM tjc_hymn")
-    rows = cur.fetchall()
-    updated_staff = updated_numbered = 0
-    missing_staff = missing_numbered = 0
-
-    for num, staff_pdf, numbered_pdf in rows:
-        staff_png = resolve_png_from_pdf(staff_pdf) if staff_pdf and staff_pdf.endswith(".pdf") else None
-        if staff_png:
-            cur.execute("UPDATE tjc_hymn SET staff_img_path=? WHERE hymn_number=?",
-                        (staff_png, num))
-            updated_staff += 1
-        elif staff_pdf and staff_pdf.endswith(".pdf"):
-            missing_staff += 1
-
-        numbered_png = resolve_png_from_pdf(numbered_pdf) if numbered_pdf and numbered_pdf.endswith(".pdf") else None
-        if numbered_png:
-            cur.execute("UPDATE tjc_hymn SET numbered_img_path=? WHERE hymn_number=?",
-                        (numbered_png, num))
-            updated_numbered += 1
-        elif numbered_pdf and numbered_pdf.endswith(".pdf"):
-            missing_numbered += 1
-
-    conn.commit()
-    conn.close()
-    print(f"[任务1] DB 更新完成: staff {updated_staff} 条, numbered {updated_numbered} 条")
-    if missing_staff or missing_numbered:
-        print(f"[任务1] 警告: 找不到对应PNG staff {missing_staff}, numbered {missing_numbered}")
-
-
-def update_checksums():
-    """任务2: 追加/更新 checksums.json 中的 PNG 条目"""
+def run_chks():
+    """追加/更新 checksums.json 中的 PNG 条目; 返回更新的目录数"""
     changed_dirs = 0
     for dirpath, _dirs, files in os.walk("Hymn_Downloads"):
         checksum_path = os.path.join(dirpath, "checksums.json")
@@ -107,13 +62,17 @@ def update_checksums():
                 fh.write("\n")
             changed_dirs += 1
 
-    print(f"[任务2] checksums.json 更新: {changed_dirs} 个目录")
+    print(f"[任务: checksums] 更新: {changed_dirs} 个目录")
+    return changed_dirs
+
+
+def run():
+    """程序化入口: 供 crawler_fast.py 调用"""
+    return run_chks()
 
 
 def main():
-    update_db()
-    update_checksums()
-    print("完成")
+    run()
 
 
 if __name__ == "__main__":
