@@ -1,5 +1,5 @@
 {
-    "python.defaultInterpreterPath": "/home/zjx/hymn_crawler_env/bin/python3",
+    "python.defaultInterpreterPath": "/home/zjx/python_env/bin/python3",
     "python.analysis.extraPaths": [
         "/home/zjx/hymn_crawler_env/lib/python3/site-packages"
     ]
