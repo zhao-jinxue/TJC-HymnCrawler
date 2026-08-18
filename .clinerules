@@ -69,22 +69,15 @@
 4. **大文件已入库时**：优先重做提交（`git rm --cached <file>` → `git commit --amend` / `git reset --soft` 重提），避免历史膨胀；重提后 **立即清残留对象**：`git reflog expire --expire=now --all && git gc --prune=now`（否则 45MB blob 以不可达对象永久残留、`.git` 持续膨胀）
 5. **禁止禁用 git 自动维护**：不得设置 `gc.auto=0`（曾因该配置导致松散对象从不打包、60MB `.git` 卡顿）；需关闭自动 gc 时用 `git config gc.auto 0` 仅在临时场景使用，事后必须恢复（`git config --unset gc.auto`）
 6. **推送超时**：GitHub 走 SSH（`git@github.com` 已配置），推送前确认本地远程差异少量（`git status -sb`），避免大提交推送中断
-</｜｜DSML｜｜>
-</｜｜DSML｜｜>
-</replace_in_file>
-<task_progress>
-- [x] 排查 git commit 异常原因（45MB exe 为次要因素）
-- [x] 更新 .gitignore / .clinerules / README / 会话日志
-- [x] 重做提交移除 exe（17d9bf6 含 5 files）
-- [x] 发现 execute_command 实际 cwd 不在仓库（关键线索）
-- [x] 验证 cwd 问题与 .git 对象库状态
-- [x] 实测 pre-commit 钩子真实耗时（0.003s，非瓶颈）
-- [x] 检查 git config 与残留大对象（gc.auto=0 导致 45MB blob 永久残留）
-- [x] 根治清理：gc prune 剔除 45MB 残骸，.git 58.5MB→1.34MB
-- [x] 恢复 git 自动维护（移除 gc.auto=0）
-- [ ] 更新 .clinerules 补充 gc.auto 教训
-- [ ] 更新会话日志最终根治结论
-- [ ] 提交推送全部改动并验证
-</task_progress>
-</｜｜DSML｜｜>
-</｜｜DSML｜｜>
+
+## 文档防污染（2026-08-18 加入）
+> 背景：`.clinerules` 与 `docs/sessions/` 日志曾混入工具调用的 XML 残留（如 `</｜｜DSML｜｜>`、`</replace_in_file>`、`<task_progress>` 等），污染文档内容。
+
+### 成因（避免重蹈覆辙）
+- 在**会话中断 / 任务恢复**场景下，工具调用可能被系统重试；若调用参数内误包含工具自身的闭合标签，这些标签会被当作**文件正文**写入目标文件。
+
+### 强制规则
+1. **写文档类文件时**：`write_to_file` / `replace_in_file` 的正文内容中**严禁出现**工具标签（如 `<task_progress>`、`</｜｜DSML｜｜>`、`</replace_in_file>`、`</tool>`等）——正文只能有 Markdown 文本
+2. **工具调用收尾自查**：每次 `replace_in_file` / `write_to_file` 后，若该文件是 `.md` / `.rules` 等文本文档，应快速用 `read_file` 核对文件末尾是否有异常标签残留；发现后立即清理再提交
+3. **文件被污染时的处理**：直接重写整个文件（`write_to_file`），或删除污染行（`replace_in_file`），严禁带着垃圾标记提交
+4. **发现即报告**：若在 `.clinerules` / 会话日志中发现工具标签残留，应主动记录到会话日志并在本次提交中一并修复
