@@ -19,3 +19,11 @@ __pycache__/
 # 数据库文件（probe_report.json 保留跟踪，作为 db 重建的保险）
 *.db-journal
 
+# 大型二进制安装包（禁止提交，避免 git 仓库膨胀与提交卡顿）
+*.exe
+*.msi
+*.dmg
+*.zip
+*.tar.gz
+*.7z
+
