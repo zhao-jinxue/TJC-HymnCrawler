@@ -22,8 +22,26 @@
 - 测试命令：`/home/zjx/python_env/bin/python -m pytest test/ -x -q`
 - 构建/验证：参考 `hymn_crawler_plan.md` 与 `docs/CLINE_CONTEXT_MINIMIZE.md`
 
-## 会话日志强制流程
-- 每个会话在 `docs/sessions/YYYY-MM-DD_HH-MM-SS.md` 记录：提问 / 解决思路 / 最终结果
+## 千问 API Key（图片解析/理解）
+- **触发条件**：任务涉及"解析图片、理解图片、识别图片内容、读取图片文字、视觉问答"时，使用千问多模态视觉 API
+- **API Key 存放**：本地文件 `/home/zjx/.cline/qwen_key.txt`（脚本读取，**禁止**明文写入代码 / 规则 / 文档）
+- **调用方式**：OpenAI SDK 兼容格式，base URL `https://dashscope.aliyuncs.com/compatible-mode/v1`，模型 `qwen-vl-ocr`（目录 OCR）/ `qwen-vl-plus` / `qwen-vl-max`
+- **现有脚本**：`tool/qwen_ocr.py`（调用 Qwen-VL 识别目录图片中的文字，key 从本地文件读取不打印），模型可在 `--model` 参数覆盖
+
+## 会话日志强制流程（Cline 开发记录档案）
+> 目的：将使用 Cline Agent 的开发经历完整留档——每个会话的提问、解决思路、最终结果，形成可回溯的项目档案。
+
+### 强制流程（每个任务必须遵守）
+1. **任务开始（会话内第一个任务时）**：在 `docs/sessions/` 目录以**会话开始时间**创建日志，命名为 `YYYY-MM-DD_HH-MM-SS.md`，复制 `docs/sessions/_template.md` 为基底
+2. **记录提问**：记录用户的初始提问与后续追问（保持用户原意，技术细节可简写）
+3. **记录思路**：动手前先阐述分析结论、可选方案对比、选定方案与理由
+4. **记录结果**：任务完成或中断时记录——完成结论、关键改动文件清单、验证方式、遇到的困难、遗留问题
+5. **日志章节**（模板已固化，必须包含）：`## 提问` / `## 解决思路` / `## 最终结果`
+6. **多任务处理**：一个会话可能包含多个任务——同一日志文件内按 `## 任务 N：<标题>` 分段追加，全部任务完成后再写 `## 会话总结`
+7. **与 git 同步**：日志随代码改动一起 `git add docs/sessions/` 提交
+
+### 质量要求
+- 只记录**有价值的决策与结论**，禁止工具调用流水账
 - 结果必须含三要素：**改了什么文件 / 验证了什么 / 遗留什么**
-- 日志随代码一起 `git add docs/sessions/` 提交
 - 中断的会话也要记录已完成步骤与未完成事项（以便续接）
+- 规范细节见 `docs/sessions/README.md`；模板见 `docs/sessions/_template.md`
