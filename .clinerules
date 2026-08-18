@@ -1,0 +1,29 @@
+# hymn_crawler 项目规则
+
+## 新会话启动流程（续接开发，目的：最小化上下文）
+按以下顺序加载上下文，不要多做任何事：
+
+1. 读 `docs/SESSION_SUMMARY.md`（开发总结）——按需全文或关键章节
+2. 若存在 `docs/UI_CONFIRMATION.md`，只读「最终设计定稿」章节（用 start_line/end_line 限定）
+3. 执行 `git log --oneline -15` 查看提交历史
+4. 用不超过 5 行汇报：当前状态 / 最近提交 / 遗留任务，然后停止等待用户指令
+
+**禁止**：
+- 不读 `.clinerules` / `.mcp.json` / 全局规则（系统已自动注入）
+- 不遍历用户配置目录、不扫描整个仓库目录树
+- 不调用任何 MCP 工具
+- 不整文件读取长文档，优先按章节读取
+
+## 项目关键信息
+- 项目类型：TJC 赞美诗（hymn）数据爬虫 + 数据处理流水线
+- Python 环境：`/home/zjx/python_env/bin/python`（内含 opencc / rapidocr 等依赖）
+- 核心代码：`crawler_core/`（爬虫框架）、`tool/`（数据处理工具）、`test/`（测试）
+- 数据文件：`tjc_hymn.db`（SQLite 数据库）、`probe_report.json`、`final_report.txt`
+- 测试命令：`/home/zjx/python_env/bin/python -m pytest test/ -x -q`
+- 构建/验证：参考 `hymn_crawler_plan.md` 与 `docs/CLINE_CONTEXT_MINIMIZE.md`
+
+## 会话日志强制流程
+- 每个会话在 `docs/sessions/YYYY-MM-DD_HH-MM-SS.md` 记录：提问 / 解决思路 / 最终结果
+- 结果必须含三要素：**改了什么文件 / 验证了什么 / 遗留什么**
+- 日志随代码一起 `git add docs/sessions/` 提交
+- 中断的会话也要记录已完成步骤与未完成事项（以便续接）
