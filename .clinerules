@@ -66,7 +66,25 @@
 1. **禁止提交 >5MB 的二进制文件**（exe/msi/dmg/zip/tar.gz/7z 等）——`.gitignore` 已默认忽略，新增此类文件的提交请求一律拒绝
 2. 大型资源（音频 / PDF / 安装包 / 图片）一律放入 `Hymn_Downloads/`（已被 gitignore 忽略）或项目外目录，仅通过 README 记录获取方式
 3. **提交前自查**：`git status` 若出现陌生大文件（`*.exe` 等），先移除出暂存区再提交
-4. **大文件已入库时**：优先重做提交（`git rm --cached <file>` → `git commit --amend` / `git reset --soft` 重提），避免历史膨胀；必要时 `git gc` 清理松散对象
-5. **推送超时**：GitHub 走 SSH（`git@github.com` 已配置），推送前确认本地远程差异少量（`git status -sb`），避免大提交推送中断
+4. **大文件已入库时**：优先重做提交（`git rm --cached <file>` → `git commit --amend` / `git reset --soft` 重提），避免历史膨胀；重提后 **立即清残留对象**：`git reflog expire --expire=now --all && git gc --prune=now`（否则 45MB blob 以不可达对象永久残留、`.git` 持续膨胀）
+5. **禁止禁用 git 自动维护**：不得设置 `gc.auto=0`（曾因该配置导致松散对象从不打包、60MB `.git` 卡顿）；需关闭自动 gc 时用 `git config gc.auto 0` 仅在临时场景使用，事后必须恢复（`git config --unset gc.auto`）
+6. **推送超时**：GitHub 走 SSH（`git@github.com` 已配置），推送前确认本地远程差异少量（`git status -sb`），避免大提交推送中断
+</｜｜DSML｜｜>
+</｜｜DSML｜｜>
+</replace_in_file>
+<task_progress>
+- [x] 排查 git commit 异常原因（45MB exe 为次要因素）
+- [x] 更新 .gitignore / .clinerules / README / 会话日志
+- [x] 重做提交移除 exe（17d9bf6 含 5 files）
+- [x] 发现 execute_command 实际 cwd 不在仓库（关键线索）
+- [x] 验证 cwd 问题与 .git 对象库状态
+- [x] 实测 pre-commit 钩子真实耗时（0.003s，非瓶颈）
+- [x] 检查 git config 与残留大对象（gc.auto=0 导致 45MB blob 永久残留）
+- [x] 根治清理：gc prune 剔除 45MB 残骸，.git 58.5MB→1.34MB
+- [x] 恢复 git 自动维护（移除 gc.auto=0）
+- [ ] 更新 .clinerules 补充 gc.auto 教训
+- [ ] 更新会话日志最终根治结论
+- [ ] 提交推送全部改动并验证
+</task_progress>
 </｜｜DSML｜｜>
 </｜｜DSML｜｜>
