@@ -4172,7 +4172,8 @@
       "人聲版": {
         "url": "https://sacredmusic.tjc.org.tw/storage/uploads/hymn/audio/982121410bd623cb438b6be3d679454b.mp4",
         "filename": "982121410bd623cb438b6be3d679454b.mp4",
-        "ext": "mp4"
+        "ext": "m4a",
+        "_src_ext": "mp4"
       }
     },
     "download_status": "completed",
@@ -7430,7 +7431,7 @@
   },
   {
     "hymn_number": "349",
-    "title": "354_349救主正在等候",
+    "title": "354_349奇妙的耶穌",
     "staff_pdf": "https://sacredmusic.tjc.org.tw/storage/uploads/hymn/score/sheet/349.pdf",
     "numbered_pdf": "https://sacredmusic.tjc.org.tw/storage/uploads/hymn/score/num/349.pdf",
     "audio_versions": {

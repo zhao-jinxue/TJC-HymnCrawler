@@ -32,7 +32,8 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 os.chdir(ROOT)
 
 # 资源文件扩展名（排除 checksums.json 等非资源文件）
-RESOURCE_EXTS = {".pdf", ".m4a", ".mp3"}
+# `.mp4`：官网个别音频以 MP4 容器提供（如 #201 人聲版），归一化名仍为 .m4a，此处兜底防漏统计
+RESOURCE_EXTS = {".pdf", ".m4a", ".mp3", ".mp4"}
 
 # 音频版本分组（用于按类型聚合统计；合唱-1/2/3/4部版 归入"合唱部版"）
 VERSION_GROUP_MAP = {
