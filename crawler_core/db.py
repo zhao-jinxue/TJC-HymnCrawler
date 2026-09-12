@@ -2,6 +2,7 @@
 # 数据库管理 - 含迁移与初始化
 # v4: +download_status +integrity_status
 # v5: +staff_png_path +numbered_png_path（图片转 PNG 的保存路径）
+# v6: +chorus（副歌；官网 API lyrics_chorus，此前因采集缺陷整段丢失）
 
 import json
 import os
@@ -11,7 +12,7 @@ from .config import DB_PATH, SAVE_ROOT
 
 
 def init_db():
-    """初始化数据库，迁移到最新结构（v5: 含 PNG 图片路径字段）"""
+    """初始化数据库，迁移到最新结构（v6: 含 chorus 副歌字段）"""
     conn = sqlite3.connect(DB_PATH)
     try:
         c = conn.cursor()
@@ -31,8 +32,10 @@ def init_db():
                 _migrate_v3_to_v4(c)
             # 所有迁移路径统一幂等补 PNG 图片字段（v5）
             _migrate_v5_png_fields(c)
+            # 幂等补副歌字段（v6）
+            ensure_chorus_field(c)
             _backfill_from_probe(c, conn)
-            print("📊 数据库结构已是最新版（v5）。")
+            print("📊 数据库结构已是最新版（v6）。")
         else:
             _create_table_v4(c)
 
@@ -156,6 +159,22 @@ def _migrate_v5_png_fields(c):
         print("📦 数据库新增 staff_png_path + numbered_png_path 字段（v5）。")
 
 
+def ensure_chorus_field(c):
+    """v6: 幂等补添 chorus（副歌）字段
+
+    官网数据模型把正歌（lyrics[]）与副歌（lyrics_chorus）分开存放，
+    历史采集只取了正歌的第一个片段，副歌整段丢失；副歌独立成列后不再混入 verse_*。
+    """
+    c.execute("PRAGMA table_info(tjc_hymn)")
+    columns = {col[1] for col in c.fetchall()}
+    if "chorus" not in columns:
+        c.execute("ALTER TABLE tjc_hymn ADD COLUMN chorus TEXT DEFAULT ''")
+        c.connection.commit()
+        print("📦 数据库新增 chorus 字段（v6，副歌）。")
+        return True
+    return False
+
+
 def _backfill_from_probe(c, conn):
     """从 probe_report.json 回填 audio_versions / audio_version_list / download_status"""
     pr_path = os.path.join(os.path.dirname(DB_PATH), "probe_report.json")
@@ -214,7 +233,7 @@ def _backfill_from_probe(c, conn):
 # ================= 建表 =================
 
 def _create_table_v4(c):
-    """创建 v5 版 tjc_hymn 表（v4 字段 + PNG 图片路径字段）"""
+    """创建 v6 版 tjc_hymn 表（v4 字段 + PNG 图片路径字段 + chorus 副歌）"""
     c.execute('''CREATE TABLE IF NOT EXISTS tjc_hymn (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 hymn_number TEXT UNIQUE NOT NULL,
@@ -233,6 +252,7 @@ def _create_table_v4(c):
                 verse_8 TEXT DEFAULT '',
                 verse_9 TEXT DEFAULT '',
                 verse_10 TEXT DEFAULT '',
+                chorus TEXT DEFAULT '',
                 staff_img_path TEXT,
                 numbered_img_path TEXT,
                 staff_png_path TEXT,
@@ -252,6 +272,7 @@ def save_to_db(hymn_data):
     conn = sqlite3.connect(DB_PATH)
     try:
         c = conn.cursor()
+        ensure_chorus_field(c)  # 幂等确保 v6 字段存在
 
         av = hymn_data.get("audio_versions", {})
         audio_json = json.dumps(av, ensure_ascii=False)
@@ -262,11 +283,11 @@ def save_to_db(hymn_data):
         sql = '''INSERT INTO tjc_hymn
                  (hymn_number, title, lyricist, composer, source_info, verse_count,
                   verse_1, verse_2, verse_3, verse_4, verse_5,
-                  verse_6, verse_7, verse_8, verse_9, verse_10,
+                  verse_6, verse_7, verse_8, verse_9, verse_10, chorus,
                   staff_img_path, numbered_img_path,
                   audio_versions, audio_version_list,
                   download_status, integrity_status)
-                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                  ON CONFLICT(hymn_number) DO UPDATE SET
                     title = excluded.title, lyricist = excluded.lyricist,
                     composer = excluded.composer, source_info = excluded.source_info,
@@ -276,6 +297,9 @@ def save_to_db(hymn_data):
                     verse_5 = excluded.verse_5, verse_6 = excluded.verse_6,
                     verse_7 = excluded.verse_7, verse_8 = excluded.verse_8,
                     verse_9 = excluded.verse_9, verse_10 = excluded.verse_10,
+                    -- 副歌：新值为空时保留旧值（无副歌的诗歌不得清掉已抓取的副歌）
+                    chorus = CASE WHEN excluded.chorus IS NULL OR excluded.chorus = ''
+                                  THEN tjc_hymn.chorus ELSE excluded.chorus END,
                     -- 路径/状态类字段：新值为空时保留旧值（防止文本提取覆盖已回写的资源路径）
                     staff_img_path = CASE WHEN excluded.staff_img_path IS NULL OR excluded.staff_img_path = ''
                                           THEN tjc_hymn.staff_img_path ELSE excluded.staff_img_path END,
@@ -298,6 +322,7 @@ def save_to_db(hymn_data):
             hymn_data["source_info"], hymn_data["verse_count"]
         ]
         params.extend(hymn_data["verses"])
+        params.append(hymn_data.get("chorus", "") or "")
         params.extend([hymn_data["staff_img_path"], hymn_data["numbered_img_path"],
                        audio_json, version_list_json, ds, ins])
         c.execute(sql, params)
@@ -475,6 +500,8 @@ def print_db_status():
         total = c.fetchone()[0]
         c.execute("SELECT COUNT(*) FROM tjc_hymn WHERE verse_count > 0")
         has_lyrics = c.fetchone()[0]
+        c.execute("SELECT COUNT(*) FROM tjc_hymn WHERE chorus != '' AND chorus IS NOT NULL")
+        has_chorus = c.fetchone()[0]
         c.execute("SELECT COUNT(*) FROM tjc_hymn WHERE staff_img_path != ''")
         has_staff = c.fetchone()[0]
         c.execute("SELECT COUNT(*) FROM tjc_hymn WHERE numbered_img_path != ''")
@@ -532,6 +559,7 @@ def print_db_status():
         print(f"📊 数据库状态（{DB_PATH}）：")
         print(f"   总记录: {total} 首")
         print(f"   有歌词: {has_lyrics}/{total}")
+        print(f"   有副歌: {has_chorus}/{total}")
         print(f"   五线谱PDF: {has_staff}/{total} {'✅' if has_staff > 0 else '❌'}")
         print(f"   简谱PDF:   {has_numbered}/{total} {'✅' if has_numbered > 0 else '❌'}")
         print(f"   五线谱图片: {has_staff_png}/{total} {'✅' if has_staff_png > 0 else '❌'}")

@@ -15,9 +15,49 @@ from selenium.webdriver.support.ui import WebDriverWait
 from .config import MAP_FILE, SAVE_ROOT
 from .db import save_to_db
 from .driver import init_driver
+from .lyrics_api import fetch_hymn_lyrics
 
 # 断点进度文件（记录已成功处理的 hymn_number，被 .gitignore 忽略）
 PROGRESS_FILE = os.path.join(SAVE_ROOT, "step2_progress.json")
+
+
+def _lyrics_ready(driver):
+    """歌词区出现非空文本即视为就绪（精确等待替代固定 sleep）"""
+    els = driver.find_elements(By.CSS_SELECTOR, ".lyrics_box")
+    return any((e.text or "").strip() for e in els)
+
+
+def group_lyrics_boxes(tab_boxes):
+    """把「每个 Tab 下的 .lyrics_box 文本列表」归并为 (verses, chorus)
+
+    官网 DOM 结构：每个「第N節」Tab 下依次有若干 .lyrics_box——第 1 个是本节歌词，
+    其后为副歌（每节重复出现同一段）。判定规则：若某个位置 j（j>=1）在所有 Tab 中
+    都存在且文本完全一致，则该位置视为副歌；一旦某位置不一致即停止判定，
+    其余 box 视为本节内容（保证不丢文本）。
+
+    Args:
+        tab_boxes: [[box_text, ...], ...]，每个元素对应一个 Tab 下的全部 box 文本
+    Returns:
+        (verses: list[str], chorus: str)
+    """
+    cleaned = [[t.strip() for t in boxes if t and t.strip()] for boxes in tab_boxes]
+    cleaned = [b for b in cleaned if b]
+    if not cleaned:
+        return [], ""
+
+    # 各 Tab 共同拥有的“正歌之外”的位置数
+    common_extra = min(len(b) for b in cleaned) - 1
+    chorus_parts = []
+    for j in range(1, common_extra + 1):
+        first = cleaned[0][j]
+        if all(b[j] == first for b in cleaned):
+            chorus_parts.append(first)
+        else:
+            break
+
+    chorus = "\n".join(chorus_parts)
+    verses = ["\n".join([boxes[0]] + boxes[1 + len(chorus_parts):]) for boxes in cleaned]
+    return verses, chorus
 
 
 def load_progress():
@@ -131,6 +171,7 @@ class Extractor:
             "source_info": "",
             "verse_count": 0,
             "verses": [""] * 10,
+            "chorus": "",
             "staff_img_path": "",
             "numbered_img_path": "",
             "audio_versions": {}
@@ -162,9 +203,6 @@ class Extractor:
             pass
         # 用精确等待替代固定 sleep(0.8)+sleep(0.5)：歌词区域出现非空文本即继续
         try:
-            def _lyrics_ready(d):
-                els = d.find_elements(By.CSS_SELECTOR, ".lyrics_box")
-                return any((e.text or "").strip() for e in els)
             WebDriverWait(driver, 5).until(_lyrics_ready)
         except TimeoutException:
             pass
@@ -211,39 +249,59 @@ class Extractor:
         except Exception:  # noqa: S110, BLE001 nosec B110 - 源考区块可能不存在, 容错跳过
             pass
 
-        # 歌词
-        lyrics_parts = []
-        try:
-            tabs = driver.find_elements(By.CSS_SELECTOR, ".tab_box .tab")
-            if not tabs:
-                try:
-                    text = driver.find_element(By.CSS_SELECTOR, ".lyrics_box").text.strip()
-                    if text:
-                        lyrics_parts.append(text)
-                except Exception:  # noqa: S110, BLE001 nosec B110 - 无歌词框时容错
-                    pass
-            else:
-                for tab in tabs:
-                    try:
-                        tab.click()
-                        # 用精确等待替代固定 sleep(0.2)：点击后轮询歌词非空即继续
-                        WebDriverWait(driver, 2).until(_lyrics_ready)
-                    except Exception:  # noqa: S112, BLE001 nosec B112 - 单个 Tab 点击失败时跳过该 Tab
-                        continue
-                    boxes = driver.find_elements(By.CSS_SELECTOR, ".lyrics_box")
-                    for box in boxes:
-                        text = box.text.strip()
-                        if text and text not in lyrics_parts:
-                            lyrics_parts.append(text)
-                            break
-        except Exception:  # noqa: S110, BLE001 nosec B110 - 歌词区解析失败, 返回空歌词
-            pass
+        # 歌词：官网 API 为权威源（正歌 lyrics[] + 副歌 lyrics_chorus 分离存放），
+        # 失败时才回退 DOM 解析（见 _extract_lyrics_from_dom）
+        api_lyrics = fetch_hymn_lyrics(song["hymn_number"])
+        if api_lyrics["verses"]:
+            lyrics_parts = api_lyrics["verses"]
+            result["chorus"] = api_lyrics["chorus"]
+        else:
+            lyrics_parts, chorus = self._extract_lyrics_from_dom(driver)
+            result["chorus"] = chorus
 
         result["verse_count"] = min(len(lyrics_parts), 10)
         for i in range(min(10, len(lyrics_parts))):
             result["verses"][i] = lyrics_parts[i]
 
         return result
+
+    @staticmethod
+    def _extract_lyrics_from_dom(driver):
+        """回退方案：从渲染后的 DOM 提炼歌词
+
+        官网每个「第N節」Tab 下依次有多个 .lyrics_box：第 1 个是本节歌词，
+        其后为副歌（每节重复同一段）。旧版每个 Tab 只取第一个 box 便 break，
+        导致副歌整段丢失——此处改为收集全部 box 后交 group_lyrics_boxes 归并。
+
+        Returns:
+            (verses: list[str], chorus: str)
+        """
+        tab_boxes = []
+        try:
+            tabs = driver.find_elements(By.CSS_SELECTOR, ".tab_box .tab")
+        except Exception:  # noqa: BLE001 - 无 Tab 结构时退化为整页 box
+            tabs = []
+
+        if tabs:
+            for tab in tabs:
+                try:
+                    tab.click()
+                    WebDriverWait(driver, 2).until(_lyrics_ready)
+                except Exception:  # noqa: S112, BLE001 nosec B112 - 单个 Tab 点击失败时跳过该 Tab
+                    continue
+                try:
+                    boxes = driver.find_elements(By.CSS_SELECTOR, ".lyrics_box")
+                    tab_boxes.append([(b.text or "").strip() for b in boxes])
+                except Exception:  # noqa: S110, BLE001 nosec B110 - 歌词区解析失败时跳过该 Tab
+                    pass
+        else:
+            try:
+                boxes = driver.find_elements(By.CSS_SELECTOR, ".lyrics_box")
+                tab_boxes.append([(b.text or "").strip() for b in boxes])
+            except Exception:  # noqa: S110, BLE001 nosec B110 - 无歌词框时容错
+                pass
+
+        return group_lyrics_boxes(tab_boxes)
 
 
 def load_url_map():

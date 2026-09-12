@@ -15,6 +15,7 @@ __pycache__/
 /Hymn_Downloads/step2_progress.json
 /Hymn_Downloads/step5_progress.json
 /Hymn_Downloads/step7_progress.json
+/Hymn_Downloads/lyrics_progress.json
 
 # 数据库文件（probe_report.json 保留跟踪，作为 db 重建的保险）
 *.db-journal

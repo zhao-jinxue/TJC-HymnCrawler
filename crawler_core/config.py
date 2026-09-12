@@ -6,6 +6,9 @@ import os
 BASE_URL = "https://sacredmusic.tjc.org.tw"
 LIST_URL = "https://sacredmusic.tjc.org.tw/hymn"
 
+# 官网 JSON API（诗歌详情：lyrics[] 正歌 + lyrics_chorus 副歌），{no} 为诗歌编号
+API_HYMN_URL = BASE_URL + "/api/hymn/{}"
+
 SCRIPT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SAVE_ROOT = os.path.join(SCRIPT_DIR, "Hymn_Downloads")
 DB_PATH = os.path.join(SCRIPT_DIR, "tjc_hymn.db")

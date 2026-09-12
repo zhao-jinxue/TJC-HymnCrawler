@@ -22,6 +22,7 @@ from crawler_core.downloader import run_download
 from crawler_core.driver import init_driver
 from crawler_core.extractor import Extractor, load_url_map
 from crawler_core.images import run as run_step5
+from crawler_core.lyrics_api import run as run_lyrics_backfill
 from crawler_core.probe import load_probe_report, run_probe, run_probe_missing
 from crawler_core.scanner import Scanner
 from crawler_core.verify import main as run_step4
@@ -157,6 +158,7 @@ def main():
     ]
     if failed_count > 0:
         items.append(("8", f"补全失败：重试提取 {failed_count} 首失败诗歌"))
+    items.append(("9", "歌词重抓：官网 API 全量刷新正歌 + 副歌 chorus（修复历史丢失）"))
     items.append(("0", "退出"))
 
     print("📋 请选择要执行的步骤：\n")
@@ -166,17 +168,17 @@ def main():
 
     while True:
         try:
-            choice = input("请输入选项 [0-8] (默认 5): ").strip()
+            choice = input("请输入选项 [0-9] (默认 5): ").strip()
         except (EOFError, KeyboardInterrupt):
             choice = "0"
             print()
         if choice == "":
             choice = "5"
             break
-        elif choice in ("0", "1", "2", "3", "4", "5", "6", "7", "8"):
+        elif choice in ("0", "1", "2", "3", "4", "5", "6", "7", "8", "9"):
             break
         else:
-            print("   无效选项，请输入 0-8")
+            print("   无效选项，请输入 0-9")
 
     print()
     total_start = time.time()
@@ -298,6 +300,12 @@ def main():
                     break
                 else:
                     print("   请输入 Y 或 N")
+
+    # ---- 歌词重抓（官网 API：正歌 + 副歌 chorus）----
+    if choice == "9":
+        print("\n🎵 歌词重抓：逐首调用官网 API 刷新 verse_1..10 + chorus ...")
+        print("   说明：官网把副歌单独放在 lyrics_chorus，旧版仅抓正歌首个片段导致副歌丢失。")
+        run_lyrics_backfill()
 
     # ---- 完成 ----
     elapsed = time.time() - total_start

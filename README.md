@@ -14,7 +14,8 @@ hymn_crawler/
 │   ├── config.py               # 全局配置
 │   ├── driver.py               # Selenium 驱动管理
 │   ├── scanner.py              # Step 1：扫描列表页 + 创建目录
-│   ├── extractor.py            # Step 2：提取详情页文本（断点续爬）
+│   ├── extractor.py            # Step 2：提取详情页文本（断点续爬；歌词优先走官网 API）
+│   ├── lyrics_api.py           # 歌词刷新：官网 API 取正歌/副歌 → verse_* + chorus
 │   ├── probe.py                # 资源探测（PDF HEAD + 音频页面点击捕获）
 │   ├── downloader.py           # 资源下载 + 完整性校验 + 路径回写
 │   ├── verify.py               # 数据校验与报告生成
@@ -43,7 +44,7 @@ hymn_crawler/
 │   ├── CLINE_CONTEXT_MINIMIZE.md # 上下文最小化指南
 │   └── sessions/               # 🗂 会话开发日志档案（模板 + 按时间命名）
 │
-├── tjc_hymn.db                 # 🗄 SQLite 数据库（v5 结构，474 首）
+├── tjc_hymn.db                 # 🗄 SQLite 数据库（v6 结构，474 首，含副歌 chorus）
 ├── probe_report.json           # 📋 资源探测清单（474 首，URL 对象格式）
 ├── final_report.txt            # 📊 最终执行统计报告
 └── hymn_crawler_plan.md        # 📖 开发计划文档
@@ -80,9 +81,11 @@ hymn_crawler/
 | `6` | 仅 转图片入库（PDF→PNG + 双页拼接 + 路径入库 + 哈希清单） |
 | `7` | **全流程**（Step 1 → 2 → 探测 → 下载 → 校验 → 转图入库） |
 | `8` | 补全提取失败诗歌（菜单动态出现） |
+| `9` | 歌词重抓（官网 API 全量刷新正歌 `verse_*` + 副歌 `chorus`） |
 | `0` | 退出 |
 
-> ✅ 所有阶段**支持幂等重跑**：已存在的内容自动跳过，断点进度文件（`step2/5/7_progress.json`）可续跑。
+> ✅ 所有阶段**支持幂等重跑**：已存在的内容自动跳过，断点进度文件（`step2/5/7_progress.json`、`lyrics_progress.json`）可续跑。
+> 进阶用法：`python -c "from crawler_core.lyrics_api import run; run(force=True, reset=True)"` 全量重抓歌词。
 
 ### 测试
 
@@ -106,6 +109,7 @@ hymn_crawler/
 | --- | --- | --- | --- |
 | **Step 1 扫描** | `crawler_core/scanner.py` | 遍历 24 页列表页，提取 474 首元数据，创建 `序号_编号_名称` 目录 | ✅ 完成 |
 | **Step 2 提取** | `crawler_core/extractor.py` | 深入详情页提取作词 / 作曲 / 源考 / 歌词，写入 SQLite（断点续爬） | ✅ 完成 |
+| **歌词刷新** | `crawler_core/lyrics_api.py` | 官网 JSON API（`/api/hymn/{no}`）取正歌 `lyrics[]` + 副歌 `lyrics_chorus`，刷新 `verse_*` / `chorus` | ✅ 完成 |
 | **资源探测** | `crawler_core/probe.py` | HEAD 探测五线谱/简谱 PDF + Selenium 点击捕获音频 URL | ✅ 完成 |
 | **资源下载** | `crawler_core/downloader.py` | 10 线程并发下载 + 断点续传 + 文件完整性校验 + 路径回写 | ✅ 完成 |
 | **校验报告** | `crawler_core/verify.py` | 三方对账（DB / 目录 / url_map）+ 资源核验 + `final_report.txt` | ✅ 完成 |
@@ -124,8 +128,9 @@ hymn_crawler/
 | `title` | TEXT | 诗歌名称 |
 | `lyricist` / `composer` | TEXT | 作词者 / 作曲者（缺失默认 `Unknown`） |
 | `source_info` | TEXT | 诗歌源考 |
-| `verse_count` | INTEGER | 歌词总节数 |
-| `verse_1` ~ `verse_10` | TEXT | 歌词内容（按实际填充，默认为空） |
+| `verse_count` | INTEGER | 歌词总节数（正歌节数，不含副歌） |
+| `verse_1` ~ `verse_10` | TEXT | 正歌歌词内容（按实际填充，默认为空） |
+| `chorus` | TEXT | **副歌**（官网 `lyrics_chorus`；v6 新增，此前因采集缺陷整段丢失） |
 | `staff_img_path` | TEXT | **五线谱 PDF** 相对路径 |
 | `numbered_img_path` | TEXT | **简谱 PDF** 相对路径 |
 | `audio_versions` | TEXT | JSON：**版本名 → 相对路径**（如 `{"鋼琴版": "..."}`） |
@@ -135,7 +140,7 @@ hymn_crawler/
 | `integrity_status` | TEXT | `passed` / `failed` / `unchecked` |
 | `updated_at` | TIMESTAMP | 更新时间（本地时间 CST） |
 
-> 🔄 **自动迁移**：`crawler_core/db.py` 的 `init_db()` 支持从任意旧版本自动升级（v1 → v5），无需手动干预。
+> 🔄 **自动迁移**：`crawler_core/db.py` 的 `init_db()` 支持从任意旧版本自动升级（v1 → v6），无需手动干预。
 
 ---
 
