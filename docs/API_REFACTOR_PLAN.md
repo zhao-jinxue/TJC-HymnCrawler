@@ -1,8 +1,8 @@
 # 官网 JSON API 重构方案（设计文档 · 待评审）
 
-> 版本：v1（2026-09-12）　状态：**待评审，未实施**
-> 关联会话日志：`docs/sessions/2026-09-12_21-47-42.md`（任务 2）
-> 结论一句话：**可行，收益 ≈10×；建议 P0 → P1 → P2 分三阶段推进，P0 完成即可摆脱对 Selenium 的性能依赖**
+> 版本：v1.1（2026-09-12 修订）　状态：**待评审，未实施**
+> 关联会话日志：`docs/sessions/2026-09-12_21-47-42.md`（任务 2、任务 3）
+> 结论一句话：**可行，收益 ≈10×；API 为主、Selenium 完整保留为保底（`crawler_core/legacy/`）；P0 → P1 → P2 分三阶段推进**
 
 ---
 
@@ -15,11 +15,16 @@
 | 资源探测 · PDF | 948 次 HEAD ≈ 0.5 min | URL 由 API 直接给出（HEAD 校验保留） |
 | 资源探测 · 音频 | 474 页逐个点击播放 ≈ **8–10 min** | **0 s**（随数据一起返回） |
 | **合计（元数据 + 资源探测）** | **≈ 28–30 min** | **≈ 2–3 min** |
-| 数据完整性 | 音频 473 首 / 1120 条 | **474 首 / 1130 条**（多 11 首） |
+| 数据完整性 | 音频 **1119 条可用**（本地 1256 文件，含 136 重复） | 音频 **1119 条可用 / 474 首**（另 10 条源站不可用） |
 | 增量更新 | 只能全量重扫 | 依 `updated_at` 真增量 |
-| 运行依赖 | Chrome + chromedriver 版本匹配 | 纯 requests |
+| 运行依赖 | Chrome + chromedriver 版本匹配 | 纯 requests（Selenium 移入 `legacy/` 作保底） |
+| 失败处理 | 无重试、坏链永久 `partial`、原因不落盘 | 四层容错 + URL 预检 + `_unavailable` 分类记录（§5.9） |
 
 关键前提（已实测）：**列表接口 `/api/hymn` 每条记录 = 详情接口 `/api/hymn/{no}` 的完整记录**（仅详情多 `prev_no`/`next_no`），因此**全量 474 首只需 48 个请求、2.2 MB**。
+
+> 📌 v1.1 两处重要校准（详见 §3.2 / §3.6 / §3.7）：
+> 1. **音频口径**：初轮"API 多 11 首 12 条"不成立——API 侧 1130 条中 **9 条 `file_url=null` 空记录 + 1 条 404（#62 人聲版）**，真正可补**只有 #201 人聲版 1 条**；本地反而多出 **136 个重复文件（145.7 MB）**。
+> 2. **失败与异常**：新增 §5.9 完整设计（#62 类"有链接但下载不了"不再导致永久 `partial`，也不会崩程序）；新增 §4.4 双引擎与 `legacy/` 保底目录布局。
 
 ---
 
@@ -30,6 +35,11 @@
 2. **脆**：依赖 Chrome / chromedriver 版本匹配；页面为**客户端渲染**（原始 HTML 里 `div.music` / `.lyrics_box` / `music_title` 均无数据），DOM 结构一变就全挂；音频探测靠 `time.sleep(1.5)` 等异步播放器加载，偶发漏抓（本次音频少 11 首即此原因）。
 3. **信息有损**：仅能拿到页面展示的字段；官网 API 里现成的 `category` / `tags` / `composers` / `lyricists` / `youtube_urls` / `prev_no` / `updated_at` 全部拿不到（或拿不全会）。
 4. **无法增量**：没有 `updated_at`，只能全量重扫。
+5. **失败处理粗糙**（本轮二次实测发现）：
+   - 资源 URL **无预检**：坏链要等下载阶段才暴露，且被永久计入"期望文件"分母 → 例如 #62 人聲版（服务端 404）使该首永远是 `partial(3/4)` + `integrity_status=failed`；
+   - 下载失败**只打印不落盘**：`probe_report.json` 里没有失败原因/HTTP 状态码，下次运行分不清"没试过"与"试过且 404"；
+   - **无重试**：实测 2078 个资源 URL 中有 33 个（≈1.6%）瞬时失败（超时/SSL 抖动），现状会直接判失败；
+   - 归档说明**硬编码**在 `verify.py:301`（`if h == "62"`），新增坏链不会被记录。
 
 ### 1.2 目标
 - **性能**：元数据 + 资源 URL 采集从 ~30 min 降到 ~2–3 min（≈10×）。
@@ -113,7 +123,8 @@ downloader → images → checksums → verify（纯 requests / poppler）
 | 编号集合 | 474 | 474 | **完全一致**（无多无少） |
 | 五线谱 PDF | 474 | 474 | **零差异**；直链实测 `200 application/pdf`（如 12 号 81299 B） |
 | 简谱 PDF | 474 | 474 | **零差异**（如 12 号 774720 B） |
-| 音频 | 474 首 / 1130 条 | 473 首 / 1120 条 | **API 多 11 首 12 条**：62、122、178、249、255、268…（122「彼此相愛」probe 完全未抓到）；DB 多 1 首（349，官网已下架该版本） |
+| 音频（API 列出） | 474 首 / 1130 条 | 474 首 / 1256 条（本地文件） | 见下方「音频口径二次校准」 |
+| 音频（**实测可下载**） | 474 首 / **1119 条** | — | API 侧 10 条不可用；本地多 138 条（136 重复 + 2 已下架） |
 | 歌词 / 副歌 | 474 / 270 | 474 / 270 | **逐首 0 不一致**（本次修复后） |
 | 元数据 | — | — | 17 首 `composer` DB 为 `Unknown` 而 API 有名字；349 标题/词作者 API 为新值；`source_info` 与 `history` 同源（差异仅 HTML 实体与换行） |
 
@@ -125,6 +136,25 @@ API : 鋼琴 / 人聲 / 四部合唱 / 合唱-1部 … 四部合唱-4部
 ```
 
 （分布：鋼琴 475、人聲 469、四部合唱 46、四部合唱-1..4 部各 34、合唱-1..4 部各 1）
+
+> ⚠️ **音频口径二次校准（2026-09-12 补测，推翻初轮"API 多 11 首 12 条、可补 11 首"之说）**
+>
+> 对 API 全部 **1130 条**音频 URL 逐条实测（HEAD + Range，含复测）：
+> - **可下载 1119 条 / 474 首**；
+> - **不可用 10 条**：
+>   - **`file_url` 与 `file` 同时为 `null`（空记录）9 条**：#178、#249、#255、#268、#274_b、#308、#386、#387、#389 各 1 条；
+>   - **HTTP 404 1 条**：#62 人聲版（`…/audio/0dcc19451da297d5a15105d3e7eea85d.m4a`）——**与 Selenium 抓到的 URL 逐字符相同**，属服务端文件缺失，换 API 不会自动修好；
+> - 因此初轮统计的"API 多出 11 首"多数是上述空/坏记录 → **真正可补的只有 1 条：#201 人聲版**（URL 后缀为 `.mp4`，实测 200 `video/mp4`、2 489 768 B、头部 `ftyp`）；
+> - 反向差异：**本地比 API 多 138 条** = 34 首 × 4 条 `合唱-N部版`（**与 `四部合唱-N部版` 内容完全相同，历史重复副本，145.7 MB**）+ #349 的 `人聲版`/`四部合唱版`（官网已下架，保留不动）；
+> - **结论：音频侧的真实账不是"补 11 首"，而是"补 1 条 + 清理存量重复 136 个文件"**，详见 §3.6、§3.7 与 §5.9。
+
+> ℹ️ **`seq` 与 `hymn_number` 必须分开对待（实测）**
+>
+> `url_map.txt` 第一列是 **列表位置（1…474）**，第三列 URL 末尾是**诗歌编号**（`no`）；两者有 **423/474 条不相等**：
+> - 因存在 5 对「甲/乙」互见编号（`51_a/51_b`、`124_a/124_b`、`132_a/132_b`、`274_a/274_b`、`296_a/296_b`）→ 编号总数 469、列表条目 474；
+> - 例：`063|063_62願主偕行|…/hymn/62`、`201|201_198靠主領回天家|…/hymn/198`、`354|354_349救主正在等候|…/hymn/349`。
+>
+> → **目录名用 `seq`、资源文件名用 `hymn_number`**，API 版实现不得混用（`no` 是字符串，可能是 `"51_b"`）。
 
 ### 3.3 列表 = 详情（设计关键）
 
@@ -148,6 +178,36 @@ API : 鋼琴 / 人聲 / 四部合唱 / 合唱-1部 … 四部合唱-4部
 | 文件名规则（`{no}_五线谱.pdf` / `{no}_简谱.pdf` / `{no}_{版本}版.{ext}`） | 抽查 4 首 **全部命中** |
 
 → 兼容策略：**目录名以现有 `url_map.txt` 为准，API 只做「校验 + 新增」**（349 保持旧目录名，不重命名文件），新增诗歌按同一 sanitize 规则生成。
+
+---
+
+### 3.6 资源 URL 可下载性全量实测（2078 个 URL，回答"有链接但下载不了"）
+
+对 API 给出的**全部**资源 URL 做可达性实测（948 个 PDF + 1130 条音频，16 线程 HEAD，失败者用 GET `Range` 复测至多 3 次）：
+
+| 轮次 | PDF | 音频 | 说明 |
+| --- | --- | --- | --- |
+| 首轮 200 | 942 / 948 | 1102 / 1130 | 非 200 共 **34** 条 |
+| 复测后 | 948 / 948 | 1120 / 1130 | 33 条**恢复 200**（瞬时抖动） |
+| 确认不可用 | **0** | **10**（9 空记录 + 1 个 404） | 见 §3.2 校准 |
+
+瞬时失败构成：`ReadTimeout` 13、`SSLError` 5、`MissingSchema` 9（= 空 URL 记录，非网络问题）。
+
+**三条可直接落地的结论**：
+1. **站点无严格限流**：16 线程连续 2078 请求未见 429 → 并发 8 是安全值。
+2. **瞬时失败率 ≈ 1.6%（33/2078）**：**API 版必须带重试**，否则会凭空丢 PDF/音频（现状 downloader 无重试，正属此类隐患）。
+3. **"有链接" ≠ "能下载"**：必须把「网络抖动（可重试）」与「资源真缺失（4xx/空 URL，不可重试）」**分类记录**，否则期望清单与 `download_status` 会永久失真（#62 即活例）。
+
+### 3.7 历史重复文件（新发现，145.7 MB）
+
+| 项目 | 结果 |
+| --- | --- |
+| 现象 | 34 首诗歌目录内同时存在 `{no}_合唱-1..4部版.m4a` 与 `{no}_四部合唱-1..4部版.m4a` |
+| 实测 | 两者**字节数相同、内容 md5 相同**（抽样 #8/#25/#211/#231 各 4 对全部一致）→ **同一文件的两份副本** |
+| 规模 | **136 个重复文件 / 145.7 MB**（另 #6 的 `合唱-1..4部` 是 API 真实分类，不计入重复） |
+| 成因 | 站点分类名历史上由「合唱-N部」更名为「四部合唱-N部」；两轮 Selenium 采集各存一份（DOM 标签驱动命名，无权威分类校验） |
+| API 现状 | 只列 `四部合唱-N部`（34 首）与 `合唱-N部`（仅 #6「頌主造化大功」一首）→ **API 版天然不产生重复** |
+| 处理 | **只读不改**：登记为 `legacy_duplicate`，不计入期望集合、不报错、不删除；是否清理留用户决策（§10 ⑦） |
 
 ---
 
@@ -183,7 +243,9 @@ API : 鋼琴 / 人聲 / 四部合唱 / 合唱-1部 … 四部合唱-4部
 | `crawler_core/scanner.py` | 修改 | 默认走 API 列表；保留 `_create_dir`/`_save_map` 逻辑与 sanitize 规则不变；Selenium 版本保留为 `scan_legacy()` |
 | `crawler_core/extractor.py` | 修改 | `_parse_one` 改为「API 直出全部字段」，DOM 解析降级为 fallback；`group_lyrics_boxes` 保留（兜底用） |
 | `crawler_core/probe.py` | 修改 | `_do_probe` 改为「API 构造 PDF/音频 URL + HEAD 校验」；音频点击逻辑保留为 `_probe_audios_legacy()` |
-| `crawler_core/driver.py` | 修改 | Selenium 依赖**改为函数内延迟导入**（无 Chrome 环境也能跑纯 API 流程） |
+| `crawler_core/driver.py` | 修改 | 收敛为**转发层**（`from .legacy.driver import init_driver`），保持旧 import 可用；Selenium 依赖改为函数内延迟导入 |
+| `crawler_core/naming.py` | **新增** | 双引擎**唯一命名真源**：`sanitize()` / `to_dirname(seq, no, name)` / `pdf_name(no, kind)` / `audio_name(no, ver, ext)` / `API 分类名 + "版"` 映射 |
+| `crawler_core/legacy/` | **新增** | Selenium 保底实现整体迁入（`driver.py` / `scanner_selenium.py` / `extractor_dom.py` / `probe_audio.py` + README），默认不参与主流程 |
 | `crawler_core/db.py` | 修改 | v7 迁移（幂等 `ADD COLUMN`）+ 新字段写入 + 状态打印扩展 |
 | `crawler_core/lyrics_api.py` | 保留 | 与 `api_client` 共享 `fetch_hymn_lyrics`（转为薄封装，避免重复实现） |
 | `crawler_fast.py` | 修改 | 菜单：Step1/Step2/探测切到 API；新增「10 极速全量同步（纯 API）」；「8 补全」支持 API 重试 |
@@ -220,8 +282,41 @@ def to_metadata(rec) -> dict      # title/lyricist/composer/category/tags/youtub
 - **一次 48 请求拿全量**（默认路径），详情接口仅用于**单首补抓/校验**（比全量更省，且能拿 `prev_no/next_no`）。
 - 所有 `requests.get(..., verify=False)` 均带 `# nosec B501`（与 `downloader.py` 一致）。
 - 失败重试：`429/5xx/超时` 退避 `1.5^n` 秒，最多 3 次；整体失败才触发 DOM 降级。
+- **URL 归一化**：`file_url` 为 `null`/空 → 判定 `unavailable`；后缀 `.mp4` → 落盘按 `.m4a` 处理（同一容器）。
 
+### 4.4 双引擎与 Selenium 保底目录（按用户 2026-09-12 建议）
 
+**目标：新方法（API）为主，Selenium 完整保留为可运行保底，且主流程零浏览器依赖。**
+
+```
+crawler_core/
+├── api_client.py          ★ 新增：API 客户端（重试/退避/并发/缓存/自检）
+├── naming.py              ★ 新增：目录名·文件名·版本名规则（双引擎共用真源）
+├── scanner.py               改造：scan_api()（默认） / scan_legacy()（委托 legacy）
+├── extractor.py             改造：API 主路径 + _parse_one_dom() 降级
+├── probe.py                 改造：API 清单 + URL 预检 + _probe_audios_legacy() 降级
+├── driver.py                改造：转发层（from .legacy.driver import init_driver）
+└── legacy/                ★ 新增：Selenium 保底包（默认不参与主流程）
+    ├── __init__.py
+    ├── driver.py              WebDriver 工厂（懒导入 selenium）
+    ├── scanner_selenium.py    原「列表页翻页 + DOM 解析」
+    ├── extractor_dom.py       原 _parse_one DOM 解析 + group_lyrics_boxes
+    ├── probe_audio.py         原「音频点击捕获」
+    └── README.md              用途/启停方法/何时该用
+crawler_selenium.py        ★ 新增（可选）：纯 Selenium 整链入口，等价重构前行为
+requirements-selenium.txt  ★ 新增（可选）：selenium 移出主依赖
+```
+
+| 维度 | 设计 |
+| --- | --- |
+| 引擎开关 | `--engine api \| selenium \| auto`（+ `config.CRAWL_ENGINE`），默认 `api`；`auto` = API 优先，**逐首**校验失败才降级该首 |
+| 依赖策略 | 主依赖不含 `selenium`；`legacy/*` 内部才 `import selenium` → 未装也能跑 API 全流程，装了即可用保底 |
+| 兼容策略 | `driver.py` 顶层保留转发 → 旧代码 `from crawler_core.driver import init_driver` 不破；`scanner.scan_legacy()` / `probe._probe_audios_legacy()` 方法名保留 |
+| 命名一致性 | 两个引擎**都必须**调用 `naming.py` → 杜绝"旧版多存 136 个重复文件"这类规则漂移 |
+| 为什么用子包而非顶层副本 | 相对导入（`..config`）改动最小、`crawler_core` 仍是唯一包、测试与入口无需双份维护；顶层 `crawler_selenium.py` 只做薄入口，满足"整链保底" |
+| 测试 | legacy 不进默认 `pytest`（无浏览器 CI 也能全绿），以 `pytest -m selenium` 单独可选运行 |
+
+**保底触发条件**（`auto` 模式）：API 请求整体失败 / `validate_record` 报必填字段缺失 / 该首 API 记录异常（`no` 不匹配、`lyrics` 为空）→ 仅该首走 DOM。
 
 ---
 
@@ -256,7 +351,8 @@ class Scanner:
     def scan_api(self) -> list[dict]:        # 默认：48 请求拿全量 → song 列表 → 建目录 → 写 url_map
     def scan_legacy(self) -> list[dict]:     # 原 Selenium 翻页逻辑（保留，开关启用）
 ```
-- `_create_dir` / `_save_map` / `_load_existing` **逻辑与 sanitize 规则完全保持不变**（保证历史目录不重建）。
+- `_create_dir` / `_save_map` / `_load_existing` **逻辑与 sanitize 规则完全保持不变**（保证历史目录不重建），并统一改调用 `naming.py`（双引擎共用）。
+- 目录名 = `f"{seq:03d}_{sanitize(no + name)}"`，其中 **`seq` = 列表位置（1…474）、`no` = 该首编号（可能含 `_a/_b`）**；实测两者 423/474 不相等（见 §3.2 说明），实现中不得混用。
 - 新增校验：若 `f"{seq}_{sanitize(no+name)}"` 与 `url_map.txt` 既有目录名不符（如 349），**沿用既有目录名并打印提示**，仅登记差异不重命名。
 - 新增 `--check` 模式：只比对「API 列表 vs url_map vs 本地目录」三方一致性，不落盘。
 
@@ -288,6 +384,10 @@ def _do_probe():
                          "audio_versions": audio, ...})     # 结构不变
 ```
 - 音频不再需要点击播放；PDF 保留 **HEAD 可达性校验**。
+- **新增 URL 预检（关键）**：对每个 PDF/音频 URL 做 `HEAD`（失败再 `GET Range`，各重试 2 次），结果写入
+  `audio_versions[ver]["_http_status"]` / `["_error"]` 与 `_pdf_status`；**不可用者不计入期望文件集合**，
+  从而修正 `download_status`/`integrity_status` 语义（#62 从"永久 partial"变为"completed + 1 条 unavailable"）。
+- `.mp4` 后缀归一化为 `.m4a`（见 §5.9），避免下游 `RESOURCE_EXTS={.pdf,.m4a,.mp3}` 漏统计。
 - 原 `_capture_song_audio` 改名 `_capture_song_audio_legacy`，仅在 API 无 `audio_files` 时用于单首兜底。
 - `run_probe_missing()`（增量补探音频）语义改为「API 与本地清单的差集」，接口保留。
 
@@ -298,7 +398,8 @@ def init_driver():
     from selenium import webdriver          # 延迟导入：无 Chrome 环境也能跑纯 API 流程
     ...
 ```
-- P0/P1 阶段 `selenium` 仍留在 `requirements.txt`（兜底用），P2 阶段再移除。
+- 主依赖**不含** `selenium`：`crawler_core/legacy/*` 内部才 `import selenium` → 无 Chrome 环境也能跑纯 API 全流程；需要保底时 `pip install -r requirements-selenium.txt` 即可。
+- `driver.py` 保留为转发层，旧 import 路径不破；`legacy/README.md` 说明启停方法与使用场景。
 
 ### 5.6 DB v7 迁移（幂等，向后兼容）
 
@@ -339,7 +440,73 @@ ALTER TABLE tjc_hymn ADD COLUMN next_no TEXT DEFAULT '';
 | **10** | — | **极速全量同步（纯 API，含增量模式）** |
 | 9 | 歌词重抓 | 保留（转为 `api_client` 薄封装） |
 
-选项范围由 0–9 更新为 **0–10**。
+选项范围由 0–9 更新为 **0–10**（另加 `--engine api|selenium|auto`）。
+
+### 5.9 异常与失败处理设计（#62 案例分析：如何保证"永不崩溃、不丢数据、不误报"）
+
+#### 5.9.1 现状回放：#62「願主偕行」人聲版
+
+| 环节 | 现行行为（代码位置） | 结果 |
+| --- | --- | --- |
+| 探测 | URL 写入 `probe_report.json.audio_versions["人聲版"]`（`probe.py`） | 与 API 给的 URL **完全相同** |
+| 下载 | `download_one()` 非 200 → `return (item, False)`；`except Exception` 同（`downloader.py:94-105`） | 打印 `❌`，`fail += 1`，**continue，不抛异常** |
+| 状态 | `_update_download_status()` 按"本地文件是否存在"重算 | `partial(3/4)` |
+| 完整性 | `_verify_and_sync()` 逐文件校验 | `integrity_status = failed` |
+| 入库 | `_backfill_paths_to_db()` 只写**本地存在**的版本 | DB `audio_versions` 只剩 `鋼琴版`（坏 URL 不入库） |
+| 报告 | `verify.py` → `final_report.txt` | 缺失清单 + **硬编码**归档说明（`verify.py:301 if h == "62"`） |
+
+**结论：现状不会因单个坏链崩溃**（DB 分布 `completed: 473 / partial(3/4): 1`），但存在 4 个缺陷：① 坏链永久计入期望分母 → 永远 `partial`+`failed`；② 失败原因不落盘；③ 无重试；④ 归档信息硬编码。
+
+#### 5.9.2 改后：四层容错（任一层失败都不影响其余）
+
+| 层 | 范围 | 机制 |
+| --- | --- | --- |
+| **L1 URL 级** | 单个资源 | `api_client`/`downloader` 内**退避重试**；4xx（非 429）**不重试**（判定为真缺失）；超时/SSL/连接重置/5xx/429 重试 `1.5^n` 秒，默认 3 次 |
+| **L2 记录级** | 单首诗歌 | `validate_record()` 失败 → 该首降级 DOM（`USE_SELENIUM_FALLBACK=1`）或跳过并登记 `failed`，**不中断其它首**；`extractor` 沿用 `step2_progress.json` 断点 |
+| **L3 阶段级** | 单个 Step | 阶段内 `try/except`，异常打印 + 写入错误清单 + 已落盘数据保留；提示可用续跑命令 |
+| **L4 进程级** | 整程序 | `crawler_fast.main()` 顶层兜底（已有）+ `KeyboardInterrupt` 提示"可断点续跑" |
+
+#### 5.9.3 资源可用性状态机（新增，写进 `probe_report.json`）
+
+```
+待检 pending → HEAD/Range 预检
+   ├─ 2xx            → available → 进入下载队列 → 下载成功 → downloaded
+   ├─ 404/403/410    → unavailable(4xx)   ← 记录 _http_status，**不计入期望集合**，不下载、不重试
+   ├─ file_url=null  → unavailable(api_null)
+   └─ 超时/5xx/SSL   → retry(≤3) → 仍失败 → unavailable(network)（下次运行自动重试）
+```
+
+字段放置（**零破坏兼容**）：全部挂在 `audio_versions[版本]` 与顶层 `_pdf_status` / `_unavailable` 等**下划线前缀键**上——现有代码 `downloader.py:61/221/303`、`crawler_fast.print_probe_report_status()` 均已过滤/忽略 `_` 前缀键，因此 `probe_report.json` **结构对旧消费者保持兼容**。
+
+**期望集合规则**：`期望文件 = 仅 available 的资源`；`download_status` 仅在 available 资源真实缺失时降级。
+效果：`#62 → completed`（并带 `_unavailable: {"人聲版": {"_http_status": 404}}`），不再永久 `partial`。
+`verify.py` 的 `#62` 硬编码改为**数据驱动**：读取 `_unavailable` 汇总生成"失败任务归档"章节。
+
+#### 5.9.4 后缀归一化（#201 实例）
+
+`#201 人聲版` 的 URL 后缀是 `.mp4`（`video/mp4`，头部 `ftyp` → 即 MP4/M4A 容器）。若照抄后缀落盘为 `201_人聲版.mp4`：
+- `verify.py` 的 `RESOURCE_EXTS = {".pdf", ".m4a", ".mp3"}` **不认 `.mp4`** → 该文件在多媒体对账中"消失"；
+- `verify_file_integrity()` 走 `else` 分支（仅判 `size > 0`），校验强度下降。
+
+对策：`to_audio_versions()` 把 `.mp4` → `.m4a`（同名容器，播放器/转换链路不受影响），并在 `RESOURCE_EXTS` 增加 `.mp4` 兜底。
+
+#### 5.9.5 参数默认值（写入 `config.py`，可覆盖）
+
+| 参数 | 默认 | 说明 |
+| --- | --- | --- |
+| `API_MAX_WORKERS` | 8 | 实测 16 线程 11 req/s 无 429，8 更保守 |
+| `API_RETRIES` / `API_BACKOFF` | 3 / 1.5 | `429/5xx/超时` 指数退避 |
+| `PROBE_URL_CHECK` | `True` | 资源 URL 预检总开关（离线/极端省时可关） |
+| `DOWNLOAD_RETRIES` / `DOWNLOAD_BACKOFF` | 2 / 2.0 | 下载阶段重试（仅瞬时类错误） |
+| `USE_SELENIUM_FALLBACK` | `False` | 记录级 DOM 降级开关 |
+| `CRAWL_ENGINE` | `"api"` | `api` / `selenium` / `auto` |
+
+#### 5.9.6 不崩断言（P0 验收必测）
+
+1. 构造坏 URL（404 / 空串 / 非法域名 / 超大延迟）→ 全链跑完，退出码 0，报告含 `_unavailable`；
+2. 断网重跑 Step2 → 每首登记 `failed`，`step2_progress.json` 可续跑；
+3. `file_url=null` 的 9 首（#178/#249/#255/#268/#274_b/#308/#386/#387/#389）→ 不产生任何下载请求；
+4. API 返回结构被改（缺 `lyrics`）→ 触发降级或跳过，绝不 `KeyError` 崩栈。
 
 ---
 
@@ -362,23 +529,29 @@ ALTER TABLE tjc_hymn ADD COLUMN next_no TEXT DEFAULT '';
 ## 7. 分阶段计划与验收标准
 
 ### P0 — 核心替换（预计 3–4 h，含测试）
-交付：`api_client.py`、`scanner.scan_api`、`extractor` API 主路径、`probe` API 清单、`driver` 延迟导入。
+交付：`api_client.py`、`naming.py`、`scanner.scan_api`、`extractor` API 主路径、`probe` API 清单 + URL 预检、`driver` 转发层 + `legacy/` 目录落位（不删代码）。
 验收：
 1. Step 1 全量扫描 ≤ 15 s，且生成的 `url_map.txt` 与现状 **474 行完全一致**（349 沿用既有目录名，差异仅写入日志/报告，不落盘）；
 2. Step 2 全量 474 首 ≤ 3 min，`verse_1..10`/`chorus` 与现状**逐首 0 不一致**（对账脚本）；
-3. `probe_report.json` 的 PDF 字段与现状**0 差异**；音频条目 ≥ 现状（预期 +12 条）；
-4. 现有 `pytest` 23 项全绿；`ruff` / `bandit` / `mypy` 门禁通过。
+3. `probe_report.json` 的 PDF 字段与现状**0 差异**；音频侧按**实测可用口径**核对：可用 ≥ 1119 条、`_unavailable` 恰为 10 条（9 空 + #62 404），**无新增误报**；
+4. **不崩断言**（§5.9.6 四项）全通过，退出码 0；
+5. `--engine api` 下 `sys.modules` 不含 `selenium`；`--engine selenium` 仍可跑通旧链（保底可用）；
+6. 现有 `pytest` 23 项全绿；`ruff` / `bandit` / `mypy` 门禁通过。
 
 ### P1 — 数据模型 + 增量（预计 2–3 h）
-交付：DB v7 迁移、新字段写入、增量同步、数据修正（17 首 composer、349 元数据、11 首缺失音频入下载队列、`hymn_category` 重建方案）。
+交付：DB v7 迁移、新字段写入、增量同步、数据修正（17 首 `composer`、349 元数据、**#201 人聲版 1 条音频入下载队列（≈2.5 MB）**、`hymn_category` 重建方案、136 个重复文件的登记口径）。
 验收：
 1. `pytest` 新增字段相关用例全绿；迁移可重复执行（幂等）；
 2. 增量模式二次运行：0 首需要更新（水位判定正确）；
-3. 输出「API vs 本地 DB」差异报表，人工确认后再落库。
+3. 输出「API vs 本地 DB」差异报表，人工确认后再落库；
+4. `verify.py` 的 #62 硬编码归档改为 `_unavailable` 数据驱动，#62 状态归正为 `completed`。
 
-### P2 — 瘦身（预计 1 h，需你确认）
-交付：移除 `selenium` 依赖与 `driver.py`（或降级为 `extras/`）；README 更新；CI/环境说明更新。
-验收：全新环境（无 Chrome）跑通全流程。
+### P2 — 瘦身与保底固化（预计 1 h）
+交付：Selenium 实现**移入 `crawler_core/legacy/`**（非删除）、`selenium` 移出主依赖到 `requirements-selenium.txt`、顶层 `crawler_selenium.py` 保底入口、`legacy/README.md`、README 更新。
+验收：
+1. 全新环境（无 Chrome、未装 selenium）跑通 API 全流程；
+2. `--engine selenium` 在装了 selenium 的环境下仍能跑通旧链（保底不失效）；
+3. `pytest test/ -q` 全绿（legacy 不参与默认测试）。
 
 ---
 
@@ -404,19 +577,27 @@ ALTER TABLE tjc_hymn ADD COLUMN next_no TEXT DEFAULT '';
 | 触发限流 / 封 IP | 抓取中断 | 并发上限默认 8（实测 16 线程 11 req/s 无异常）；429/5xx 退避重试；失败清单落盘可续跑 |
 | `verify=False` 的安全告警 | 门禁失败 | 沿用 `# nosec B501`（与 downloader 一致），并在注释说明自签名证书原因 |
 | 349 等标题漂移 | 目录/文件路径错位 | 目录名以 `url_map.txt` 为准，绝不重命名；差异写入报告并由人工决策是否迁移 |
-| 音频版本名映射错位 | 重复下载 / 命名冲突 | 映射规则 `API 名 + "版"` 已与现有 1120 条文件名核对一致 |
+| 音频版本名映射错位 | 重复下载 / 命名冲突 | 映射规则 `API 名 + "版"` 已与现有 1120 条文件名核对一致；命名统一走 `naming.py` |
+| **瞬时网络抖动（实测 33/2078 ≈ 1.6%）** | 静默丢 PDF/音频（现状无重试） | `api_client`/`downloader` 退避重试；失败清单落盘；复测机制（HEAD→GET Range） |
+| **API 音频空记录/坏链（实测 10 条）** | 期望集合失真、永久 `partial` | URL 预检 + `_unavailable` 标记，**不计入期望**；`verify` 改为数据驱动；`#62` 状态归正 |
+| **本地存量重复文件（136 个 / 145.7 MB）** | 统计口径混乱、磁盘浪费 | 登记 `legacy_duplicate`，不删不移；清理与否由用户决策（§10 ⑦） |
+| `.mp4` 后缀资源（#201） | 下游统计漏项 | `to_audio_versions` 归一化 `.mp4 → .m4a`；`RESOURCE_EXTS` 加 `.mp4` 兜底 |
+| Selenium 保底失效（Chrome 升级等） | 兜底不可用 | legacy 包保持可运行并单测（`-m selenium`）；保底非唯一手段：API 失败清单 + 断点续跑即可恢复 |
 | 误把大文件/缓存提交 | 仓库膨胀 | `api_cache/`、`probe_report.json` 等加入 `.gitignore`；遵循「>5 MB 二进制禁提交」规则 |
 
 ---
 
 ## 10. 待决策项（请评审时确认）
 
-1. **Selenium 的最终去留**：P2 是否删除 `driver.py` + `selenium` 依赖？（建议：P0/P1 稳定跑 1–2 周后再删）
+1. **Selenium 的最终去留**：**已按你的建议改为「移入 `crawler_core/legacy/` 保底 + 可选依赖」**（§4.4），**不删除任何 Selenium 代码**。待确认：子包布局与命名（`legacy/` 还是 `selenium_legacy/`）、是否额外提供顶层 `crawler_selenium.py` 整链入口。
 2. **349 的处理**：保留旧目录名「354_349救主正在等候」（推荐）还是新建「354_349奇妙的耶穌」并迁移文件？
 3. **DB v7 字段形态**：按 5.6 逐字段建列（查询友好，推荐）还是只加一列 `api_raw`（JSON 全量存档，最省事）？
 4. **`hymn_category` 表**：保留现有简体 45 行（来自 `merged_all.json`）不动、新分类写 `tjc_hymn.category`（推荐），还是用 API 重建整表？
 5. **缓存策略**：是否将 48 页响应落盘到 `Hymn_Downloads/api_cache/`（离线复现/对账更方便，但会多 2.2 MB 本地文件，需 gitignore）？
-6. **音频补齐范围**：是否将 API 多出的 11 首 12 条音频加入下载队列（约 +10–20 MB）？
+6. **音频补齐范围**：实测**仅 #201 人聲版 1 条可补**（≈2.5 MB，`.mp4` 容器）→ 是否补？（原"11 首"说法已作废，见 §3.2 校准）
+7. **存量重复文件**：136 个 `合唱-N部版`（= `四部合唱-N部版` 副本、145.7 MB）与 #349 的 2 条已下架文件 → 保留登记（推荐）/ 归档到 `_legacy/` / 删除？
+8. **不可用资源的 `download_status` 语义**：改为「不计入期望集合 → #62 变 `completed` + `_unavailable` 标注」（推荐）还是维持 `partial(n/m)`（保留现状语义）？
+9. **`.mp4` → `.m4a` 归一化**：是否同意（推荐同意，避免 `verify` 统计漏项）？
 
 ---
 
@@ -431,6 +612,13 @@ ALTER TABLE tjc_hymn ADD COLUMN next_no TEXT DEFAULT '';
 | `bench_api_vs_selenium.py` | 速度基准（Selenium vs API） |
 | `check_dir_naming.py` / `check_dir_naming2.py` | 目录名/文件名可推导性与顺序一致性 |
 | `check_list_vs_detail.py` | 列表项与详情记录等值性 |
+| `check62.py` | #62 全链取证：API/probe_report/DB/本地文件/HTTP 实测（本轮新增） |
+| `check_urls.py` | 全量 2078 个资源 URL 可达性实测（16 线程 HEAD，本轮新增） |
+| `check_urls2.py` | 非 200 复测（重试 + GET Range 兜底）+ `file_url` 字段形态检查（本轮新增） |
+| `reconcile_audio.py` | 以"实测可下载"为准的 API vs 本地逐版本对账（本轮新增） |
+| `check_seq.py` | `seq` 与 `hymn_number` 偏差、目录/文件命名核对（本轮新增） |
+| `check_detail.py` | 详情接口 vs 列表接口音频差异复核（本轮新增） |
+| `check_dup.py` | `合唱-N部版` 与 `四部合唱-N部版` 内容 md5 比对 + #201 下载实测（本轮新增） |
 
 产出数据：`/tmp/api_all_hymns.json`（474 首全量 2.2 MB，供离线复现对账）
 
