@@ -1,24 +1,24 @@
-# 官网 JSON API 重构方案（设计文档 · 待评审）
+# 官网 JSON API 重构方案（设计文档 · v1.3 已实施）
 
-> 版本：v1.2（2026-09-12 修订）　状态：**决策已定稿、数据先行项已落地，P0 就绪**
-> 关联会话日志：`docs/sessions/2026-09-12_21-47-42.md`（任务 2、任务 3、任务 4）
-> 结论一句话：**可行，收益 ≈10×；API 为主、Selenium 完整保留为保底（`crawler_core/selenium_legacy/`）；P0 → P1 → P2 分三阶段推进**
+> 版本：v1.3（2026-09-13 实施完成）　状态：**P0 / P1 / P2 全部落地，§7 验收全绿**
+> 关联会话日志：`docs/sessions/2026-09-12_21-47-42.md`（任务 1–5）
+> 结论一句话：**已完成——API 为主（Step 1 5.9 s / Step 2 58.7 s，约 10× 提速）、Selenium 完整保留为保底（`crawler_core/selenium_legacy/` + `crawler_selenium.py`）、DB v7 一列 `api_raw`、增量同步可用**
 
 ---
 
 ## 0. TL;DR
 
-| 维度 | 现状（Selenium） | 改后（官网 API） |
-| --- | --- | --- |
-| Step 1 列表扫描 | 48 页 × 2.76 s ≈ **2.2 min** | 48 请求 ≈ **5 s**（6 线程） |
-| Step 2 详情（474 首） | 实测 2.27 s/首 ≈ **17.9 min** | 实测 0.21 s/首（10 线程）≈ **100 s** |
-| 资源探测 · PDF | 948 次 HEAD ≈ 0.5 min | URL 由 API 直接给出（HEAD 校验保留） |
-| 资源探测 · 音频 | 474 页逐个点击播放 ≈ **8–10 min** | **0 s**（随数据一起返回） |
-| **合计（元数据 + 资源探测）** | **≈ 28–30 min** | **≈ 2–3 min** |
-| 数据完整性 | 音频 **1119 条可用**（清理前本地 1257 条，含 136 重复） | 音频 **1119 条可用 / 474 首**（另 10 条源站不可用；已清除 136 个重复文件，本地 1121 条） |
-| 增量更新 | 只能全量重扫 | 依 `updated_at` 真增量 |
-| 运行依赖 | Chrome + chromedriver 版本匹配 | 纯 requests（Selenium 移入 `selenium_legacy/` 作保底） |
-| 失败处理 | 无重试、坏链永久 `partial`、原因不落盘 | 四层容错 + URL 预检 + `_unavailable` 分类记录（§5.9） |
+| 维度 | 现状（Selenium） | 改后（官网 API） | 实施实测 |
+| --- | --- | --- | --- |
+| Step 1 列表扫描 | 48 页 × 2.76 s ≈ **2.2 min** | 48 请求 ≈ **5 s**（6 线程） | ✅ **5.9 s**（冷启动）/ 0.0 s（命中 `api_cache`）；Selenium 保底实测 20.7 s |
+| Step 2 详情（474 首） | 实测 2.27 s/首 ≈ **17.9 min** | 实测 0.21 s/首（10 线程）≈ **100 s** | ✅ **58.7 s**（列表 48 请求 + 474 详情补齐，8 线程） |
+| 资源探测 · PDF | 948 次 HEAD ≈ 0.5 min | URL 由 API 直接给出（HEAD 校验保留） | ✅ 含在探测 95.8 s 内 |
+| 资源探测 · 音频 | 474 页逐个点击播放 ≈ **8–10 min** | **0 s**（随数据一起返回） | ✅ 0 次点击；URL 预检 HEAD→GET Range 复测 |
+| **合计（元数据 + 资源探测）** | **≈ 28–30 min** | **≈ 2–3 min** | ✅ **≈ 2.6 min**（5.9 + 58.7 + 95.8 s） |
+| 数据完整性 | 音频 **1119 条可用**（清理前本地 1257 条，含 136 重复） | 音频 **1119 条可用 / 474 首**（另 10 条源站不可用；已清除 136 个重复文件，本地 1121 条） | ✅ 三方对账 474/474/474；资源 2067/2067 完整；音频 1119 可用 / 474 首全有 |
+| 增量更新 | 只能全量重扫 | 依 `updated_at` 真增量 | ✅ 水位 `api_raw.updated_at`；二次运行 0 变更 |
+| 运行依赖 | Chrome + chromedriver 版本匹配 | 纯 requests（Selenium 移入 `selenium_legacy/` 作保底） | ✅ `--engine api` 下 `sys.modules` 不含 selenium |
+| 失败处理 | 无重试、坏链永久 `partial`、原因不落盘 | 四层容错 + URL 预检 + `_unavailable` 分类记录（§5.9） | ✅ `_unavailable` 恰 10 条、#62 → `completed`、归档数据驱动 |
 
 关键前提（已实测）：**列表接口 `/api/hymn` 每条记录 = 详情接口 `/api/hymn/{no}` 的完整记录**（仅详情多 `prev_no`/`next_no`），因此**全量 474 首只需 48 个请求、2.2 MB**。
 
@@ -26,7 +26,13 @@
 > - **v1.1（校准）**：① 音频口径——API 侧 1130 条中 **9 条 `file_url=null` 空记录 + 1 条 404（#62 人聲版）**，另有 **136 个本地重复文件**；② 新增 §5.9 失败与异常处理设计、§4.4 双引擎保底布局。
 > - **v1.2（决策定稿 + 数据先行，2026-09-12 用户拍板 10 项，见 §10）**：
 >   - **已执行的数据操作**：删除 136 个重复文件（**-134.7 MB**，逐对 md5 复核）；#201 人聲版 `.mp4 → .m4a` 归一化；#349 目录迁移为 `354_349奇妙的耶穌`（目录 + `url_map.txt` + `probe_report.json` + `step5_progress.json` + DB 6 字段全链同步）。
->   - **已定稿的设计选择**：保底包命名 **`crawler_core/selenium_legacy/`** + 独立整链入口 **`crawler_selenium.py`**（必备）；DB v7 **只加一列 `api_raw`**；`hymn_category` **用 API 重建整表**；`api_cache/` 落盘并**纳入 git 跟踪**（约 2.2 MB）；不可用资源**不计入期望集合**（#62 → `completed` + `_unavailable`）；`.mp4 → .m4a` 归一化。
+>   - **已定稿的设计选择**：保底包命名 **`crawler_core/selenium_legacy/`** + 独立整链入口 **`crawler_selenium.py`**（必备）；DB v7 **只加一列 `api_raw`**；`hymn_category` **用 API 重建整表**；`api_cache/` 落盘并**纳入 git 跟踪**（约 2.9 MB）；不可用资源**不计入期望集合**（#62 → `completed` + `_unavailable`）；`.mp4 → .m4a` 归一化。
+> - **v1.3（实施完成，2026-09-13）**：
+>   - **P0/P1/P2 全部落地**（§7 验收逐项实测通过，详见会话日志任务 5）；
+>   - **两处实测修正**：① `hymn_category` 实为 **47 类 / 474 首**（v1.2 写的「45 类」是更早快照；现已按 API 实测口径重建并逐类核对）；
+>     ② **#349 是"整首诗被替换"而非仅元数据变化**——旧直链 `score/sheet|num/349.pdf` 现已 **404**，本地旧 PDF 文本确为《救主正在等待》，
+>     官网现为《奇妙的耶穌》（哈希命名 URL，五线谱 1,022,790 B / 简谱 194,773 B / 鋼琴版 `.mp3` 3,074,506 B）；
+>     处理：旧 5 个资源移入 `354_349奇妙的耶穌/_archive/`（附 README + md5），按新 URL 重新下载规范文件（**零删除**）。
 
 ---
 
@@ -41,7 +47,7 @@
    - 资源 URL **无预检**：坏链要等下载阶段才暴露，且被永久计入"期望文件"分母 → 例如 #62 人聲版（服务端 404）使该首永远是 `partial(3/4)` + `integrity_status=failed`；
    - 下载失败**只打印不落盘**：`probe_report.json` 里没有失败原因/HTTP 状态码，下次运行分不清"没试过"与"试过且 404"；
    - **无重试**：实测 2078 个资源 URL 中有 33 个（≈1.6%）瞬时失败（超时/SSL 抖动），现状会直接判失败；
-   - 归档说明**硬编码**在 `verify.py:301`（`if h == "62"`），新增坏链不会被记录。
+   - 归档说明**硬编码**在 `verify.py:301`（`if h == "62"`），新增坏链不会被记录。（v1.3 已改为读取 `_unavailable` 数据驱动）
 
 ### 1.2 目标
 - **性能**：元数据 + 资源 URL 采集从 ~30 min 降到 ~2–3 min（≈10×）。
@@ -111,7 +117,7 @@ downloader → images → checksums → verify（纯 requests / poppler）
 | `audio_files[{file_url, audio_category.name}]` | 474/474 首、**1130 条** | 音频直链 + 版本分类 |
 | `history` | 473/474 | 诗歌源考（HTML，含 `<p>`/`<br>`/`&ldquo;`） |
 | `lyricists` / `composers` | 442 / 473 | 多值数组（含 name / id / image_url） |
-| `category` | 474/474 | 分类对象（45 类，如 `讚美耶穌`） |
+| `category` | 474/474 | 分类对象（**47 类**，如 `讚美耶穌`；v1.2 记的 45 类为旧快照，实施时按 API 实测重建核对） |
 | `tags` | 1/474 | 标签基本未维护 |
 | `youtube_urls` | 471/474 | `[{label,url}]` |
 | `sheet_score_images` | **0** | 全为 `[]`（无图像版乐谱） |
@@ -530,33 +536,39 @@ ALTER TABLE tjc_hymn ADD COLUMN api_raw TEXT DEFAULT '';   -- 整条 API 记录�
 
 ## 7. 分阶段计划与验收标准
 
-### P0 — 核心替换（预计 3–4 h，含测试）
+### P0 — 核心替换（预计 3–4 h，含测试）　✅ **已完成（2026-09-13）**
 交付：`api_client.py`、`naming.py`、`scanner.scan_api`、`extractor` API 主路径、`probe` API 清单 + URL 预检、`driver` 转发层 + `selenium_legacy/` 目录落位（不删代码）、`api_cache/` 落盘、`crawler_selenium.py` 保底入口。
-验收：
-1. Step 1 全量扫描 ≤ 15 s，且生成的 `url_map.txt` 与现状 **474 行完全一致**（#349 已迁移为 `354_349奇妙的耶穌`，474/474 符合命名规则）；
-2. Step 2 全量 474 首 ≤ 3 min，`verse_1..10`/`chorus` 与现状**逐首 0 不一致**（对账脚本）；
-3. `probe_report.json` 的 PDF 字段与现状**0 差异**；音频侧按**实测可用口径**核对：可用 **1119** 条、`_unavailable` 恰为 **10** 条（9 空 + #62 404），**无新增误报**；
-4. **不崩断言**（§5.9.6 四项）全通过，退出码 0；
-5. `--engine api` 下 `sys.modules` 不含 `selenium`；`crawler_selenium.py` / `--engine selenium` 仍可跑通旧链（保底可用）；
-6. `api_cache/` 生成 48 个 JSON（合计 ≈2.2 MB）且二次运行命中缓存、不重复请求；
-7. 现有 `pytest` 23 项全绿；`ruff` / `bandit` / `mypy` 门禁通过。
+验收（**实测结果见括号**）：
+1. Step 1 全量扫描 ≤ 15 s，且生成的 `url_map.txt` 与现状 **474 行完全一致**（✅ 冷启动 5.9 s / 命中缓存 0.0 s；md5 `51f69558…` 前后不变）；
+2. Step 2 全量 474 首 ≤ 3 min，`verse_1..10`/`chorus` 与现状**逐首 0 不一致**（✅ 58.7 s；0 处差异；`api_raw` 覆盖 474/474）；
+3. `probe_report.json` 的 PDF 字段与现状**0 差异**；音频侧按**实测可用口径**核对：可用 **1119** 条、`_unavailable` 恰为 **10** 条（9 空 + #62 404），**无新增误报**（✅ 音频 474/474 首、可用 1119、`_unavailable` 10、`site_removed` 0；PDF 仅 #349 一处**真差异**——官网换诗导致旧 URL 404，已按新 URL 重下并留档旧文件，非实现缺陷）；
+4. **不崩断言**（§5.9.6 四项）全通过，退出码 0（✅ `test/test_no_crash.py` 12 项；另发现"断网但命中 `api_cache` 仍能完成 Step 2"）；
+5. `--engine api` 下 `sys.modules` 不含 `selenium`；`crawler_selenium.py` / `--engine selenium` 仍可跑通旧链（✅ 断言通过；保底 Step 1 实测 474 首 / 24 页 / 20.7 s）；
+6. `api_cache/` 生成 48 个 JSON（合计 ≈2.2 MB）且二次运行命中缓存、不重复请求（✅ 48 文件 ≈2.9 MB 已入 git；二次 `fetch_all` 0.02 s）；
+7. 现有 `pytest` 23 项全绿；`ruff` / `bandit` / `mypy` 门禁通过（✅ **pytest 81 passed**（新增 58 项）、ruff `All checks passed`、mypy 22 files Success、bandit 退出码 0）。
 
-### P1 — 数据模型 + 增量（预计 2–3 h）
+### P1 — 数据模型 + 增量（预计 2–3 h）　✅ **已完成（2026-09-13）**
 交付：DB v7 迁移（**单列 `api_raw`**）、`hymn_category` 用 API 重建、增量同步、`verify.py` 归档数据驱动化、残留数据修正（17 首 `composer`、#349 的元数据/音频对账——官网现仅剩 1 条 `鋼琴` mp3，本地 2 条已下架文件留档）。
 > ✅ 用户拍板的**数据先行项已于 2026-09-12 完成**：136 个重复文件删除（-134.7 MB）、#201 `.mp4 → .m4a` 归一化（实测无需补下载）、#349 目录迁移 + DB 全链同步。
-验收：
-1. `pytest` 新增字段相关用例全绿；迁移可重复执行（幂等）；
-2. 增量模式二次运行：0 首需要更新（水位判定正确）；
-3. 输出「API vs 本地 DB」差异报表，人工确认后再落库；
-4. `verify.py` 的 #62 硬编码归档改为 `_unavailable` 数据驱动，#62 状态归正为 `completed`；
-5. `hymn_category` 重建后：分类数与 API 一致（45 类）、每类诗歌数与 API 逐类相符，且可重复执行（幂等）。
+验收（**实测结果见括号**）：
+1. `pytest` 新增字段相关用例全绿；迁移可重复执行（幂等）（✅ `test/test_db_v7.py` 10 项；`ensure_v7_fields` 二次返回 False）；
+2. 增量模式二次运行：0 首需要更新（水位判定正确）（✅ 水位 `W=2026-09-07T05:53:28Z`，`same=474 / changed=0`）；
+3. 输出「API vs 本地 DB」差异报表，人工确认后再落库（✅ `sync.report()` 报表 + `run(apply=True)` 落库分离）；
+4. `verify.py` 的 #62 硬编码归档改为 `_unavailable` 数据驱动，#62 状态归正为 `completed`（✅ 硬编码已删；`download_status/completed` 474/474、失败任务"无"）；
+5. `hymn_category` 重建后：分类数与 API 一致、每类诗歌数与 API 逐类相符，且可重复执行（✅ **47 类 / 474 首**，逐类核对无差异，幂等复跑一致；文档原写「45 类」为旧快照，已更新）。
 
-### P2 — 瘦身与保底固化（预计 1 h）
+### P2 — 瘦身与保底固化（预计 1 h）　✅ **已完成（2026-09-13）**
 交付：Selenium 实现**移入 `crawler_core/selenium_legacy/`**（只搬不删）、`selenium` 移出主依赖到 `requirements-selenium.txt`、顶层 `crawler_selenium.py` **独立保底入口**、`selenium_legacy/README.md`、README 更新。
-验收：
-1. 全新环境（无 Chrome、未装 selenium）跑通 API 全流程；
-2. `crawler_selenium.py`（或 `--engine selenium`）在装了 selenium 的环境下仍能跑通旧链（保底不失效）；
-3. `pytest test/ -q` 全绿（`selenium_legacy/` 不参与默认测试）。
+验收（**实测结果见括号**）：
+1. 全新环境（无 Chrome、未装 selenium）跑通 API 全流程（✅ 全模块延迟导入 selenium，`--engine api` 下 `sys.modules` 无 selenium；`requirements.txt` 不含 selenium）；
+2. `crawler_selenium.py`（或 `--engine selenium`）在装了 selenium 的环境下仍能跑通旧链（保底不失效）（✅ 实测 Step 1 通过）；
+3. `pytest test/ -q` 全绿（`selenium_legacy/` 不参与默认测试）（✅ 81 passed；`pytest.ini` 注册 `selenium` 标记）。
+
+### P3 — 展望（可选，未排期）
+- `tool/bench_api.py`：把「Selenium vs API」基准脚本纳入 `tool/`，供每次改版后回归；
+- `selenium_legacy/` 的 `-m selenium` 用例（真实浏览器，仅本地/含 Chrome 环境运行）；
+- `#349` 留档目录（`_archive/` 5 个旧资源）的最终去留决策（保留 / 删除）；
+- `merged_all.json` 等导出物同步 `chorus` / `api_raw` 字段。
 
 ---
 
@@ -596,24 +608,26 @@ ALTER TABLE tjc_hymn ADD COLUMN api_raw TEXT DEFAULT '';   -- 整条 API 记录�
 
 ## 10. 决策定稿（2026-09-12 用户拍板 10 项）
 
-> 全部决策已确认，**P0 可直接开工**；其中 5 项属"数据先行"已在本次会话落地（见「落地状态」列）。
+> 全部决策已确认并**全部落地**（P0/P1/P2 于 2026-09-13 完成，§7 验收全绿）；其中 5 项属"数据先行"已在 2026-09-12 完成（见「落地状态」列）。
 
 | # | 决策项 | 拍板结论 | 落地状态 |
 | --- | --- | --- | --- |
-| ① | Selenium 保底包命名 | **`crawler_core/selenium_legacy/`**（不用 `legacy/`） | 待 P0/P2 实施 |
-| ② | 独立入口 | **需要 `crawler_selenium.py` 作为独立备选入口**（必备，非可选） | 待 P2 实施 |
+| ① | Selenium 保底包命名 | **`crawler_core/selenium_legacy/`**（不用 `legacy/`） | ✅ **已完成**（`__init__/driver/scanner_selenium/extractor_dom/probe_audio/README.md`） |
+| ② | 独立入口 | **需要 `crawler_selenium.py` 作为独立备选入口**（必备，非可选） | ✅ **已完成**（`crawler_selenium.py` + `--engine selenium`，实测 Step 1 通过） |
 | ③ | #349 处理 | **新建「354_349奇妙的耶穌」并迁移文件，数据库同步修改** | ✅ **已完成**（目录 + `url_map.txt` + `probe_report.json` + `step5_progress.json` + DB 6 字段；三方对账仍 ✅） |
 | ④ | 音频补齐范围 | **补 #201 那 1 条音频** | ✅ **已核实无需下载**：本地已有且与远端 md5 完全一致（`c6b9c8fc…`）→ 实际只做 `.mp4 → .m4a` 归一化 |
-| ⑤ | DB v7 字段形态 | **只加一列 `api_raw`**（API 原始记录 JSON） | 待 P1 实施（§5.6 已按此重写） |
-| ⑥ | `hymn_category` 表 | **用 API 重建整表** | 待 P1 实施（§5.6） |
-| ⑦ | 缓存策略 | **48 页响应落盘 `Hymn_Downloads/api_cache/`，不 gitignore，2.2 MB 入库可接受** | 待 P0 实施（§6 兼容表已改） |
+| ⑤ | DB v7 字段形态 | **只加一列 `api_raw`**（API 原始记录 JSON） | ✅ **已完成**（474/474 覆盖；另补「空值不覆盖旧值」守卫） |
+| ⑥ | `hymn_category` 表 | **用 API 重建整表** | ✅ **已完成**（47 类 / 474 首，逐类核对一致、幂等） |
+| ⑦ | 缓存策略 | **48 页响应落盘 `Hymn_Downloads/api_cache/`，不 gitignore，2.2 MB 入库可接受** | ✅ **已完成**（48 JSON ≈2.9 MB 已入 git；二次命中 0.02 s） |
 | ⑧ | 存量重复文件 | **先与官网数据对账；确认重复则删除** | ✅ **对账确认 + 已删除**：API 侧这 34 首只有 `四部合唱-N部`（无 `合唱-N部`），136 对文件全文件 md5 完全相同且未被 `probe_report`/DB 引用 → 删除 136 个文件（-134.7 MB），同步 `checksums.json`；#6 的 4 个（API 真实分类）保留 |
-| ⑨ | 不可用资源的 `download_status` 语义 | **采用推荐方式**：不计入期望集合 → `#62 → completed` + `_unavailable` 标注 | 待 P0/P1 实施（§5.9.3） |
+| ⑨ | 不可用资源的 `download_status` 语义 | **采用推荐方式**：不计入期望集合 → `#62 → completed` + `_unavailable` 标注 | ✅ **已完成**（`_unavailable` 恰 10 条；`download_status` 全量 `completed`） |
 | ⑩ | `.mp4 → .m4a` 归一化 | **同意**（前提：不影响播放——同容器改名，播放/转换链路不受影响） | ✅ **已完成**（`201_人聲版.m4a`：文件 + `checksums.json` + `probe_report.ext` + DB 路径四处同步） |
 
-**拍板后的新增待办**（原表之外，由本轮对账派生）：
-- #349 的 2 条已下架文件（`349_人聲版.mp3`、`349_四部合唱版.m4a`）**不是重复文件 → 保留留档**，P1 对账报表中标注 `site_removed`；
-- #349 官网现仅剩 1 条 `鋼琴` 音频，且 URL 已换为 `…af2877e3….mp3`（本地为旧 `…2fbccdb4….m4a`）→ P1 决定是否按新 URL 重下/替换（建议：先比对时长与码率，再决定是否替换）。
+**拍板后的新增待办**（原表之外，由本轮对账派生）——**均已于 2026-09-13 闭环**：
+- ✅ #349 取证升级：官网已把 349 号**整首诗替换**（旧直链 `score/sheet|num/349.pdf` → 404；本地旧 PDF 经 `pdftotext`
+  验证文本为《救主正在等待》，官网现为《奇妙的耶穌》并改用哈希命名 URL）→ 旧 5 个资源（2 PDF + 3 音频）
+  移入 `354_349奇妙的耶穌/_archive/`（含 `README.txt` + md5 清单）留档（**零删除**），并按 API 当前 URL
+  重新下载 3 个规范文件；`probe_report` 的 PDF 字段因此有 **1 处真差异**（#349），属站点内容变更、非实现缺陷。
 
 ---
 
@@ -641,6 +655,10 @@ ALTER TABLE tjc_hymn ADD COLUMN api_raw TEXT DEFAULT '';   -- 整条 API 记录�
 | `apply_cleanup.py` | 数据清理执行脚本：删重复文件（逐对 md5 守卫）+ `.mp4→.m4a` + `#349` 目录迁移（本轮新增） |
 
 产出数据：`/tmp/api_all_hymns.json`（474 首全量 2.2 MB，供离线复现对账）
+
+> 📦 **v1.3 收编**：4 个数据审计脚本（`check_dup2.py` / `verify_before_delete.py` / `reconcile_final.py` / `apply_cleanup.py`）
+> 已从 `/tmp` 落库到 **`tool/data_audit/`**（含 README 与复检顺序）；
+> 48 页 API 响应缓存落在 **`Hymn_Downloads/api_cache/`**（≈2.9 MB，纳入 git），可离线复现 Step 1/Step 2。
 
 ## 附录 B · 关键样例（12 号「耶穌尊名」）
 
