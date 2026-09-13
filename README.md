@@ -30,13 +30,14 @@ hymn_crawler/
 │   ├── verify.py               # 数据校验与报告（`_unavailable` 数据驱动归档）
 │   ├── images.py               # PDF → 窄边距 PNG + 双页拼接
 │   ├── checksums.py            # checksums.json 哈希维护
-│   ├── db.py                   # 数据库管理 + 迁移（v7）+ UPSERT + hymn_category 重建
+│   ├── ppt_jianpu.py           # ★ 从《赞美诗》PPT 提取带简谱文字歌词（解析+5 项校验+报告）
+│   ├── db.py                   # 数据库管理 + 迁移（v7 + 带简谱歌词 v8）+ UPSERT + hymn_category 重建
 │   └── selenium_legacy/        # 🛟 Selenium 保底引擎（旧实现原样保留，默认不参与主流程）
 │       ├── driver.py / scanner_selenium.py / extractor_dom.py / probe_audio.py
 │       └── README.md           # 用途 / 启停方法 / 何时该用
 │
 ├── crawler_api.py              # 🎮 统一主入口（API 主路径；--engine api|selenium|auto）
-├── tjc_hymn.db                 # 🗄 SQLite 数据库（v7 结构，474 首，含 api_raw 原始记录）
+├── tjc_hymn.db                 # 🗄 SQLite 数据库（v7 主表 474 首 + v8 两表「带简谱文字歌词」）
 │
 ├── config/                     # ⚙️ 依赖 + 门禁/测试配置（详见该目录 README）
 │   ├── requirements.txt        # 主依赖（纯 API，无 selenium）
@@ -47,7 +48,8 @@ hymn_crawler/
 │
 ├── data/                       # 📦 流水线产物（详见该目录 README）
 │   ├── probe_report.json       #   资源探测清单（474 首；含 _http_status/_unavailable 元信息）
-│   └── final_report.txt        #   最终执行统计报告
+│   ├── final_report.txt        #   最终执行统计报告
+│   └── jianpu_report.txt       #   带简谱歌词提取校验报告（需复核清单 + 等长统计）
 │
 ├── legacy/                     # 🛟 保底入口（详见该目录 README）
 │   └── crawler_selenium.py     #   Selenium 保底整链入口（等价重构前行为）
@@ -55,6 +57,8 @@ hymn_crawler/
 ├── tool/                       # 🛠 数据处理工具
 │   ├── data_audit/             # 🔍 数据审计脚本（重复文件对账 / 删除前核验 / 音频对账 / 清理执行 + README）
 │   ├── show_lyrics.py          # 🔎 入库歌词复核（看某首的正歌+副歌，并与 api_raw 逐字比对）
+│   ├── extract_jianpu.py       # 🎼 PPT → 带简谱文字歌词提取入库（解析/校验/报告/写库）
+│   ├── show_jianpu.py          # 🎹 简谱歌词渲染复核（简谱字体+歌词字体出图，逐字对位索引）
 │   ├── qwen_ocr.py             # 千问 Qwen-VL 图片 OCR 识别
 │   ├── ocr_merged_slices.py    # OCR 合并切片
 │   ├── merge_ocr_results.py    # OCR 结果合并
@@ -63,11 +67,12 @@ hymn_crawler/
 │   ├── verify_merged.py        # 合并数据校验
 │   └── ...                     # 其他数据比对 / 清理脚本
 │
-├── test/                       # 🧪 pytest 测试（81 项，离线可跑）
+├── test/                       # 🧪 pytest 测试（114 项，离线可跑）
 │   ├── test_api_client.py      # ★ API 客户端：分页/映射/目录名规则/重试/缓存/可用性状态机
 │   ├── test_db_v7.py           # ★ DB v7：api_raw/空值守卫/hymn_category/增量计划/引擎隔离
 │   ├── test_no_crash.py        # ★ 不崩断言（§5.9.6）：坏 URL/断网续跑/null 不下载/结构改版
 │   ├── test_lyrics_api.py      # 歌词 API + DOM box 归并 + chorus 字段
+│   ├── test_jianpu.py          # ★ PPT 带简谱歌词：字形语义/计数/解析/编号归属/DB v8 两表
 │   └── test_smoke.py           # 纯函数冒烟
 │
 ├── hooks/
@@ -187,6 +192,7 @@ hymn_crawler/
 | **转图入库** | `crawler_core/images.py` | PDF → 300DPI 窄边距 PNG，双页上下拼接 | ✅ 完成 |
 | **哈希清单** | `crawler_core/checksums.py` | 各目录 `checksums.json` 维护 PNG SHA-256 | ✅ 完成 |
 | **图片入库** | `crawler_core/db.py` (`update_png_paths`) | PNG 路径以新增字段 `*_png_path` 入库，不覆盖原 PDF 路径 | ✅ 完成 |
+| **带简谱歌词** | `crawler_core/ppt_jianpu.py` + `tool/extract_jianpu.py` | 474 份 PPT → 每节每行「简谱记号 + 歌词」；5 项校验（行配对/节号自洽/跨节曲调一致/歌词归属/音符-字数等长），写 `hymn_jianpu` + `hymn_jianpu_line` | ✅ 完成（404 首全项通过 / 70 首带复核标记） |
 
 ---
 
@@ -220,12 +226,50 @@ hymn_crawler/
 
 ---
 
+## 🎼 带简谱文字歌词（`hymn_jianpu` / `hymn_jianpu_line`，v8）
+
+`data/赞美诗PPT/*.ppt`（474 份，外部整理）**每张幻灯片 = 一节**，正文行序为
+「标题行 →（可选）节标签 `(副歌)`/`(三)` → 简谱记号行 + 歌词行 若干对 → 节号 `k/M`」。
+记号是**纯 ASCII**：`1`-`7` 为音级；`q w e t y r u`（半宽 `a d f g h j s`）等字母 =
+「数字 + 减时线/八度点」的**合成字形**；`/` = 延长线；`\` = 小节线；`|` = 终止线；
+零宽码位 `0 8 9 = - i k P p o` 等 = 附点/八度点/升号等叠加修饰。`data/赞美诗PPT/简谱字体/简谱字体.ttf`
+（01SMN "Simple music notation"）负责把上述 ASCII 渲染成简谱——**未装字体时 PPT 里"看不到字"**。
+
+| 表 | 粒度 | 关键列 |
+| :--- | :--- | :--- |
+| `hymn_jianpu` | 每份 PPT 一行（主键 `ppt_file`） | `hymn_number`（↔`tjc_hymn`，未匹配留空）、`version`（甲/乙）、`ppt_old_no`/`ppt_new_no`、`key_sig`/`time_sig`/`tempo`、`slide_count`/`chorus_slides`/`pair_count`/`note_total`、`tune_period`、`title_match`/`title_score`/`verse_match`/`verse_score`、`marker_ok`/`structure_ok`/`tune_ok`/`align_ok`、`review_reason`、`src_md5`、`extractor` |
+| `hymn_jianpu_line` | 每行一条（主键 `ppt_file, stanza_no, line_no`） | `notes`（原样记号）、`lyric`（原样歌词，含作者用空格做的对位）、`verse_no`/`is_chorus`/`label`、`note_count`/`rest_count`/`syllable_count`/`count_delta`/`align_ok` |
+
+> ❓ **为什么新建两表而不扩充 `tjc_hymn`**：一首诗天然是「节 × 行」两级、行数不定（1:N）。
+> 塞进 28 列宽表只能再走 `ALTER TABLE ADD COLUMN`（重演 v5~v7 的列序错位）或塞 JSON 大字段
+> （SQL 里没法做等长/归属校验）。独立两表还能同时容纳 **甲/乙两个版本**（DB 编号 `51_a`/`51_b`）。
+>
+> 🎯 **"曲谱配错歌词"怎么防**（入库前 5 项校验，全部落列可查）：
+> ① **行级配对**：每个简谱行必须紧跟其歌词行（`structure_ok`）；
+> ② **节号自洽**：每节的 `k/M` 必须与实际张数一致（`marker_ok`）；
+> ③ **跨节曲调一致**：同一首诗各节的旋律签名必须相同（`tune_period`/`tune_ok`）
+>    —— 现网检出 **41 首**作者记谱手误（如把 `q5812` 写成 `15812`）；
+> ④ **歌词归属**：本节歌词与 DB 正歌/副歌逐字比对（覆盖率 ≥0.75），确认"这段曲谱确实配这首诗"
+>    （`verse_match`/`verse_score`；PPT 为旧版编号，靠标题 + 歌词双重认定）；
+> ⑤ **音符-字数等长**：`count_delta = 音符数 - 字数`（>0 = 一字多音，正常；<0 = 音符数不足，必须人工复核）。
+>
+> ⚠️ **逐字对位（哪个字唱哪个音）PPT 里没有严格数据保证**：作者是用空格 + 字号在幻灯片上手工对齐的。
+> 因此 `notes`/`lyric` **原样保存**（含空格）以复现作者对位，并提供 `tool/show_jianpu.py`
+> 出图（音符序号 + 音节序号 + em 网格）与官方简谱 PNG 并排人工终审。
+
+---
+
 ## 🛠 开发工具
 
 - **tool/qwen_ocr.py**：调用千问 Qwen-VL 视觉模型识别图片文字（OCR），API Key 从本地文件读取
 - **tool/ 数据脚本**：OCR 切片合并、JSON↔DB 比对、图片合并、结果校验等
 - **tool/reorder_table_columns.py**：把 `tjc_hymn` 表的**物理列顺序**对齐 `crawler_core/db.py::_create_table_v4`
   （解析代码 DDL 为唯一权威 → 事务重建 + 逐行逐列自检；幂等，`--dry-run` 只报告不改库）
+- **带简谱歌词**（`data/赞美诗PPT/` 就位时）：
+  - `python tool/extract_jianpu.py --dry-run`：474 份 PPT → 出校验报告 `data/jianpu_report.txt`（不写库）
+  - `python tool/extract_jianpu.py`：解析 + 写 `hymn_jianpu` / `hymn_jianpu_line`（幂等，可反复跑）
+  - `python tool/show_jianpu.py 1 --map`：渲染 #1 的简谱+歌词（简谱字体出图、逐字对位索引），
+    与 `Hymn_Downloads/001_1頌讚獨一真神/1_简谱.png` 官方简谱并排核对；`--review` 列被标记的行
 - **单文件转图**：`python -m crawler_core.images --force --pdf <PDF 相对路径>`（重画指定诗歌的简谱 / 五线谱 PNG，不触发全量扫描）
 - **测试**：`/home/zjx/python_env/bin/python -m pytest -c config/pytest.ini test/ -q`（纯单元，无需网络；`test_smoke.py` 冒烟 + `test_maintenance.py` 维护工具回归）
 - **pre-commit 钩子**：提交前自动重建 `checksums.json`

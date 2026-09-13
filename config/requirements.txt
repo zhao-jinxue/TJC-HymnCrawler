@@ -7,3 +7,5 @@ requests>=2.28      # 官网 JSON API / PDF、音频下载
 urllib3>=1.26       # 关闭证书校验告警（站点为自有证书环境）
 beautifulsoup4>=4.12  # Selenium 保底列表页 DOM 解析、工具脚本
 Pillow>=9.0         # Step 5：PDF → PNG 双页拼接
+olefile>=0.47       # 解析二进制 .ppt（带简谱文字歌词提取，tool/extract_jianpu.py）
+opencc>=1.1         # 繁简转换：PPT（简体）↔ DB（繁体）的标题/歌词比对

@@ -29,6 +29,8 @@
   （**必须带 `--pythonpath`**：CLI 不会自动识别名为 `python_env` 的解释器，也不读 `.vscode/settings.json`，
   否则 selenium/PIL/bs4 会被误报为 `reportMissingImports`——19 条假告警）
 - 歌词/副歌复核：`python tool/show_lyrics.py <编号|区间>`（`--stats` 看覆盖率、`--no-chorus` 列无副歌编号）
+- 带简谱歌词复核：`python tool/extract_jianpu.py [--dry-run] [--only 1 5 349]`（PPT→两表+报告）、
+  `python tool/show_jianpu.py <编号> [--map]`（简谱字体渲染出图 + 逐字对位索引）、`--review` 列被标记的行
 - 构建/验证：参考 `docs/hymn_crawler_plan.md`（历史计划）与 `docs/CLINE_CONTEXT_MINIMIZE.md`
 
 ## 千问 API Key（图片解析/理解）

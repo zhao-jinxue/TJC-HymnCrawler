@@ -34,3 +34,6 @@ __pycache__/
 # 外部整理的大文件资料（2026-09-13 由用户放入，123 MB / .ppt）：仅本机使用，不入库
 /data/赞美诗PPT/
 
+# 带简谱歌词的复核渲染图（tool/show_jianpu.py 产物，可由 DB 随时重出）
+/data/jianpu_render/
+

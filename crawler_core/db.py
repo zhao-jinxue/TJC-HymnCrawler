@@ -3,6 +3,7 @@
 # v4: +download_status +integrity_status
 # v5: +staff_png_path +numbered_png_path（图片转 PNG 的保存路径）
 # v6: +chorus（副歌；官网 API lyrics_chorus，此前因采集缺陷整段丢失）
+# v8: +hymn_jianpu / hymn_jianpu_line（PPT 带简谱文字歌词，独立两表，不做 ALTER）
 
 import json
 import os
@@ -36,10 +37,13 @@ def init_db():
             ensure_chorus_field(c)
             # 幂等补 API 原始记录字段（v7）
             ensure_v7_fields(c)
+            # 幂等创建带简谱文字歌词两表（v8；独立于 tjc_hymn，不做 ALTER）
+            ensure_jianpu_tables(c)
             _backfill_from_probe(c, conn)
-            print("📊 数据库结构已是最新版（v7）。")
+            print("📊 数据库结构已是最新版（v7 + 带简谱歌词表 v8）。")
         else:
             _create_table_v4(c)
+            ensure_jianpu_tables(c)
 
         conn.commit()
     except Exception:
@@ -896,3 +900,186 @@ def update_png_paths(force=False, reset=False):
     print(f"[清理] 删除分页图 {deleted} 张, 保留(无整图) {skipped} 张")
     print("完成")
     return {"staff": s_ok, "numbered": n_ok, "deleted_pages": deleted, "resumed": resumed}
+
+
+# ================= 带简谱文字歌词表（v8: hymn_jianpu / hymn_jianpu_line） =================
+#
+# 来源：`data/赞美诗PPT/*.ppt`（解析见 `crawler_core/ppt_jianpu.py`，取证见会话日志任务 3）
+#
+# 设计取舍（为什么不扩充 tjc_hymn）：
+#   - 一首诗天然是「节 × 行」两级、行数不定（1:N）。塞进 `tjc_hymn` 只能①再走
+#     `ALTER TABLE ADD COLUMN` 追加 verse*_jianpu（重演 v5~v7 的列序错位）或②塞 JSON 大字段
+#     （SQL 里无法做等长/归属校验）。两种都违背「可查询、可校验、可复核」的目标。
+#   - 拆两张表：`hymn_jianpu`（每首一行：来源 + 元数据 + 汇总校验）+ `hymn_jianpu_line`
+#     （每行：notes/lyric + 音符数/字数 + 等长标志）→ 行级异常可直接 SQL 查出。
+#   - 关联：`hymn_jianpu.hymn_number` ↔ `tjc_hymn.hymn_number`。PPT 文件名是**旧版编号**，
+#     入库前由标题匹配换算为 DB 编号（`ppt_jianpu.match_hymn_number`）。
+
+JIANPU_HYMN_DDL = """CREATE TABLE IF NOT EXISTS hymn_jianpu (
+    ppt_file        TEXT PRIMARY KEY,
+    hymn_number     TEXT DEFAULT '',
+    version         TEXT DEFAULT '',
+    ppt_old_no      TEXT DEFAULT '',
+    ppt_new_no      TEXT DEFAULT '',
+    title           TEXT DEFAULT '',
+    title_line      TEXT DEFAULT '',
+    key_sig         TEXT DEFAULT '',
+    time_sig        TEXT DEFAULT '',
+    tempo           TEXT DEFAULT '',
+    slide_count     INTEGER DEFAULT 0,
+    chorus_slides   INTEGER DEFAULT 0,
+    pair_count      INTEGER DEFAULT 0,
+    note_total      INTEGER DEFAULT 0,
+    tune_period     INTEGER DEFAULT 0,
+    title_match     TEXT DEFAULT '',
+    title_score     REAL DEFAULT 0,
+    verse_match     TEXT DEFAULT '',
+    verse_score     REAL DEFAULT 0,
+    marker_ok       INTEGER DEFAULT 0,
+    structure_ok    INTEGER DEFAULT 0,
+    tune_ok         INTEGER DEFAULT 0,
+    align_ok        INTEGER DEFAULT 0,
+    review_reason   TEXT DEFAULT '',
+    src_md5         TEXT DEFAULT '',
+    extractor       TEXT DEFAULT '',
+    updated_at      TIMESTAMP DEFAULT (datetime('now', 'localtime'))
+)"""
+
+JIANPU_LINE_DDL = """CREATE TABLE IF NOT EXISTS hymn_jianpu_line (
+    ppt_file        TEXT NOT NULL,
+    hymn_number     TEXT DEFAULT '',
+    stanza_no       INTEGER NOT NULL,
+    line_no         INTEGER NOT NULL,
+    verse_no        INTEGER DEFAULT 0,
+    is_chorus       INTEGER DEFAULT 0,
+    label           TEXT DEFAULT '',
+    notes           TEXT NOT NULL,
+    lyric           TEXT NOT NULL,
+    note_count      INTEGER DEFAULT 0,
+    rest_count      INTEGER DEFAULT 0,
+    syllable_count  INTEGER DEFAULT 0,
+    count_delta     INTEGER DEFAULT 0,
+    align_ok        INTEGER DEFAULT 0,
+    PRIMARY KEY (ppt_file, stanza_no, line_no)
+)"""
+
+
+def ensure_jianpu_tables(c):
+    """v8: 幂等创建「带简谱文字歌词」两表 + 索引（不改动 tjc_hymn）
+
+    主键用 `ppt_file`：同一首诗在 PPT 库里可能存在**甲/乙两版**（如 051a/051b、132a/132b），
+    用 hymn_number 做主键会互相覆盖；`hymn_number` 降为关联列（未匹配时为空串）。
+    """
+    c.execute(JIANPU_HYMN_DDL)
+    c.execute(JIANPU_LINE_DDL)
+    c.execute("CREATE INDEX IF NOT EXISTS idx_jianpu_number ON hymn_jianpu(hymn_number)")
+    c.execute("CREATE INDEX IF NOT EXISTS idx_jianpu_line_review "
+              "ON hymn_jianpu_line(align_ok, count_delta)")
+    c.connection.commit()
+
+
+# 列清单（写库/读取共用；顺序即建表顺序，与 DDL 保持一致）
+JIANPU_HYMN_COLS = ("ppt_file", "hymn_number", "version", "ppt_old_no", "ppt_new_no",
+                    "title", "title_line", "key_sig", "time_sig", "tempo",
+                    "slide_count", "chorus_slides", "pair_count", "note_total",
+                    "tune_period", "title_match", "title_score", "verse_match",
+                    "verse_score", "marker_ok", "structure_ok", "tune_ok", "align_ok",
+                    "review_reason", "src_md5", "extractor")
+JIANPU_LINE_COLS = ("ppt_file", "hymn_number", "stanza_no", "line_no", "verse_no",
+                    "is_chorus", "label", "notes", "lyric", "note_count", "rest_count",
+                    "syllable_count", "count_delta", "align_ok")
+
+
+def save_jianpu_records(records, db_path=DB_PATH):
+    """写入「带简谱文字歌词」（每首 UPSERT 主行 + 重写行表；幂等，事务内失败回滚）
+
+    - 未映射到 DB 编号 / 解析失败 的记录**跳过并回报**（不静默丢弃）
+    - 行表先按 hymn_number 删除再插入 → 同一首重复导入不残留旧行
+    返回 {"hymns": n, "lines": n, "skipped": [(ppt_file, reason), ...]}
+    """
+    stats = {"hymns": 0, "lines": 0, "skipped": []}
+    conn = sqlite3.connect(db_path)
+    try:
+        c = conn.cursor()
+        ensure_jianpu_tables(c)
+        hcols = ", ".join(JIANPU_HYMN_COLS)
+        hph = ", ".join("?" * len(JIANPU_HYMN_COLS))
+        hupd = ", ".join(f"{col} = excluded.{col}" for col in JIANPU_HYMN_COLS[1:])
+        lcols = ", ".join(JIANPU_LINE_COLS)
+        lph = ", ".join("?" * len(JIANPU_LINE_COLS))
+        for rec in records:
+            if rec.get("parse_error") or not rec.get("ppt_file"):
+                stats["skipped"].append((rec.get("ppt_file", "?"),
+                                         rec.get("review_reason") or "解析失败"))
+                continue
+            # 列名来自本模块常量白名单，值全部参数化
+            c.execute(f"INSERT INTO hymn_jianpu ({hcols}) VALUES ({hph}) "
+                      f"ON CONFLICT(ppt_file) DO UPDATE SET {hupd}",  # nosec B608
+                      [rec.get(col) for col in JIANPU_HYMN_COLS])
+            c.execute("DELETE FROM hymn_jianpu_line WHERE ppt_file = ?", (rec["ppt_file"],))
+            rows = [[rec["ppt_file"]] +
+                    [(rec.get("hymn_number") if col == "hymn_number" else ln.get(col))
+                     for col in JIANPU_LINE_COLS[1:]]
+                    for ln in rec.get("lines", [])]
+            c.executemany(f"INSERT INTO hymn_jianpu_line ({lcols}) VALUES ({lph})",  # nosec B608
+                          rows)
+            stats["hymns"] += 1
+            stats["lines"] += len(rows)
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        conn.close()
+    return stats
+
+
+def load_jianpu(hymn_number, db_path=DB_PATH):
+    """按编号（或 ppt 文件名）读带简谱歌词 → [{"hymn": {...}, "lines": [...]}, ...]
+
+    同一首可能有**多份**（甲/乙版本、重复 PPT），故返回列表；表不存在返回 []。
+    """
+    out = []
+    conn = sqlite3.connect(db_path)
+    try:
+        cur = conn.execute(
+            f"SELECT {', '.join(JIANPU_HYMN_COLS)} FROM hymn_jianpu "  # nosec B608
+            "WHERE hymn_number = ? OR ppt_file = ? ORDER BY ppt_file",
+            (str(hymn_number), str(hymn_number)))
+        for row in cur.fetchall():
+            hymn = dict(zip(JIANPU_HYMN_COLS, row))
+            lines = conn.execute(
+                f"SELECT {', '.join(JIANPU_LINE_COLS)} FROM hymn_jianpu_line "  # nosec B608
+                "WHERE ppt_file = ? ORDER BY stanza_no, line_no",
+                (hymn["ppt_file"],)).fetchall()
+            out.append({"hymn": hymn,
+                        "lines": [dict(zip(JIANPU_LINE_COLS, r)) for r in lines]})
+    except sqlite3.OperationalError:  # 未建表
+        return []
+    finally:
+        conn.close()
+    return out
+
+
+def jianpu_stats(db_path=DB_PATH):
+    """带简谱歌词覆盖统计（表不存在返回 None）"""
+    conn = sqlite3.connect(db_path)
+    try:
+        total, mapped_n, usable = conn.execute(
+            "SELECT COUNT(*), SUM(hymn_number != ''), SUM(align_ok = 1) "
+            "FROM hymn_jianpu").fetchone()
+        lines = conn.execute("SELECT COUNT(*) FROM hymn_jianpu_line").fetchone()[0]
+        eq = conn.execute(
+            "SELECT COUNT(*) FROM hymn_jianpu_line WHERE count_delta = 0").fetchone()[0]
+        short = conn.execute(
+            "SELECT COUNT(*) FROM hymn_jianpu_line WHERE count_delta < 0").fetchone()[0]
+        db_matched = conn.execute(
+            "SELECT COUNT(*) FROM hymn_jianpu j JOIN tjc_hymn h "
+            "ON h.hymn_number = j.hymn_number").fetchone()[0]
+        return {"hymns": total, "mapped": mapped_n or 0, "usable": usable or 0,
+                "lines": lines, "lines_equal": eq, "lines_short": short,
+                "db_matched": db_matched}
+    except sqlite3.OperationalError:
+        return None
+    finally:
+        conn.close()
