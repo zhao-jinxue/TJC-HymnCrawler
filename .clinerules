@@ -16,11 +16,18 @@
 
 ## 项目关键信息
 - 项目类型：TJC 赞美诗（hymn）数据爬虫 + 数据处理流水线
+- **目录约定（2026-09-13 重排）**：项目根只保留 `README.md` / `crawler_api.py` / `tjc_hymn.db`；
+  依赖与门禁配置在 `config/`，产物在 `data/`，保底入口在 `legacy/`，资源在 `Hymn_Downloads/`（详见 README 项目结构）
 - Python 环境：`/home/zjx/python_env/bin/python`（内含 opencc / rapidocr 等依赖）
 - 核心代码：`crawler_core/`（爬虫框架）、`tool/`（数据处理工具）、`test/`（测试）
-- 数据文件：`tjc_hymn.db`（SQLite 数据库）、`probe_report.json`、`final_report.txt`
-- 测试命令：`/home/zjx/python_env/bin/python -m pytest test/ -x -q`
-- 构建/验证：参考 `hymn_crawler_plan.md` 与 `docs/CLINE_CONTEXT_MINIMIZE.md`
+- 主入口：`crawler_api.py`（原 `crawler_fast.py`）；保底入口：`legacy/crawler_selenium.py`
+- 数据文件：`tjc_hymn.db`（SQLite 数据库）、`data/probe_report.json`、`data/final_report.txt`
+- 测试命令：`/home/zjx/python_env/bin/python -m pytest -c config/pytest.ini test/ -x -q`
+- 门禁命令：`ruff check --config config/ruff.toml .`｜`mypy crawler_core crawler_api.py legacy/crawler_selenium.py`｜
+  `bandit -c config/bandit.yaml -r crawler_core crawler_api.py legacy/crawler_selenium.py`｜
+  VSCode/Pylance 对齐检查：`npx pyright crawler_core`
+- 歌词/副歌复核：`python tool/show_lyrics.py <编号|区间>`（`--stats` 看覆盖率、`--no-chorus` 列无副歌编号）
+- 构建/验证：参考 `docs/hymn_crawler_plan.md`（历史计划）与 `docs/CLINE_CONTEXT_MINIMIZE.md`
 
 ## 千问 API Key（图片解析/理解）
 - **触发条件**：任务涉及"解析图片、理解图片、识别图片内容、读取图片文字、视觉问答"时，使用千问多模态视觉 API

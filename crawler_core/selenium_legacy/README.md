@@ -16,14 +16,14 @@
 
 ```bash
 # 1) 安装保底依赖（另外需要 Chrome 与匹配版本的 chromedriver）
-pip install -r requirements-selenium.txt
+pip install -r config/requirements-selenium.txt
 
-# 2) 整链保底入口（菜单与重构前一致，全部走 DOM 引擎）
-/home/zjx/python_env/bin/python crawler_selenium.py
+# 2) 整链保底入口（菜单与重构前一致，全部走 DOM 引擎；2026-09-13 起位于 legacy/）
+/home/zjx/python_env/bin/python legacy/crawler_selenium.py
 
 # 3) 或从主入口临时切换引擎
-/home/zjx/python_env/bin/python crawler_fast.py --engine selenium --step 1
-/home/zjx/python_env/bin/python crawler_fast.py --engine auto --step 2   # API 优先，逐首失败才降级 DOM
+/home/zjx/python_env/bin/python crawler_api.py --engine selenium --step 1
+/home/zjx/python_env/bin/python crawler_api.py --engine auto --step 2   # API 优先，逐首失败才降级 DOM
 ```
 
 引擎语义（`--engine`，默认 `api`）：

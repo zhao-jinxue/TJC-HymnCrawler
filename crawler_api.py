@@ -1,13 +1,18 @@
 #!/usr/bin/env python3
-# crawler_fast.py
-# 🚀 统一入口（默认 API 引擎；Selenium 保底见 crawler_selenium.py）
+# crawler_api.py（原 crawler_fast.py，2026-09-13 重命名）
+# 🚀 统一主入口（默认 API 引擎；Selenium 保底见 legacy/crawler_selenium.py）
 #
-# 用法：
-#   python crawler_fast.py                        # 交互菜单
-#   python crawler_fast.py --engine api --step 1  # 非交互：只跑 Step 1（API）
-#   python crawler_fast.py --engine selenium --step 7
-#   python crawler_fast.py --step check           # Step 1 三方一致性检查（不落盘）
-#   python crawler_fast.py --refresh-api-cache --step 2
+# 用法（在项目根目录执行）：
+#   python crawler_api.py                        # 交互菜单
+#   python crawler_api.py --engine api --step 1  # 非交互：只跑 Step 1（API）
+#   python crawler_api.py --engine selenium --step 7
+#   python crawler_api.py --step check           # Step 1 三方一致性检查（不落盘）
+#   python crawler_api.py --refresh-api-cache --step 2
+#
+# 目录约定（2026-09-13 目录重排）：
+#   根目录只保留 README.md / crawler_api.py / tjc_hymn.db；
+#   依赖与门禁配置 → config/，数据产物（probe_report.json、final_report.txt）→ data/，
+#   Selenium 保底入口 → legacy/，Selenium 实现与 DOM 引擎 → crawler_core/selenium_legacy/。
 #
 # 引擎语义（§4.4）：api（默认，零浏览器依赖）/ selenium（旧 DOM 整链）/ auto（API 优先，逐首降级）
 
@@ -271,7 +276,7 @@ def main(argv=None, engine=None, step=None, use_cache=True):
     # 无 TTY（cron/CI/管道）时不进入交互菜单，避免无限等待输入
     if not sys.stdin.isatty():
         print("⚠️ 非交互终端：请用 --step <1-10|check|incremental> 指定要执行的步骤。")
-        print("   示例：python crawler_fast.py --engine api --step 10")
+        print("   示例：python crawler_api.py --engine api --step 10")
         return 2
 
     print("\n" + "=" * 40)

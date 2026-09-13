@@ -17,7 +17,7 @@ from crawler_core.config import BASE_URL  # noqa: E402
 
 ROOT = "/home/zjx/hymn_crawler"
 api = {i["no"]: i for i in json.load(open("/tmp/api_all_hymns.json", encoding="utf-8"))}
-report = json.load(open(os.path.join(ROOT, "probe_report.json"), encoding="utf-8"))
+report = json.load(open(os.path.join(ROOT, "data", "probe_report.json"), encoding="utf-8"))
 dirs = {e["hymn_number"]: os.path.join(ROOT, "Hymn_Downloads", e["title"]) for e in report}
 
 NULL_NOS = {"178", "249", "255", "268", "274_b", "308", "386", "387", "389"}

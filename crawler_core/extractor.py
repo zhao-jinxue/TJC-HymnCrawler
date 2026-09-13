@@ -171,14 +171,20 @@ class Extractor:
         fail = 0
         unresolved = []
 
-        def prepare(song):
-            """并发部分：只做 CPU/网络，不碰 DB"""
+        def prepare(song) -> tuple[dict, dict, list]:
+            """并发部分：只做 CPU/网络，不碰 DB
+
+            Returns:
+                (song, data, problems)：`problems` 非空即失败，此时 `data` 为 `{}`
+                （占位、不写库）；调用方先判 `problems`，故下面 `data["verse_count"]`
+                的类型恒为 dict，无需再判 None。
+            """
             rec = records.get(song["hymn_number"])
             if not rec:
-                return song, None, ["record:not_found"]
+                return song, {}, ["record:not_found"]
             problems = api_client.validate_record(rec)
             if problems:
-                return song, None, problems
+                return song, {}, problems
             return song, api_client.to_db_record(rec), []
 
         total = len(pending)
@@ -235,7 +241,7 @@ class Extractor:
 
         if not selenium_available():
             print(f"  ⚠️ {len(unresolved)} 首待 DOM 降级，但未安装 selenium → 保持 failed。"
-                  "（安装保底依赖：pip install -r requirements-selenium.txt）")
+                  "（安装保底依赖：pip install -r config/requirements-selenium.txt）")
             return success, fail
 
         driver = driver or self._ensure_driver()

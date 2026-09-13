@@ -1,9 +1,12 @@
-# ruff 门禁配置（2026-09-13 加入）
+# ruff 门禁配置（2026-09-13 加入；同日随目录重排移入 config/）
+#
+# ⚠️ 本文件不在项目根 → 必须在项目根显式指定：`ruff check --config config/ruff.toml .`
 #
 # 说明：项目内的「历史独立脚本」不在门禁范围内，避免为通过风格检查而改动行为——
 #   - `tool/**`            ：一次性数据处理/取证脚本（含本轮收编的 data_audit）
 #   - `test/test_step*.py` ：重构前的独立 Selenium 联调脚本（非 pytest 用例，需网络+浏览器）
-# 门禁覆盖：crawler_core / crawler_selenium.py / crawler_fast.py / test/ 下的 pytest 用例。
+# 门禁覆盖：crawler_core / crawler_api.py / legacy/crawler_selenium.py / test/ 下的 pytest 用例。
+# 注：exclude 模式相对**调用目录（项目根）**书写，与配置文件所在目录无关（已实测）。
 extend-exclude = [
     "tool",
     "test/test_step1.py",

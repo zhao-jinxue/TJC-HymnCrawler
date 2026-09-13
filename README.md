@@ -2,7 +2,11 @@
 
 一个系统化的 **TJC 赞美诗（Hymn）数据爬虫与数据处理流水线**，自动抓取真耶穌教會聖樂网（sacredmusic.tjc.org.tw）的诗歌资源，完成 **探测 → 下载 → 提取 → 转图 → 校验 → 入库** 全流程，最终沉淀为结构化的 SQLite 数据库与本地多媒体资源库。
 
-> **当前架构（2026-09-12 重构）**：默认走**官网 JSON API**（纯 `requests`，零浏览器依赖）——元数据 + 资源 URL 一次拿全，全量 474 首 **Step 1 ≈ 6 s / Step 2 ≈ 60 s**；重构前的 **Selenium/DOM 实现完整保留**为保底引擎（`crawler_core/selenium_legacy/`，独立入口 `crawler_selenium.py`），API 异常时可整体回退。
+> **目录约定（2026-09-13 重排）**：项目根只保留 `README.md` / `crawler_api.py` / `tjc_hymn.db`；
+> 依赖与门禁配置 → `config/`，数据产物（`probe_report.json`、`final_report.txt`）→ `data/`，
+> Selenium 保底入口 → `legacy/`，下载资源与 API 缓存 → `Hymn_Downloads/`。
+>
+> **当前架构（2026-09-12 重构）**：默认走**官网 JSON API**（纯 `requests`，零浏览器依赖）——元数据 + 资源 URL 一次拿全，全量 474 首 **Step 1 ≈ 6 s / Step 2 ≈ 60 s**；重构前的 **Selenium/DOM 实现完整保留**为保底引擎（`crawler_core/selenium_legacy/`，独立入口 `legacy/crawler_selenium.py`），API 异常时可整体回退。
 >
 > **当前实测**：成功采集 **474 首**诗歌（含 `51_a`/`51_b` 等同名变体），数据库 `tjc_hymn.db` 完整落库（v7：+`api_raw`）。
 
@@ -31,10 +35,26 @@ hymn_crawler/
 │       ├── driver.py / scanner_selenium.py / extractor_dom.py / probe_audio.py
 │       └── README.md           # 用途 / 启停方法 / 何时该用
 │
-├── crawler_fast.py             # 🎮 统一菜单入口（API 主路径；--engine api|selenium|auto）
-├── crawler_selenium.py         # 🛟 Selenium 保底独立整链入口（等价重构前行为）
+├── crawler_api.py              # 🎮 统一主入口（API 主路径；--engine api|selenium|auto）
+├── tjc_hymn.db                 # 🗄 SQLite 数据库（v7 结构，474 首，含 api_raw 原始记录）
+│
+├── config/                     # ⚙️ 依赖 + 门禁/测试配置（详见该目录 README）
+│   ├── requirements.txt        # 主依赖（纯 API，无 selenium）
+│   ├── requirements-selenium.txt # 保底引擎依赖（selenium + Chrome/chromedriver）
+│   ├── pytest.ini              # 测试配置（selenium 标记注册）
+│   ├── ruff.toml               # 风格门禁
+│   └── bandit.yaml             # 安全扫描跳过项
+│
+├── data/                       # 📦 流水线产物（详见该目录 README）
+│   ├── probe_report.json       #   资源探测清单（474 首；含 _http_status/_unavailable 元信息）
+│   └── final_report.txt        #   最终执行统计报告
+│
+├── legacy/                     # 🛟 保底入口（详见该目录 README）
+│   └── crawler_selenium.py     #   Selenium 保底整链入口（等价重构前行为）
+│
 ├── tool/                       # 🛠 数据处理工具
 │   ├── data_audit/             # 🔍 数据审计脚本（重复文件对账 / 删除前核验 / 音频对账 / 清理执行 + README）
+│   ├── show_lyrics.py          # 🔎 入库歌词复核（看某首的正歌+副歌，并与 api_raw 逐字比对）
 │   ├── qwen_ocr.py             # 千问 Qwen-VL 图片 OCR 识别
 │   ├── ocr_merged_slices.py    # OCR 合并切片
 │   ├── merge_ocr_results.py    # OCR 结果合并
@@ -56,16 +76,10 @@ hymn_crawler/
 ├── docs/
 │   ├── API_REFACTOR_PLAN.md    # 📐 API 重构方案（v1.3 已实施，含取证数据/决策定稿/验收结果）
 │   ├── SESSION_SUMMARY.md      # 📋 开发会话总结（新会话必读）
+│   ├── hymn_crawler_plan.md    # 📖 历史开发计划文档（v1.0 全流程方案）
 │   ├── CLINE_CONTEXT_MINIMIZE.md # 上下文最小化指南
 │   └── sessions/               # 🗂 会话开发日志档案（模板 + 按时间命名）
-│
-├── tjc_hymn.db                 # 🗄 SQLite 数据库（v7 结构，474 首，含 api_raw 原始记录）
-├── probe_report.json           # 📋 资源探测清单（474 首；含 _http_status/_unavailable 元信息）
-├── final_report.txt            # 📊 最终执行统计报告
-├── requirements.txt            # 主依赖（纯 API，无 selenium）
-├── requirements-selenium.txt   # 保底引擎依赖（selenium + Chrome/chromedriver）
-├── ruff.toml / pytest.ini      # 门禁与测试配置
-└── hymn_crawler_plan.md        # 📖 开发计划文档
+└── Hymn_Downloads/             # 诗歌资源（PDF/PNG/音频 + api_cache/ + url_map.txt）
 ```
 
 > 📦 `Hymn_Downloads/api_cache/`：48 页 API 响应落盘（≈2.9 MB，**纳入 git 跟踪**）——离线对账/复现用；命中缓存时 Step 1 仅需 0.0 s。
@@ -78,27 +92,27 @@ hymn_crawler/
 
 - **Python 3.10+**
 - 虚拟环境（推荐）：`/home/zjx/python_env/bin/python`
-- 主依赖（纯 API 路径）：`pip install -r requirements.txt`（`requests` / `urllib3` / `beautifulsoup4` / `Pillow`）
+- 主依赖（纯 API 路径）：`pip install -r config/requirements.txt`（`requests` / `urllib3` / `beautifulsoup4` / `Pillow`）
 - 系统工具：`poppler`（`pdftoppm` / `pdfinfo` / `pdftotext`，仅转图阶段需要）
-- 保底引擎（可选）：`pip install -r requirements-selenium.txt` + Chrome/chromedriver（**默认路径不需要**）
+- 保底引擎（可选）：`pip install -r config/requirements-selenium.txt` + Chrome/chromedriver（**默认路径不需要**）
 
 ### 运行
 
 ```bash
-# 交互菜单（默认 API 引擎）
-/home/zjx/python_env/bin/python crawler_fast.py
+# 交互菜单（默认 API 引擎）；所有命令都在项目根执行
+/home/zjx/python_env/bin/python crawler_api.py
 
 # 非交互单步（CI/脚本友好）
-/home/zjx/python_env/bin/python crawler_fast.py --engine api --step 1        # Step 1 扫描
-/home/zjx/python_env/bin/python crawler_fast.py --engine api --step 2        # Step 2 提取
-/home/zjx/python_env/bin/python crawler_fast.py --engine api --step 3        # 资源探测
-/home/zjx/python_env/bin/python crawler_fast.py --step 5                     # 校验与报告
-/home/zjx/python_env/bin/python crawler_fast.py --step 10                    # 全量/增量极速同步
-/home/zjx/python_env/bin/python crawler_fast.py --step check                 # 三方一致性检查（不落盘）
-/home/zjx/python_env/bin/python crawler_fast.py --refresh-api-cache --step 1 # 忽略分页缓存重抓
+/home/zjx/python_env/bin/python crawler_api.py --engine api --step 1        # Step 1 扫描
+/home/zjx/python_env/bin/python crawler_api.py --engine api --step 2        # Step 2 提取
+/home/zjx/python_env/bin/python crawler_api.py --engine api --step 3        # 资源探测
+/home/zjx/python_env/bin/python crawler_api.py --step 5                     # 校验与报告
+/home/zjx/python_env/bin/python crawler_api.py --step 10                    # 全量/增量极速同步
+/home/zjx/python_env/bin/python crawler_api.py --step check                 # 三方一致性检查（不落盘）
+/home/zjx/python_env/bin/python crawler_api.py --refresh-api-cache --step 1 # 忽略分页缓存重抓
 
 # Selenium 保底整链（等价重构前行为；需已装 selenium）
-/home/zjx/python_env/bin/python crawler_selenium.py
+/home/zjx/python_env/bin/python legacy/crawler_selenium.py
 ```
 
 | 参数 | 说明 |
@@ -126,18 +140,32 @@ hymn_crawler/
 > ✅ 所有阶段**支持幂等重跑**：已存在的内容自动跳过，断点进度文件（`step2/5/7_progress.json`、`lyrics_progress.json`）可续跑。
 > 进阶用法：`python -c "from crawler_core.lyrics_api import run; run(force=True, reset=True)"` 全量重抓歌词。
 
+### 歌词复核（人工取证）
+
+```bash
+# 看某首的正歌 + 副歌（并与 api_raw 原文逐字比对；退出码 1 = 有编号缺失/不一致）
+/home/zjx/python_env/bin/python tool/show_lyrics.py 12
+/home/zjx/python_env/bin/python tool/show_lyrics.py 1-20
+/home/zjx/python_env/bin/python tool/show_lyrics.py --stats       # 474 首 / 有副歌 270 / 无副歌 204
+/home/zjx/python_env/bin/python tool/show_lyrics.py --no-chorus   # 列出官网未提供副歌的编号
+```
+
+> 说明：副歌字段 `chorus` 来自官网 API 的 `lyrics_chorus`。**该字段为空的诗歌（当前 204 首）官网本身就无副歌**
+> （列表接口与详情接口一致，且正歌文本已含「阿們，阿們，哈利路亞！」这类内置叠句），并非抓取遗漏；
+> 详见 `docs/sessions/2026-09-13_12-53-00.md` 的取证结论。
+
 ### 测试
 
 ```bash
-/home/zjx/python_env/bin/python -m pytest test/ -x -q
+/home/zjx/python_env/bin/python -m pytest -c config/pytest.ini test/ -x -q
 ```
 
 代码质量检查（ruff / bandit / mypy 均已配置并通过）：
 
 ```bash
-/home/zjx/python_env/bin/python -m ruff check .                      # 门禁范围见 ruff.toml（历史独立脚本已排除）
-/home/zjx/python_env/bin/python -m bandit -c bandit.yaml -r crawler_core crawler_fast.py crawler_selenium.py
-/home/zjx/python_env/bin/python -m mypy crawler_core crawler_fast.py crawler_selenium.py
+/home/zjx/python_env/bin/python -m ruff check --config config/ruff.toml .   # 门禁范围见 config/ruff.toml（历史独立脚本已排除）
+/home/zjx/python_env/bin/python -m bandit -c config/bandit.yaml -r crawler_core crawler_api.py legacy/crawler_selenium.py
+/home/zjx/python_env/bin/python -m mypy crawler_core crawler_api.py legacy/crawler_selenium.py
 ```
 
 > `test/test_step1|2|3.py` 是重构前的独立 Selenium 联调脚本（需网络 + 浏览器），不参与 pytest 与 ruff 门禁；
@@ -154,7 +182,7 @@ hymn_crawler/
 | **歌词刷新** | `crawler_core/lyrics_api.py` | 官网 JSON API（`/api/hymn/{no}`）取正歌 `lyrics[]` + 副歌 `lyrics_chorus`，刷新 `verse_*` / `chorus` | ✅ 完成 |
 | **资源探测** | `crawler_core/probe.py` | API 直接给出 PDF/音频 URL（音频 0 次点击）+ URL 预检（HEAD→GET Range 复测）+ `_unavailable` 分类 | ✅ 完成 |
 | **资源下载** | `crawler_core/downloader.py` | 10 线程并发 + 断点续传 + 瞬时错误退避重试 + 文件完整性校验 + 路径回写 | ✅ 完成 |
-| **校验报告** | `crawler_core/verify.py` | 三方对账（DB / 目录 / url_map）+ 资源核验 + `_unavailable` 归档 + `final_report.txt` | ✅ 完成 |
+| **校验报告** | `crawler_core/verify.py` | 三方对账（DB / 目录 / url_map）+ 资源核验 + `_unavailable` 归档 + `data/final_report.txt` | ✅ 完成 |
 | **增量同步** | `crawler_core/sync.py` | 以 `api_raw.updated_at` 为水位的差异报表 + 落库 + `hymn_category` 重建（菜单 10 增量模式） | ✅ 完成 |
 | **转图入库** | `crawler_core/images.py` | PDF → 300DPI 窄边距 PNG，双页上下拼接 | ✅ 完成 |
 | **哈希清单** | `crawler_core/checksums.py` | 各目录 `checksums.json` 维护 PNG SHA-256 | ✅ 完成 |
@@ -216,7 +244,7 @@ hymn_crawler/
 - 数据来源：真耶穌教會聖樂网（sacredmusic.tjc.org.tw），请遵守网站使用条款。
 - 数据库与下载资源位于项目根目录（`tjc_hymn.db`、`Hymn_Downloads/`），DB 内存储的是**相对项目根目录**的路径。
 - **资源可用性语义（v7 起）**：不可用资源（`file_url=null` 空记录 / HTTP 4xx / 重试后仍网络失败）**不计入期望集合**，
-  其 `url` 置 `None` 并在 `probe_report.json` 中带 `_unavailable` / `_http_status` / `_url` 留痕 → 不下载、不重试、不算缺失。
+  其 `url` 置 `None` 并在 `data/probe_report.json` 中带 `_unavailable` / `_http_status` / `_url` 留痕 → 不下载、不重试、不算缺失。
   当前 10 条：9 条空记录（#178、#249、#255、#268、#274_b、#308、#386、#387、#389）+ **#62 人聲版 404**；
   `verify.py` 会据此生成"失败任务归档"章节（不再硬编码个案），#62 的 `download_status` 已归正为 `completed`。
 - **#349 特别说明**：官网已把 349 号整首诗由《救主正在等待》换为《奇妙的耶穌》（旧直链已 404），

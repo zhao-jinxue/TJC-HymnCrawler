@@ -1,18 +1,18 @@
 #!/usr/bin/env python3
-# crawler_selenium.py
+# crawler_selenium.py（2026-09-13 目录重排：由项目根移入 legacy/）
 # 🛟 Selenium 保底**独立整链入口**（必备项，§4.4 / P2）
 #
 # 用途：等价重构前行为——菜单、步骤、DOM 引擎与 2026-09-12 重构之前完全一致。
-#   API 是主路径（`crawler_fast.py`），本入口用于「官网内部接口改版」「API 记录异常
+#   API 是主路径（根目录 `crawler_api.py`），本入口用于「官网内部接口改版」「API 记录异常
 #   需要 DOM 兜底」「需要在无 API 场景下复现历史行为」等保底场景。
 #
 # 依赖：selenium + Chrome + 匹配版本的 chromedriver
-#   pip install -r requirements-selenium.txt
+#   pip install -r config/requirements-selenium.txt
 #
-# 用法（与 crawler_fast.py 完全一致的菜单/参数）：
-#   python crawler_selenium.py                     # 交互菜单（全链 DOM 引擎）
-#   python crawler_selenium.py --step 1            # 只跑 Step 1（列表页翻页）
-#   python crawler_selenium.py --step 7            # 全流程
+# 用法（与 crawler_api.py 完全一致的菜单/参数）：
+#   python legacy/crawler_selenium.py                     # 交互菜单（全链 DOM 引擎）
+#   python legacy/crawler_selenium.py --step 1            # 只跑 Step 1（列表页翻页）
+#   python legacy/crawler_selenium.py --step 7            # 全流程
 #
 # 说明：本文件不改动任何抓取逻辑，只把引擎固定为 selenium 后复用统一入口
 # （`crawler_core/selenium_legacy/` 内为完整旧实现，未删一行代码）。
@@ -20,6 +20,13 @@
 import os
 import sys
 
+# 项目根目录（本文件位于 <root>/legacy/）：保证直接执行脚本时也能 import 到
+# crawler_core / crawler_api（无需先设置 PYTHONPATH）
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if ROOT not in sys.path:
+    sys.path.insert(0, ROOT)
+
+# 注：以下 import 需在 sys.path 引导之后（E402 在本项目 ruff 配置中未启用，故无需 noqa）
 from crawler_core.config import VALID_ENGINES
 
 ENGINE = "selenium"
@@ -32,9 +39,9 @@ def _require_selenium():
     if selenium_available():
         return True
     print("❌ 未安装 selenium，无法运行 Selenium 保底整链。")
-    print("   修复：pip install -r requirements-selenium.txt")
+    print("   修复：pip install -r config/requirements-selenium.txt")
     print("   另需安装 Google Chrome，并保证 chromedriver 与 Chrome 版本匹配。")
-    print("   提示：日常抓取请直接用 API 主路径 `python crawler_fast.py`（无需浏览器）。")
+    print("   提示：日常抓取请直接用 API 主路径 `python crawler_api.py`（无需浏览器）。")
     return False
 
 
@@ -49,9 +56,9 @@ def main(argv=None):
     # 让所有模块（含任何按 config.CRAWL_ENGINE 取默认值的地方）都走 DOM 引擎
     os.environ["CRAWL_ENGINE"] = ENGINE
 
-    from crawler_fast import main as unified_main
+    from crawler_api import main as unified_main
 
-    print("🛟 Selenium 保底入口（crawler_selenium.py）：整链 DOM 引擎")
+    print("🛟 Selenium 保底入口（legacy/crawler_selenium.py）：整链 DOM 引擎")
     return unified_main(argv, engine=ENGINE)
 
 

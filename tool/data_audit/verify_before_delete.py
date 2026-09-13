@@ -17,7 +17,7 @@ import urllib3
 urllib3.disable_warnings()
 ROOT = "/home/zjx/hymn_crawler"
 api = {i["no"]: i for i in json.load(open("/tmp/api_all_hymns.json", encoding="utf-8"))}
-report = json.load(open(os.path.join(ROOT, "probe_report.json"), encoding="utf-8"))
+report = json.load(open(os.path.join(ROOT, "data", "probe_report.json"), encoding="utf-8"))
 db = sqlite3.connect(os.path.join(ROOT, "tjc_hymn.db"))
 
 pat_a = re.compile(r"^(\d+)_合唱-(\d)部版\.(m4a|mp3|mp4)$")

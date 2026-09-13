@@ -16,7 +16,7 @@ import sqlite3
 ROOT = "/home/zjx/hymn_crawler"
 DL = os.path.join(ROOT, "Hymn_Downloads")
 DB = os.path.join(ROOT, "tjc_hymn.db")
-report = json.load(open(os.path.join(ROOT, "probe_report.json"), encoding="utf-8"))
+report = json.load(open(os.path.join(ROOT, "data", "probe_report.json"), encoding="utf-8"))
 by_no = {e["hymn_number"]: e for e in report}
 dir_of = {no: os.path.join(DL, e["title"]) for no, e in by_no.items()}
 log = {"deleted": [], "renamed": [], "db_updates": []}
@@ -151,10 +151,12 @@ sets, vals = [], []
 for i, c in enumerate(cols, start=1):
     val = row[i]
     if isinstance(val, str) and OLD in val:
-        sets.append(f"{c}=?"), vals.append(val.replace(OLD, NEW))
+        sets.append(f"{c}=?")
+        vals.append(val.replace(OLD, NEW))
         log["db_updates"].append({"col": c, "new": val.replace(OLD, NEW)})
 if row[cols.index("title") + 1] != "奇妙的耶穌":
-    sets.append("title=?"), vals.append("奇妙的耶穌")
+    sets.append("title=?")
+    vals.append("奇妙的耶穌")
     log["db_updates"].append({"col": "title", "new": "奇妙的耶穌"})
 if sets:
     conn.execute(f"UPDATE tjc_hymn SET {', '.join(sets)} WHERE rowid=?", (*vals, rowid))
@@ -163,7 +165,7 @@ if sets:
 conn.close()
 
 # ---------- 落盘 ----------
-with open(os.path.join(ROOT, "probe_report.json"), "w", encoding="utf-8") as f:
+with open(os.path.join(ROOT, "data", "probe_report.json"), "w", encoding="utf-8") as f:
     json.dump(report, f, ensure_ascii=False, indent=2)
     f.write("\n")
 json.dump(log, open("/tmp/cleanup_log.json", "w", encoding="utf-8"), ensure_ascii=False, indent=1)

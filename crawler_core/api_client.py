@@ -447,7 +447,8 @@ def to_audio_versions(rec, local_dir=None, previous=None):
     for item in rec.get("audio_files") or []:
         if not isinstance(item, dict):
             continue
-        cat = item.get("audio_category") if isinstance(item.get("audio_category"), dict) else {}
+        raw_cat = item.get("audio_category")
+        cat = raw_cat if isinstance(raw_cat, dict) else {}
         ver = naming.audio_version_name(cat.get("name"))
         url = _text(item.get("file_url")).strip()
         if not url:
@@ -572,14 +573,14 @@ def api_field(value, path, default=None):
     return cur
 
 
-def api_updated_at(value):
-    """api_raw.updated_at（增量水位依据；无则空串）"""
-    return api_field(value, "updated_at") or ""
+def api_updated_at(value) -> str:
+    """api_raw.updated_at（增量水位依据；无则空串；非字符串亦归一为字符串）"""
+    return _text(api_field(value, "updated_at")).strip()
 
 
-def api_category_name(value):
-    """api_raw.category.name（繁体分类名；无则空串）"""
-    return api_field(value, "category.name") or ""
+def api_category_name(value) -> str:
+    """api_raw.category.name（繁体分类名；无则空串；非字符串亦归一为字符串）"""
+    return _text(api_field(value, "category.name")).strip()
 
 
 def api_youtube(value):

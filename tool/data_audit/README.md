@@ -16,8 +16,8 @@
 P=/home/zjx/python_env/bin/python
 $P tool/data_audit/reconcile_final.py      # 1) 音频口径是否仍「缺失 0」
 $P tool/data_audit/check_dup2.py           # 2) 是否又出现同内容重复文件（分类改名类问题）
-$P crawler_fast.py --step check            # 3) API 列表 vs url_map vs 本地目录 三方一致
-$P crawler_core/verify.py                  # 4) 全量校验 + final_report.txt
+$P crawler_api.py --step check            # 3) API 列表 vs url_map vs 本地目录 三方一致
+$P crawler_core/verify.py                 # 4) 全量校验 + data/final_report.txt
 ```
 
 > ⚠️ 这些脚本内含本机绝对路径（`/home/zjx/hymn_crawler`），迁移机器时请先替换路径常量。

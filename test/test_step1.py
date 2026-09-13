@@ -109,7 +109,7 @@ def get_hymn_list(start_url):
                 if title_tag and link_tag:
                     title = title_tag.get_text(strip=True)
                     href = link_tag.get('href')
-                    full_url = urljoin(BASE_URL, href)
+                    full_url = urljoin(BASE_URL, str(href or ""))
                     
                     if full_url not in [song['url'] for song in all_songs]:
                         all_songs.append({"title": title, "url": full_url})

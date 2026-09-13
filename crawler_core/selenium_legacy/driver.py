@@ -3,7 +3,7 @@
 
 SELENIUM_HINT = (
     "未安装 selenium（保底引擎所需）。安装方式："
-    "`pip install -r requirements-selenium.txt`，并确保 Chrome 与 chromedriver 版本匹配。"
+    "`pip install -r config/requirements-selenium.txt`，并确保 Chrome 与 chromedriver 版本匹配。"
 )
 
 

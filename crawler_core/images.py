@@ -96,8 +96,10 @@ def trim_to_margin(png_path, margin):
     w, h = im.size
 
     # 灰度 -> 内容(非白)置为255, 背景置为0 -> getbbox 快速求包围盒(C速度)
+    # 用 256 项查找表（而非 lambda）：语义与逐像素 lambda 完全一致，
+    # 且避开 PIL `point()` 的类型重载（pyright 曾报 lambda 参数不可比较）
     gray = im.convert("L")
-    mask = gray.point(lambda p: 255 if p < WHITE_THRESHOLD else 0)
+    mask = gray.point([255 if i < WHITE_THRESHOLD else 0 for i in range(256)])
     bbox = mask.getbbox()
 
     if bbox is None:
@@ -233,7 +235,7 @@ def convert_one(pdf_path, dpi, margin, force):
 
 
 def run(dpi=DEFAULT_DPI, margin=DEFAULT_MARGIN, force=False, limit=0, reset=False):
-    """程序化入口: 供 crawler_fast.py 调用; 命令行入口走 main()"""
+    """程序化入口: 供 crawler_api.py 调用; 命令行入口走 main()"""
     if reset:
         reset_progress()
 

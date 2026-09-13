@@ -22,7 +22,10 @@ SCRIPT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SAVE_ROOT = os.path.join(SCRIPT_DIR, "Hymn_Downloads")
 DB_PATH = os.path.join(SCRIPT_DIR, "tjc_hymn.db")
 MAP_FILE = os.path.join(SAVE_ROOT, "url_map.txt")
-PROBE_REPORT = os.path.join(SCRIPT_DIR, "probe_report.json")
+# 产物目录（2026-09-13 目录重排：根目录只保留 README.md / crawler_api.py / tjc_hymn.db）
+DATA_DIR = os.path.join(SCRIPT_DIR, "data")
+PROBE_REPORT = os.path.join(DATA_DIR, "probe_report.json")
+FINAL_REPORT = os.path.join(DATA_DIR, "final_report.txt")
 # API 响应磁盘缓存（48 页 JSON ≈ 2.2 MB，纳入 git 跟踪，供离线对账/复现）
 API_CACHE_DIR = os.path.join(SAVE_ROOT, "api_cache")
 
@@ -75,6 +78,7 @@ VALID_ENGINES = ("api", "selenium", "auto")
 USE_SELENIUM_FALLBACK = _env_bool("USE_SELENIUM_FALLBACK", False)
 
 os.makedirs(SAVE_ROOT, exist_ok=True)
+os.makedirs(DATA_DIR, exist_ok=True)
 
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",

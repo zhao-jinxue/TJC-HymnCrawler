@@ -210,12 +210,34 @@ class TestSyncPlan:
         }}]
         assert sync.pending_downloads([rec], state, probe_entries=probe) == []
 
+    def test_pending_downloads_autoloads_probe_report(self, monkeypatch):
+        """缺省 `probe_entries` 时自动读 probe_report（list → 必须按编号建索引）
+
+        回归（2026-09-13）：`_load_probe_entries()` 返回 **list**，早期实现把它直接赋给
+        `probe_map` → 下面 `probe_map.get(no)` 抛 `AttributeError: 'list' object has no
+        attribute 'get'`（未显式传清单的调用路径必崩；pyright 静态检查先发现）。
+        """
+        rec = _api_rec("12", audio_files=[
+            {"file_url": "https://e.org/a/piano.m4a", "audio_category": {"name": "鋼琴"}},
+        ])
+        state = {"12": {"api_raw": "", "updated_at": "", "verse_count": 2,
+                        "has_chorus": True, "audio": []}}
+        # ① 预检清单判定 鋼琴版 不可用 → 不进队列（且不得抛异常）
+        monkeypatch.setattr(sync, "_load_probe_entries", lambda: [
+            {"hymn_number": "12", "audio_versions": {
+                "鋼琴版": {"url": None, "_http_status": 404, "_unavailable": "http_4xx"}}},
+        ])
+        assert sync.pending_downloads([rec], state) == []
+        # ② 清单里没有该首（含非 dict 脏数据）→ 正常入队
+        monkeypatch.setattr(sync, "_load_probe_entries", lambda: ["坏记录"])
+        assert [p["filename"] for p in sync.pending_downloads([rec], state)] == ["12_鋼琴版.m4a"]
+
 
 # ================= 引擎隔离（P0 验收 5） =================
 
 class TestEngineIsolation:
     def test_api_engine_imports_no_selenium(self):
-        code = ("import sys, crawler_fast, crawler_core.probe, crawler_core.scanner;"
+        code = ("import sys, crawler_api, crawler_core.probe, crawler_core.scanner;"
                 "print('selenium' in sys.modules)")
         out = subprocess.run([sys.executable, "-c", code], cwd=ROOT,
                              capture_output=True, text=True, check=True)

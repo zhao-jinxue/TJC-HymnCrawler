@@ -1,7 +1,7 @@
 # 主依赖（API 主路径：纯 requests，无需浏览器 / selenium）
 #
-# 安装：pip install -r requirements.txt
-# 保底引擎（Selenium + Chrome）另见 requirements-selenium.txt
+# 安装：pip install -r config/requirements.txt（在项目根执行）
+# 保底引擎（Selenium + Chrome）另见同目录 requirements-selenium.txt
 
 requests>=2.28      # 官网 JSON API / PDF、音频下载
 urllib3>=1.26       # 关闭证书校验告警（站点为自有证书环境）

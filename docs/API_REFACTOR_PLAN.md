@@ -1,8 +1,18 @@
 # 官网 JSON API 重构方案（设计文档 · v1.3 已实施）
 
 > 版本：v1.3（2026-09-13 实施完成）　状态：**P0 / P1 / P2 全部落地，§7 验收全绿**
-> 关联会话日志：`docs/sessions/2026-09-12_21-47-42.md`（任务 1–5）
-> 结论一句话：**已完成——API 为主（Step 1 5.9 s / Step 2 58.7 s，约 10× 提速）、Selenium 完整保留为保底（`crawler_core/selenium_legacy/` + `crawler_selenium.py`）、DB v7 一列 `api_raw`、增量同步可用**
+> 关联会话日志：`docs/sessions/2026-09-12_21-47-42.md`（任务 1–5）、`docs/sessions/2026-09-13_12-53-00.md`（重排 + 诊断修复 + 副歌复核）
+> 结论一句话：**已完成——API 为主（Step 1 5.9 s / Step 2 58.7 s，约 10× 提速）、Selenium 完整保留为保底（`crawler_core/selenium_legacy/` + `legacy/crawler_selenium.py`）、DB v7 一列 `api_raw`、增量同步可用**
+>
+> ⚠️ **路径变更（2026-09-13 目录重排，见本次会话日志）**：本文档正文中出现的**当时**路径需按下表换算——
+>
+> | 本文档旧路径 | 现路径 |
+> | --- | --- |
+> | `crawler_fast.py` | `crawler_api.py`（根目录，重命名） |
+> | `crawler_selenium.py` | `legacy/crawler_selenium.py` |
+> | `probe_report.json` | `data/probe_report.json` |
+> | `final_report.txt` | `data/final_report.txt` |
+> | `requirements.txt` / `requirements-selenium.txt` / `pytest.ini` / `ruff.toml` / `bandit.yaml` | 同名，均在 `config/` 下 |
 
 ---
 
@@ -566,9 +576,16 @@ ALTER TABLE tjc_hymn ADD COLUMN api_raw TEXT DEFAULT '';   -- 整条 API 记录�
 
 ### P3 — 展望（可选，未排期）
 - `tool/bench_api.py`：把「Selenium vs API」基准脚本纳入 `tool/`，供每次改版后回归；
-- `selenium_legacy/` 的 `-m selenium` 用例（真实浏览器，仅本地/含 Chrome 环境运行）；
-- `#349` 留档目录（`_archive/` 5 个旧资源）的最终去留决策（保留 / 删除）；
-- `merged_all.json` 等导出物同步 `chorus` / `api_raw` 字段。
+- `selenium_legacy/` 的 `-m selenium` 用例（真实浏览器，仅本地/含 Chrome 环境运行；当前仅注册标记、尚无用例）；
+- 🧑‍⚖️ `#349` 留档目录（`Hymn_Downloads/_archive/` 5 个旧资源 + README + md5）的最终去留决策（**保留 / 删除**，待用户拍板）；
+- `merged_all.json` 等导出物同步 `chorus` / `api_raw` 字段（`tool/merge_to_json.py` / `tool/json_to_db.py` 尚未纳入）；
+- 🧑‍⚖️ 歌词「缺副歌」反馈的最终定性（2026-09-13 已取证：库内 vs 实时官网 **0 差异**，270 有 / 204 无；若需为 204 首补副歌须另开 PDF/OCR 路线）。
+
+### P4 — 已完成补充（2026-09-13 会话）
+- `sync.pending_downloads()` 预检记录索引修复（`_load_probe_entries()` 返回 list 却按 dict 调用 `.get`
+  → 缺省参数路径必崩；pyright 静态检查先发现，已修 + 单测覆盖）；
+- `api_client.to_audio_versions()` / `extractor._extract_api()` 类型收窄（pyright 0 诊断）；
+- 新增 `tool/show_lyrics.py`（入库歌词复核：正歌 + 副歌 + 与 `api_raw` 逐字比对）。
 
 ---
 

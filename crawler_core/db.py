@@ -8,7 +8,7 @@ import json
 import os
 import sqlite3
 
-from .config import DB_PATH, SAVE_ROOT
+from .config import DB_PATH, PROBE_REPORT, SAVE_ROOT
 
 
 def init_db():
@@ -196,7 +196,7 @@ def ensure_v7_fields(c):
 
 def _backfill_from_probe(c, conn):
     """从 probe_report.json 回填 audio_versions / audio_version_list / download_status"""
-    pr_path = os.path.join(os.path.dirname(DB_PATH), "probe_report.json")
+    pr_path = PROBE_REPORT
     if not os.path.exists(pr_path):
         return
 
@@ -412,7 +412,7 @@ def update_integrity_status(hymn_number, integrity_status, probe_report_obj=None
     conn.close()
 
     # 更新 probe_report.json（如果传入了对象则直接修改，否则读写文件）
-    pr_path = os.path.join(os.path.dirname(DB_PATH), "probe_report.json")
+    pr_path = PROBE_REPORT
     if probe_report_obj is not None:
         for entry in probe_report_obj:
             if entry.get("hymn_number") == hymn_number:
@@ -455,7 +455,7 @@ def batch_update_integrity(integrity_map, probe_report_obj=None):
     conn.close()
 
     # 同步到 probe_report.json
-    pr_path = os.path.join(os.path.dirname(DB_PATH), "probe_report.json")
+    pr_path = PROBE_REPORT
     if probe_report_obj is not None:
         status_map = {e.get("hymn_number"): e for e in probe_report_obj}
         for hnum, status in integrity_map.items():

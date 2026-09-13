@@ -251,7 +251,9 @@ class TestCache:
         assert api_client.cache_get(1) is None
         api_client.cache_put(1, {"data": [{"no": "1"}], "last_page": 1})
         assert api_client.cache_pages() == [1]
-        assert api_client.cache_get(1)["data"][0]["no"] == "1"
+        cached = api_client.cache_get(1)
+        assert cached is not None  # 刚写入，必然命中
+        assert cached["data"][0]["no"] == "1"
         assert api_client.cache_clear() == 1
         assert api_client.cache_pages() == []
 

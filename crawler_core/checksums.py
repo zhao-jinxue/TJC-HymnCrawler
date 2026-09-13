@@ -103,7 +103,7 @@ def update_png():
 
 
 def run(incremental=False):
-    """程序化入口: 供 crawler_fast.py 调用"""
+    """程序化入口: 供 crawler_api.py 调用"""
     if incremental:
         return update_png()
     return rebuild_all()

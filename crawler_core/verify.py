@@ -25,7 +25,7 @@ import sys
 from collections import defaultdict
 
 from . import api_client
-from .config import DB_PATH, MAP_FILE, PROBE_REPORT, SAVE_ROOT
+from .config import DB_PATH, FINAL_REPORT, MAP_FILE, PROBE_REPORT, SAVE_ROOT
 from .downloader import verify_file_integrity
 
 # 项目根目录（用于拼接 DB 相对路径 / 报告输出路径）
@@ -416,7 +416,7 @@ def main():
     lines.append("=" * 60)
     lines.append("报告结束")
 
-    report_path = os.path.join(ROOT, "final_report.txt")
+    report_path = FINAL_REPORT
     with open(report_path, "w", encoding="utf-8") as f:
         f.write("\n".join(lines))
     print(f"   ✅ final_report.txt 已生成 ({len(lines)} 行)")

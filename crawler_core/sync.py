@@ -98,9 +98,11 @@ def pending_downloads(records, db_state, probe_entries=None):
     """
     probe_map = {}
     if probe_entries is not None:
-        probe_map = {e.get("hymn_number"): e for e in probe_entries}
+        probe_map = {e.get("hymn_number"): e for e in probe_entries if isinstance(e, dict)}
     else:
-        probe_map = _load_probe_entries()
+        # 注意：_load_probe_entries() 返回 list，必须按编号建索引；
+        # 直接赋值会让下面的 probe_map.get(no) 在 list 上抛 AttributeError（pyright 曾报此类型错）
+        probe_map = {e.get("hymn_number"): e for e in _load_probe_entries() if isinstance(e, dict)}
 
     pending = []
     for rec in records or []:
@@ -118,7 +120,7 @@ def pending_downloads(records, db_state, probe_entries=None):
     return pending
 
 
-def _load_probe_entries():
+def _load_probe_entries() -> list:
     """读取 probe_report.json → [entry, ...]（缺失/损坏返回 []）"""
     from .config import PROBE_REPORT
 

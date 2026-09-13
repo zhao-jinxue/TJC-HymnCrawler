@@ -50,3 +50,37 @@ class TestDirList:
         # 474 首应有 51_a 这类变体
         assert "51_a" in dirs
         assert len(dirs) >= 470
+
+
+# ---------- step5: 白边裁剪（trim_to_margin，纯本地临时文件） ----------
+class TestTrimToMargin:
+    """回归：`gray.point(lambda p: ...)` 改为 256 项查找表后行为不变（pyright 类型告警修复）"""
+
+    @staticmethod
+    def _make_png(path, size=(60, 40), content_box=(10, 5, 50, 35)):
+        from PIL import Image
+        img = Image.new("L", size, 255)
+        x0, y0, x1, y1 = content_box
+        for x in range(x0, x1):
+            for y in range(y0, y1):
+                img.putpixel((x, y), 0)
+        img.save(str(path))
+        return img
+
+    def test_trims_to_content_with_margin(self, tmp_path):
+        from crawler_core.images import trim_to_margin
+        png = tmp_path / "page.png"
+        self._make_png(png)
+        original, trimmed = trim_to_margin(str(png), 2)
+        assert original == (60, 40)
+        # 内容 40×30 + 上下左右各 2 像素边距
+        assert trimmed == (44, 34)
+
+    def test_blank_page_not_trimmed(self, tmp_path):
+        from PIL import Image
+
+        from crawler_core.images import trim_to_margin
+        png = tmp_path / "blank.png"
+        Image.new("L", (20, 30), 255).save(str(png))
+        original, trimmed = trim_to_margin(str(png), 2)
+        assert (original, trimmed) == ((20, 30), (20, 30))
