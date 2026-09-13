@@ -17,8 +17,8 @@ __pycache__/
 /Hymn_Downloads/step7_progress.json
 /Hymn_Downloads/lyrics_progress.json
 
-# 资源留档目录（如 #349 换诗后的历史文件）：仅跟踪说明文件，资源本体不入库（体积大）
-!/Hymn_Downloads/**/_archive/README.txt
+# 资源留档：2026-09-13 决策——不做 `_archive/` 长期留档（#349 的 5 个旧资源归档已删除，
+# 新诗资源按 API 当前 URL 重新下载并由 PDF 重出图片）；历史变更记录见 docs/sessions/
 
 # 数据库文件（probe_report.json 保留跟踪，作为 db 重建的保险）
 *.db-journal
@@ -30,4 +30,7 @@ __pycache__/
 *.zip
 *.tar.gz
 *.7z
+
+# 外部整理的大文件资料（2026-09-13 由用户放入，123 MB / .ppt）：仅本机使用，不入库
+/data/赞美诗PPT/
 

@@ -1,30 +1,22 @@
 [
   {
     "file": "349_五线谱.pdf",
-    "sha256": "884c06877c18915e8bce405f4fddd6181129d963f86aaef4ae20d84daf1e4ca5"
+    "sha256": "98fb6c286c75cb2b1b79098ec5f352f15ed0f40443267c74172909d53b519941"
   },
   {
     "file": "349_五线谱.png",
-    "sha256": "b5468a808b9f1364cf4a9598d2e135f91ba0f31692cddb39b6febe2789ab44d1"
-  },
-  {
-    "file": "349_人聲版.mp3",
-    "sha256": "65bc90255ecddcfa6ba47b162a92cc12a0bff3118848f5447b8d8193bf36554b"
-  },
-  {
-    "file": "349_四部合唱版.m4a",
-    "sha256": "13fecd75aef651006e0c3b8d7106133ca9c8ba52a1128dd8ca3e617e5777aaad"
+    "sha256": "b6768d217c04d8219b1b2c6221a3be777ed4c13ba810830b37fe9b4ffe1b020b"
   },
   {
     "file": "349_简谱.pdf",
-    "sha256": "a19f5c7dbecc273ef4609c2288394d6d49cdb7dc0834292b745120489dd5913f"
+    "sha256": "f646c3742890c1fb642a198fc55cec922a9101712df39bb61b1dc3fd023d40e1"
   },
   {
     "file": "349_简谱.png",
-    "sha256": "ae9fa993ef5b13691e2dd4f02a25371c4d050c2adb4a23078bb5df8e040a6d25"
+    "sha256": "55c4d0171ab500e02a9a94461e5210037f505bd5b7be0930c6154313471f08f9"
   },
   {
-    "file": "349_鋼琴版.m4a",
-    "sha256": "cb8ca70cbc07ce0dd35020b34f96fdeef9829e26cbea5c01d2b8a81fb2d0e6c3"
+    "file": "349_鋼琴版.mp3",
+    "sha256": "9ddf2c6f90023fd12d56fea805f16d88bf6c4f34c50e047ce971de3d4450510e"
   }
 ]

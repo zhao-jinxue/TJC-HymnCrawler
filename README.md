@@ -192,7 +192,7 @@ hymn_crawler/
 
 ## 🗄 数据库设计（`tjc_hymn` 表）
 
-| 字段名 | 类型 | 说明 |
+| 字段名（按 `_create_table_v4` 建表顺序） | 类型 | 说明 |
 | :--- | :--- | :--- |
 | `id` | INTEGER | 自增主键 |
 | `hymn_number` | TEXT | 诗歌编号（网页提取，UNIQUE，含 `51_a` 变体） |
@@ -204,15 +204,17 @@ hymn_crawler/
 | `chorus` | TEXT | **副歌**（官网 `lyrics_chorus`；v6 新增，此前因采集缺陷整段丢失） |
 | `staff_img_path` | TEXT | **五线谱 PDF** 相对路径 |
 | `numbered_img_path` | TEXT | **简谱 PDF** 相对路径 |
+| `staff_png_path` / `numbered_png_path` | TEXT | **五线谱 / 简谱 PNG** 相对路径（v5 新增；由 `crawler_core.images` 从 PDF 转出） |
 | `audio_versions` | TEXT | JSON：**版本名 → 相对路径**（如 `{"鋼琴版": "..."}`） |
 | `audio_version_list` | TEXT | JSON：纯版本名列表 |
-| `staff_png_path` / `numbered_png_path` | TEXT | **五线谱 / 简谱 PNG** 相对路径（第五阶段新增） |
+| `api_raw` | TEXT | **API 原始记录 JSON**（v7 新增）：`category` / `tags` / `youtube_urls` / `updated_at` / `prev_no` / `next_no` / `history` HTML 等；读取用 `api_client.api_field(raw, "category.name")` 等助手 |
 | `download_status` | TEXT | `completed` / `partial(x/y)` / `failed` / `pending` / `dir_missing` / `no_files` |
 | `integrity_status` | TEXT | `passed` / `failed` / `unchecked` |
-| `api_raw` | TEXT | **API 原始记录 JSON**（v7 新增）：`category` / `tags` / `youtube_urls` / `updated_at` / `prev_no` / `next_no` / `history` HTML 等；读取用 `api_client.api_field(raw, "category.name")` 等助手 |
 | `updated_at` | TIMESTAMP | 更新时间（本地时间 CST） |
 
 > 🔄 **自动迁移**：`crawler_core/db.py` 的 `init_db()` 支持从任意旧版本自动升级（v1 → v7），无需手动干预。
+> 🧱 **列顺序**：库内**物理列顺序**与 `_create_table_v4` 的建表顺序一致（28 列）；旧库因 v5/v6/v7 走 `ALTER TABLE` 追加曾出现顺序错位，
+> 已由 `tool/reorder_table_columns.py` 重建对齐（幂等，可随时 `--dry-run` 复核）。
 > 📚 `hymn_category` 表由 `db.rebuild_hymn_category(records)` **用 API 重建**（`id / name / slug / hymn_count / updated_at`，先建临时表再原子替换，失败回滚、可重复执行）。
 > 🔁 **UPSERT 原则（v6 起）**：`title` / 作者 / 源考 / 副歌 / 路径 / 状态 / `api_raw` 等字段**空值不覆盖旧值**——API 侧缺失时保留库内既有成果（如 #25/#31/#66/#299 官网无 lyricists、#349 无 history）。
 
@@ -222,10 +224,13 @@ hymn_crawler/
 
 - **tool/qwen_ocr.py**：调用千问 Qwen-VL 视觉模型识别图片文字（OCR），API Key 从本地文件读取
 - **tool/ 数据脚本**：OCR 切片合并、JSON↔DB 比对、图片合并、结果校验等
-- **测试**：`test/test_smoke.py`（6 个纯单元冒烟用例，无需网络）
+- **tool/reorder_table_columns.py**：把 `tjc_hymn` 表的**物理列顺序**对齐 `crawler_core/db.py::_create_table_v4`
+  （解析代码 DDL 为唯一权威 → 事务重建 + 逐行逐列自检；幂等，`--dry-run` 只报告不改库）
+- **单文件转图**：`python -m crawler_core.images --force --pdf <PDF 相对路径>`（重画指定诗歌的简谱 / 五线谱 PNG，不触发全量扫描）
+- **测试**：`/home/zjx/python_env/bin/python -m pytest -c config/pytest.ini test/ -q`（纯单元，无需网络；`test_smoke.py` 冒烟 + `test_maintenance.py` 维护工具回归）
 - **pre-commit 钩子**：提交前自动重建 `checksums.json`
 
-更多细节见 **[hymn_crawler_plan.md](hymn_crawler_plan.md)**（开发计划 / 数据库设计 / 历史决策）与 **docs/** 目录。
+更多细节见 **[docs/hymn_crawler_plan.md](docs/hymn_crawler_plan.md)**（开发计划 / 数据库设计 / 历史决策）与 **docs/** 目录。
 
 ---
 
@@ -248,6 +253,7 @@ hymn_crawler/
   当前 10 条：9 条空记录（#178、#249、#255、#268、#274_b、#308、#386、#387、#389）+ **#62 人聲版 404**；
   `verify.py` 会据此生成"失败任务归档"章节（不再硬编码个案），#62 的 `download_status` 已归正为 `completed`。
 - **#349 特别说明**：官网已把 349 号整首诗由《救主正在等待》换为《奇妙的耶穌》（旧直链已 404），
- 旧 5 个资源（2 PDF + 3 音频）保留在 `Hymn_Downloads/354_349奇妙的耶穌/_archive/`（含 README + md5），
- 当前资源按 API 新 URL 重新下载；该目录不计入 `verify` 统计。
+ 2026-09-13 决策：**不保留历史留档**——`_archive/`（5 个旧资源 + README + md5）已删除，
+ 当前资源按 API 新 URL 重新下载，并由新 PDF **重出简谱 / 五线谱 PNG**
+  （`python -m crawler_core.images --force --pdf <PDF 相对路径>`：300 DPI + 40 px 窄边距裁剪）。
 - 数据审计脚本：`tool/data_audit/`（重复文件对账 / 删除前核验 / 终版音频对账 / 清理执行），复检顺序见其 README。

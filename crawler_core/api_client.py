@@ -48,7 +48,7 @@ REQUIRED_FIELDS = ("no", "name", "lyrics", "sheet_score_pdf_url", "num_score_pdf
 UNAVAILABLE_API_NULL = "api_null"          # API 返回 file_url=null（空记录，永不可用）
 UNAVAILABLE_HTTP = "http_4xx"              # 4xx（非 429）→ 服务端真缺失
 UNAVAILABLE_NETWORK = "network"            # 重试后仍失败（超时/5xx/SSL）→ 下次运行自动重试
-UNAVAILABLE_SITE_REMOVED = "site_removed"  # 官网已下架但本地留档（#349）
+UNAVAILABLE_SITE_REMOVED = "site_removed"  # 官网已下架但本地留档（历史用例：#349 换诗期；归档删除后不再触发）
 
 # 分页本地缓存文件名（page_01.json …）
 CACHE_FILE_FMT = "page_{:02d}.json"

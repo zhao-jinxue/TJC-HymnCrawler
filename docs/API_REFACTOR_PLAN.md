@@ -42,7 +42,8 @@
 >   - **两处实测修正**：① `hymn_category` 实为 **47 类 / 474 首**（v1.2 写的「45 类」是更早快照；现已按 API 实测口径重建并逐类核对）；
 >     ② **#349 是"整首诗被替换"而非仅元数据变化**——旧直链 `score/sheet|num/349.pdf` 现已 **404**，本地旧 PDF 文本确为《救主正在等待》，
 >     官网现为《奇妙的耶穌》（哈希命名 URL，五线谱 1,022,790 B / 简谱 194,773 B / 鋼琴版 `.mp3` 3,074,506 B）；
->     处理：旧 5 个资源移入 `354_349奇妙的耶穌/_archive/`（附 README + md5），按新 URL 重新下载规范文件（**零删除**）。
+>     处理：旧 5 个资源曾移入 `354_349奇妙的耶穌/_archive/`（附 README + md5），按新 URL 重新下载规范文件；
+>     **2026-09-13 决策变更（不留档）**：该 `_archive/` 已删除，简谱/五线谱 PNG 由新 PDF 重出（见会话日志 `2026-09-13_19-18-00.md`）。
 
 ---
 
@@ -577,7 +578,8 @@ ALTER TABLE tjc_hymn ADD COLUMN api_raw TEXT DEFAULT '';   -- 整条 API 记录�
 ### P3 — 展望（可选，未排期）
 - `tool/bench_api.py`：把「Selenium vs API」基准脚本纳入 `tool/`，供每次改版后回归；
 - `selenium_legacy/` 的 `-m selenium` 用例（真实浏览器，仅本地/含 Chrome 环境运行；当前仅注册标记、尚无用例）；
-- 🧑‍⚖️ `#349` 留档目录（`Hymn_Downloads/_archive/` 5 个旧资源 + README + md5）的最终去留决策（**保留 / 删除**，待用户拍板）；
+- ✅ `#349` 留档目录（`Hymn_Downloads/_archive/` 5 个旧资源 + README + md5）已按用户决策**删除**（2026-09-13），
+  并由新 PDF 重出简谱/五线谱 PNG（`crawler_core.images --pdf`）；
 - `merged_all.json` 等导出物同步 `chorus` / `api_raw` 字段（`tool/merge_to_json.py` / `tool/json_to_db.py` 尚未纳入）；
 - 🧑‍⚖️ 歌词「缺副歌」反馈的最终定性（2026-09-13 已取证：库内 vs 实时官网 **0 差异**，270 有 / 204 无；若需为 204 首补副歌须另开 PDF/OCR 路线）。
 
@@ -643,8 +645,11 @@ ALTER TABLE tjc_hymn ADD COLUMN api_raw TEXT DEFAULT '';   -- 整条 API 记录�
 **拍板后的新增待办**（原表之外，由本轮对账派生）——**均已于 2026-09-13 闭环**：
 - ✅ #349 取证升级：官网已把 349 号**整首诗替换**（旧直链 `score/sheet|num/349.pdf` → 404；本地旧 PDF 经 `pdftotext`
   验证文本为《救主正在等待》，官网现为《奇妙的耶穌》并改用哈希命名 URL）→ 旧 5 个资源（2 PDF + 3 音频）
-  移入 `354_349奇妙的耶穌/_archive/`（含 `README.txt` + md5 清单）留档（**零删除**），并按 API 当前 URL
+  移入 `354_349奇妙的耶穌/_archive/`（含 `README.txt` + md5 清单）留档，并按 API 当前 URL
   重新下载 3 个规范文件；`probe_report` 的 PDF 字段因此有 **1 处真差异**（#349），属站点内容变更、非实现缺陷。
+- ✅ **同日决策变更（不留档）**：`354_349奇妙的耶穌/_archive/` 已删除（5 个旧资源 + README + md5 不入库），
+  简谱/五线谱 PNG 由新 PDF 重出（`python -m crawler_core.images --force --pdf ...`，300 DPI + 40 px 窄边距裁剪），
+  该目录 `checksums.json` 重建为 5 个现行文件；`tjc_hymn` 表列顺序亦已对齐 `_create_table_v4`（见 `tool/reorder_table_columns.py`）。
 
 ---
 
@@ -698,4 +703,3 @@ ALTER TABLE tjc_hymn ADD COLUMN api_raw TEXT DEFAULT '';   -- 整条 API 记录�
   "updated_at": "2023-07-26T03:08:19.000000Z"
 }
 ```
-

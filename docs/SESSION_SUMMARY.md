@@ -26,15 +26,18 @@
    DB v7（`api_raw`）+ `hymn_category` API 重建、`sync.py` 增量同步、`verify.py` 归档数据驱动、依赖拆分与 `crawler_selenium.py`
 4. 实测提速：Step 1 **5.9 s**（原 ≈2.2 min）、Step 2 **58.7 s**（原 ≈18 min）、资源探测 **95.8 s**
    （原音频需 474 次页面点击 ≈8–10 min）
-5. 数据修正：#349（官网换诗：旧 PDF/音频移入 `_archive/` 留档 + 按新 URL 重下）、#62 归正 `completed`、
+5. 数据修正：#349（官网换诗：旧 PDF/音频曾移入 `_archive/` 留档 → **2026-09-13 已删除该归档，并由新 PDF 重出简谱/五线谱 PNG**）、#62 归正 `completed`、
    #25/#31 等 composer 修正、#201 `.mp4 → .m4a`、清理 136 个重复文件（134.7 MB）
 6. **根目录重排（2026-09-13）**：`crawler_fast.py` → `crawler_api.py`、`crawler_selenium.py` → `legacy/`、
    产物 → `data/`、配置 → `config/`、计划文档 → `docs/`；同步修正 `config.py`/`db.py`/`verify.py` 路径常量与全部文档/门禁命令
 7. **VSCode(pyright) 诊断清零 + 副歌口径复核（2026-09-13）**：修 `api_client`/`extractor`/`sync` 三处告警
    （`sync.pending_downloads` 另含一处真实 bug，见会话日志），并以实时 API 复核副歌 270/204 口径
+8. **归档清理 + 库表列顺序对齐（2026-09-13）**：删除 #349 `_archive/`（5 个旧资源 + README + md5）并由新 PDF
+   重出简谱/五线谱 PNG；新增 `tool/reorder_table_columns.py` 按 `_create_table_v4` 重建 `tjc_hymn` 列顺序
+   （28 列、474 行数据零差异、`sqlite_sequence` 保持）；`checksums.json` 全量重建（顺带补齐 34 个历史遗漏目录）
 
 ## 遗留任务（可选，未排期；详见 `docs/API_REFACTOR_PLAN.md` §7「P3 — 展望」）
-- 🧑‍⚖️ **需用户决策**：`#349` 的 `Hymn_Downloads/_archive/`（5 个旧资源 + README + md5）去留
+- ✅ 已执行（不再是待决策项）：删除 `#349` 的 `Hymn_Downloads/_archive/`（5 个旧资源 + README + md5），并由新 PDF 重出简谱/五线谱 PNG
 - 🔧 可选增强：`tool/bench_api.py` 基准回归脚本、`selenium_legacy` 的 `-m selenium` 用例（当前仅标记注册、无用例）
 - 🔧 可选同步：`merged_all.json` 的 category 数据落库核对（`hymn_category` 现由 API 重建为 **47 类**）；
   导出脚本（`tool/merge_to_json.py` / `json_to_db.py`）尚未纳入 `chorus` / `api_raw` 字段

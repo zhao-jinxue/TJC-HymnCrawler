@@ -278,9 +278,9 @@ def _create_table_v4(c):
                 numbered_png_path TEXT,
                 audio_versions TEXT DEFAULT '{}',
                 audio_version_list TEXT DEFAULT '[]',
+                api_raw TEXT DEFAULT '',
                 download_status TEXT DEFAULT 'pending',
                 integrity_status TEXT DEFAULT 'unchecked',
-                api_raw TEXT DEFAULT '',
                 updated_at TIMESTAMP DEFAULT (datetime('now', 'localtime'))
             )''')
 

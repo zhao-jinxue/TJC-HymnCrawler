@@ -3,7 +3,8 @@
 crawler_core/checksums.py — checksums.json 哈希清单维护
 
 职责（相同概念合并）:
-  1. rebuild_all(): 全量重建每个诗歌目录的 checksums.json（扫全部 EXTS 文件）
+  1. rebuild_all(): 全量重建每个诗歌目录的 checksums.json（扫全部 EXTS 文件；
+     无可登记文件的目录跳过，不生成 `[]` 噪音文件）
      —— 原 generate_checksums.py
   2. update_png():  增量更新目录内 PNG 的 {file, sha256} 条目
      —— 原 step6_update_img.py
@@ -44,24 +45,32 @@ def sha256_of(path):
     return sha256_file(path)
 
 
-def rebuild_all():
-    """全量重建每个目录的 checksums.json（原 generate_checksums.py 主逻辑）"""
-    if not os.path.isdir(BASE):
-        print(f"[SKIP] {BASE} 不存在，跳过")
+def rebuild_all(base=BASE):
+    """全量重建每个目录的 checksums.json（原 generate_checksums.py 主逻辑）
+
+    base: 资源根目录（默认 `Hymn_Downloads`；测试可指向临时目录）
+    说明: 无可登记文件的目录**不新建** checksums.json（如 `api_cache/` 只有 JSON 缓存、
+          `_misc/` 只有被忽略的安装包）——避免全量重建时冒出 `[]` 噪音文件。
+    """
+    if not os.path.isdir(base):
+        print(f"[SKIP] {base} 不存在，跳过")
         return 0
 
     total = 0
-    for entry in sorted(os.listdir(BASE)):
-        if not os.path.isdir(os.path.join(BASE, entry)):
+    for entry in sorted(os.listdir(base)):
+        if not os.path.isdir(os.path.join(base, entry)):
             continue
-        list_path = os.path.join(BASE, entry, "checksums.json")
+        list_path = os.path.join(base, entry, "checksums.json")
         records = []
-        for f in sorted(os.listdir(os.path.join(BASE, entry))):
-            fpath = os.path.join(BASE, entry, f)
+        for f in sorted(os.listdir(os.path.join(base, entry))):
+            fpath = os.path.join(base, entry, f)
             if not os.path.isfile(fpath) or os.path.splitext(f)[1].lower() not in EXTS:
                 continue
             records.append({"file": f, "sha256": sha256_file(fpath)})
             total += 1
+        if not records and not os.path.exists(list_path):
+            print(f"[SKIP] {entry}（无可登记文件，不新建 checksums.json）")
+            continue
         with open(list_path, "w", encoding="utf-8") as fp:
             json.dump(records, fp, ensure_ascii=False, indent=2)
         print(f"[OK]   {entry} -> checksums.json ({len(records)} files)")

@@ -13,6 +13,8 @@ crawler_core/images.py — PDF 转窄边距 PNG + 双页拼接（原 step5_pdf2p
   python3 -m crawler_core.images --force        # 全量重新转换并覆盖
   python3 -m crawler_core.images --reset-progress  # 清空进度文件, 配合 --force 全量重做
   python3 -m crawler_core.images --limit 3      # 只处理前 N 个(测试用)
+  python3 -m crawler_core.images --force \\      # 只重画指定 PDF(可重复), 如换诗后重出图片
+      --pdf 'Hymn_Downloads/354_349奇妙的耶穌/349_简谱.pdf'
   from crawler_core.images import run           # 程序化入口
 
 断点续跑（中间文件）:
@@ -234,10 +236,60 @@ def convert_one(pdf_path, dpi, margin, force):
     return "ok", "; ".join(trim_info)
 
 
-def run(dpi=DEFAULT_DPI, margin=DEFAULT_MARGIN, force=False, limit=0, reset=False):
-    """程序化入口: 供 crawler_api.py 调用; 命令行入口走 main()"""
+def select_pdfs(pdf_paths):
+    """校验 `--pdf` 指定的 PDF 清单（相对项目根的路径）
+
+    用于"重画单首/单目录图片"场景（如 #349 换诗后重出简谱/五线谱 PNG）：
+    不经全量扫描与断点进度，直接针对指定文件转换。
+
+    返回: 去重排序后的路径列表（原样保留相对路径，便于打印）
+    异常: ValueError —— 非 .pdf 后缀或文件不存在
+    """
+    picked = []
+    for raw in pdf_paths:
+        path = os.path.normpath(raw)
+        if not path.lower().endswith(".pdf"):
+            raise ValueError(f"不是 PDF 文件: {raw}")
+        if not os.path.isfile(path):
+            raise ValueError(f"文件不存在: {raw}")
+        if path not in picked:
+            picked.append(path)
+    return sorted(picked)
+
+
+def run(dpi=DEFAULT_DPI, margin=DEFAULT_MARGIN, force=False, limit=0, reset=False, pdf_paths=None):
+    """程序化入口: 供 crawler_api.py 调用; 命令行入口走 main()
+
+    pdf_paths: 指定待转换 PDF 清单(相对项目根); 传入时仅处理这些文件, 跳过全量扫描
+    """
     if reset:
         reset_progress()
+
+    if pdf_paths:
+        try:
+            pdfs = select_pdfs(pdf_paths)
+        except ValueError as exc:
+            print(f"❌ {exc}")
+            return {"ok": 0, "skip": 0, "fail": 0, "total": 0, "resume": 0}
+        total = len(pdfs)
+        print(f"指定模式: 仅处理 {total} 个 PDF")
+        for pdf in pdfs:
+            print(f"  - {pdf}")
+        ok = fail = skip = 0
+        for pdf in pdfs:
+            status, detail = convert_one(pdf, dpi, margin, force)
+            if status == "ok":
+                ok += 1
+                print(f"OK   {pdf} | {detail}")
+            elif status == "skip":
+                skip += 1
+                print(f"SKIP {pdf} (已是最新; 需强制重画请加 --force)")
+            else:
+                fail += 1
+                print(f"FAIL {pdf} | {detail}")
+        print("\n===== 统计 =====")
+        print(f"总数: {total} | 成功: {ok} | 跳过: {skip} | 失败: {fail}")
+        return {"ok": ok, "skip": skip, "fail": fail, "total": total, "resume": 0}
 
     pdfs = find_all_pdfs("Hymn_Downloads")
     total = len(pdfs)
@@ -330,8 +382,11 @@ def main():
     parser.add_argument("--dpi", type=int, default=DEFAULT_DPI, help="分辨率(默认300)")
     parser.add_argument("--margin", type=int, default=DEFAULT_MARGIN, help="窄边距像素(默认40)")
     parser.add_argument("--limit", type=int, default=0, help="只处理前 N 个(测试用, 0=全部)")
+    parser.add_argument("--pdf", action="append", default=[], metavar="PATH",
+                        help="只处理指定 PDF(可重复; 相对项目根), 如重画某首换诗后的简谱/五线谱")
     args = parser.parse_args()
-    run(dpi=args.dpi, margin=args.margin, force=args.force, limit=args.limit, reset=args.reset_progress)
+    run(dpi=args.dpi, margin=args.margin, force=args.force, limit=args.limit,
+        reset=args.reset_progress, pdf_paths=args.pdf)
 
 
 if __name__ == "__main__":

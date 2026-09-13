@@ -9,7 +9,8 @@
 #   - 不可用资源（4xx / file_url=null / 重试后仍网络失败）**不进期望文件集合**：
 #     其 url 置 None + `_unavailable` 标注 → downloader/verify 自然跳过，
 #     于是 #62 从「永久 partial(3/4) + failed」归正为 `completed`（§5.9.3）；
-#   - 「官网已下架但本地留档」记 `_site_removed`（不计 `_unavailable`，避免误报，如 #349）；
+#   - 「官网已下架但本地留档」记 `_site_removed`（不计 `_unavailable`，避免误报）——#349 换诗期曾用到，
+#     其 `_archive/` 已于 2026-09-13 删除（该首按新 URL 重下）→ 当前 0 条命中，机制保留备用；
 #   - 失败原因/HTTP 状态落盘（`_http_status`/`_error`），下次运行可区分「没试过」与「试过且 404」。
 #
 # 保底路径（Selenium）：`--engine selenium` 或 API 缺 audio_files 时逐首点击播放按钮
