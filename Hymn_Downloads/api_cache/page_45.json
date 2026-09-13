@@ -1,0 +1,1162 @@
+{
+  "current_page": 45,
+  "data": [
+    {
+      "id": 441,
+      "no": "436",
+      "name": "我一生蒙救主引導",
+      "lyrics": [
+        {
+          "text": "我一生蒙救主引導，在今世有何所求？我豈需要猜疑主愛？\r\n祂常引領又眷祐；享受平安，得主安慰，我憑信天家居留。\r\n我深知不論何境遇，救主美意必成就!\r\n我深知不論何境遇，救主美意必成就!"
+        },
+        {
+          "text": "我一生蒙救主引導，遇試煉蒙主賜恩，天路崎嶇祂施恩惠，\r\n賞賜天糧享不盡；有時腳步軟弱疲憊，靈命乾渴無信心。\r\n救恩磐石顯現眼前，湧流活水，我甦醒，\r\n救恩磐石顯現眼前，湧流活水，我甦醒。"
+        },
+        {
+          "text": "我一生蒙救主引導，主恩愛長闊高深!真正安息主已應許，\r\n在我父家已留存；直到那日復活改變，我必住榮美天庭。\r\n歡欣歌唱直到永遠：「耶穌領我天路行!」\r\n歡欣歌唱直到永遠：「耶穌領我天路行!」"
+        }
+      ],
+      "lyrics_chorus": "",
+      "sheet_score_pdf": "uploads/hymn/score/sheet/436.pdf",
+      "sheet_score_images": "[]",
+      "num_score_pdf": "uploads/hymn/score/num/436.pdf",
+      "num_score_xml": "",
+      "category_id": 9,
+      "created_at": "2022-07-09T16:00:00.000000Z",
+      "updated_at": "2023-10-11T06:51:12.000000Z",
+      "status": "PUBLISHED",
+      "history": "<p>本詩作詞者為芬妮．克羅斯比（Fanny J. Crosby, 1823-1915），美國人，出生六個月時，因感冒被誤診而失明，一生雖盲，心卻明亮如晨星，是一位寫作豐富的作詞者，她的詩歌，安慰和激勵了許許多多的人，當人們唱她詩歌，或知道她的身世時，便能從她的身上看到　神的慈愛，信實，大能，奇妙和榮耀！&nbsp;</p>\r\n\r\n<p>&nbsp;</p>\r\n\r\n<p>關於這首詩歌的創作，芬妮．克羅斯比有這樣的回憶 :</p>\r\n\r\n<p>&nbsp;</p>\r\n\r\n<p>這首詩歌是發生在神對芬妮禱告的立時回應。有一天，芬妮急需 5美元，但她不知道能從哪裡能獲得這個金額，照她的慣常的習慣，她開始為這件事情祈禱。幾分鐘後，一個陌生人來敲門，並交付她 5美元，芬妮說除了相信神的帶領，對這樣的事，她沒有其他解釋的辭彙，神回應了她的禱告，將它託付給好心人來執行，收下錢時的第一個念頭便是「我一生蒙救主引導」。這首詩詞於焉產生，爾後請勞利譜曲。</p>\r\n\r\n<p>&nbsp;</p>\r\n\r\n<p>《詩篇》32篇8-10節：「我要教導你，指示你當行的路。我要定睛在你身上勸戒你。你不可像那無知的騾馬，必用嚼環轡頭勒住他，不然，就不能馴服。惡人必多受苦楚，惟獨倚靠耶和華的，必有慈愛四面環繞他。」</p>\r\n\r\n<p>&nbsp;</p>\r\n\r\n<p>作曲者勞利博士（Robert Lowry, 1826-1899）美國人。</p>",
+      "youtube_urls": [
+        {
+          "label": "436 - 我一生蒙救主引導",
+          "url": "https://www.youtube.com/watch?v=dYq23Um-duw&list=PLye9rkov_g8CA_oaevJ0TasPUos5L3p_e&index=441"
+        }
+      ],
+      "sheet_score_pdf_url": "https://sacredmusic.tjc.org.tw/storage/uploads/hymn/score/sheet/436.pdf",
+      "sheet_score_images_url": [],
+      "num_score_pdf_url": "https://sacredmusic.tjc.org.tw/storage/uploads/hymn/score/num/436.pdf",
+      "num_score_xml_url": null,
+      "category": {
+        "id": 9,
+        "name": "耶穌領導",
+        "slug": null,
+        "created_at": "2022-07-05T12:00:00.000000Z",
+        "updated_at": "2022-07-05T12:00:00.000000Z"
+      },
+      "tags": [],
+      "composers": [
+        {
+          "id": 409,
+          "name": "Robert Lowry",
+          "image": null,
+          "introduction": "",
+          "created_at": "2022-07-05T12:00:00.000000Z",
+          "updated_at": "2022-07-05T12:00:00.000000Z",
+          "image_url": null,
+          "pivot": {
+            "hymn_song_id": 441,
+            "artist_id": 409
+          }
+        }
+      ],
+      "lyricists": [
+        {
+          "id": 125,
+          "name": "Fanny J. Crosby",
+          "image": null,
+          "introduction": "",
+          "created_at": "2022-07-05T12:00:00.000000Z",
+          "updated_at": "2022-07-05T12:00:00.000000Z",
+          "image_url": null,
+          "pivot": {
+            "hymn_song_id": 441,
+            "artist_id": 125
+          }
+        }
+      ],
+      "audio_files": [
+        {
+          "id": 888,
+          "song_id": 441,
+          "file": "uploads/hymn/audio/2cff0b43656d5e5e12498e029c63c49b.m4a",
+          "audio_category_id": 3,
+          "created_at": "2022-10-21T01:09:02.000000Z",
+          "updated_at": "2023-04-20T03:11:22.000000Z",
+          "file_url": "https://sacredmusic.tjc.org.tw/storage/uploads/hymn/audio/2cff0b43656d5e5e12498e029c63c49b.m4a",
+          "audio_category": {
+            "id": 3,
+            "name": "鋼琴",
+            "slug": null
+          }
+        },
+        {
+          "id": 889,
+          "song_id": 441,
+          "file": "uploads/hymn/audio/6ce8b79df35ca36f6ce2653ff285a021.mp3",
+          "audio_category_id": 4,
+          "created_at": "2022-10-21T01:09:02.000000Z",
+          "updated_at": "2022-10-21T01:09:02.000000Z",
+          "file_url": "https://sacredmusic.tjc.org.tw/storage/uploads/hymn/audio/6ce8b79df35ca36f6ce2653ff285a021.mp3",
+          "audio_category": {
+            "id": 4,
+            "name": "人聲",
+            "slug": null
+          }
+        }
+      ]
+    },
+    {
+      "id": 442,
+      "no": "437",
+      "name": "誰正守候在門外？",
+      "lyrics": [
+        {
+          "text": "誰正守候在門外，呼喚我心門開？\r\n情詞迫切求進來，溫柔聲叩心懷。"
+        },
+        {
+          "text": "門外我主枯等待，門內我心未開。\r\n莫再遲疑莫耽延，主永遠不離開。"
+        },
+        {
+          "text": "寒夜中主仍等待，主叩門聲仍在。\r\n無倦無悔主大愛，為我苦苦等待。"
+        },
+        {
+          "text": "快快敞開我心懷，開心門迎主來。\r\n雖有管教卻是愛，主與我永同在。"
+        }
+      ],
+      "lyrics_chorus": "耶穌慈聲在呼召：開心門迎主來；\r\n恭聽回應主恩召，主必與我同在。",
+      "sheet_score_pdf": "uploads/hymn/score/sheet/437.pdf",
+      "sheet_score_images": "[]",
+      "num_score_pdf": "uploads/hymn/score/num/437.pdf",
+      "num_score_xml": "",
+      "category_id": 33,
+      "created_at": "2022-07-09T16:00:00.000000Z",
+      "updated_at": "2023-10-11T06:51:33.000000Z",
+      "status": "PUBLISHED",
+      "history": "<p>&nbsp; 本詩作詞者是瑪莉．斯萊德（Mary Bridges Canedy Slade, 1826-1882），她不僅是牧師娘，也是一位老師，曾經擔任 &ldquo;<em>The New Eng&shy;land Jour&shy;nal of Ed&shy;u&shy;ca&shy;tion</em>&rdquo; 這本期刊的編輯工作。這首詩 1876年被收錄於麥金托什（Rig&shy;don M. Mc&shy;In&shy;tosh）所編輯的 &ldquo;<em>Good News</em>&rdquo; 中，此書又名為「適用於主日學、教會機構、特會等的詩歌與曲調」,由Oliver Ditson &amp; Company於美國波士頓發行。</p>\r\n\r\n<p>&nbsp;</p>\r\n\r\n<p>&nbsp;&nbsp;&nbsp; 作曲者埃弗雷特（Asa Brooks Everett,1828-1875）原計劃從醫，但後來改唸音樂。分別在美國波士頓及德國萊比錫攻讀。他創作許多福音詩歌，並擔任由紐約的Big&shy;low &amp; Main公司出版的「The Scep&shy;tre」刊物。</p>\r\n\r\n<p>&nbsp;</p>\r\n\r\n<p>&nbsp;&nbsp;&nbsp; 本詩創作源於《啟示錄》3章20節：「看哪！我站在門外叩門，若有聽見我聲音就開門的，我要進到他那裡去，我與他、他與我一同坐席。」</p>",
+      "youtube_urls": [
+        {
+          "label": "437 - 誰正守候在門外？",
+          "url": "https://www.youtube.com/watch?v=z7nTbY3teWU&list=PLye9rkov_g8CA_oaevJ0TasPUos5L3p_e&index=442"
+        }
+      ],
+      "sheet_score_pdf_url": "https://sacredmusic.tjc.org.tw/storage/uploads/hymn/score/sheet/437.pdf",
+      "sheet_score_images_url": [],
+      "num_score_pdf_url": "https://sacredmusic.tjc.org.tw/storage/uploads/hymn/score/num/437.pdf",
+      "num_score_xml_url": null,
+      "category": {
+        "id": 33,
+        "name": "與主聯合",
+        "slug": null,
+        "created_at": "2022-07-05T12:00:00.000000Z",
+        "updated_at": "2022-07-05T12:00:00.000000Z"
+      },
+      "tags": [],
+      "composers": [
+        {
+          "id": 27,
+          "name": "Asa Brooks Everett",
+          "image": null,
+          "introduction": "",
+          "created_at": "2022-07-05T12:00:00.000000Z",
+          "updated_at": "2022-07-05T12:00:00.000000Z",
+          "image_url": null,
+          "pivot": {
+            "hymn_song_id": 442,
+            "artist_id": 27
+          }
+        }
+      ],
+      "lyricists": [
+        {
+          "id": 368,
+          "name": "Mary Bridges Canedy Slade",
+          "image": null,
+          "introduction": "",
+          "created_at": "2022-07-05T12:00:00.000000Z",
+          "updated_at": "2022-07-05T12:00:00.000000Z",
+          "image_url": null,
+          "pivot": {
+            "hymn_song_id": 442,
+            "artist_id": 368
+          }
+        }
+      ],
+      "audio_files": [
+        {
+          "id": 890,
+          "song_id": 442,
+          "file": "uploads/hymn/audio/89e292b49e1d192d6209ad126d04d88c.m4a",
+          "audio_category_id": 3,
+          "created_at": "2022-10-21T01:09:21.000000Z",
+          "updated_at": "2023-04-20T03:12:25.000000Z",
+          "file_url": "https://sacredmusic.tjc.org.tw/storage/uploads/hymn/audio/89e292b49e1d192d6209ad126d04d88c.m4a",
+          "audio_category": {
+            "id": 3,
+            "name": "鋼琴",
+            "slug": null
+          }
+        },
+        {
+          "id": 891,
+          "song_id": 442,
+          "file": "uploads/hymn/audio/06ce6538f26e9a0adc4c9f9eb02e4adb.mp3",
+          "audio_category_id": 4,
+          "created_at": "2022-10-21T01:09:21.000000Z",
+          "updated_at": "2022-10-21T01:09:21.000000Z",
+          "file_url": "https://sacredmusic.tjc.org.tw/storage/uploads/hymn/audio/06ce6538f26e9a0adc4c9f9eb02e4adb.mp3",
+          "audio_category": {
+            "id": 4,
+            "name": "人聲",
+            "slug": null
+          }
+        }
+      ]
+    },
+    {
+      "id": 443,
+      "no": "438",
+      "name": "頌主創造美好",
+      "lyrics": [
+        {
+          "text": "遍地燦爛好風光，榮耀煇煌滿穹蒼。\r\n回想出生到如今，主愛伴隨我身旁。"
+        },
+        {
+          "text": "神賜良辰妙而美，晝來夜往依常軌。\r\n山川花木景緻偉，日月星辰放光輝。"
+        },
+        {
+          "text": "天父賞賜天倫樂，親子兄弟愛相守。\r\n天上人間良友多，溫柔仁愛長相和。"
+        },
+        {
+          "text": "上主國度心所繫，向天舉手訴心意。\r\n萬民敬獻馨香祭，心誠意真舉靈祭。"
+        },
+        {
+          "text": "耳聽眼見用心學，感受主恩心喜悅。\r\n以靈領受真神奇，所見所聞共和諧。"
+        },
+        {
+          "text": "榮耀基督我所倚,拯救萬民得稱義。\r\n奇妙大愛無窮盡,人間平安天歡喜。"
+        }
+      ],
+      "lyrics_chorus": "敬向萬有權能神，感謝讚美齊歌頌。",
+      "sheet_score_pdf": "uploads/hymn/score/sheet/438.pdf",
+      "sheet_score_images": "[]",
+      "num_score_pdf": "uploads/hymn/score/num/438.pdf",
+      "num_score_xml": "",
+      "category_id": 1,
+      "created_at": "2022-07-09T16:00:00.000000Z",
+      "updated_at": "2026-05-07T06:18:14.000000Z",
+      "status": "PUBLISHED",
+      "history": "<p>作詞者皮爾波（Folliot Sandford Pierpoint, 1835-1917），英國人。 1857&nbsp;年自英國劍橋大學皇后學院畢業，以教職為業並喜於旅行，因此曾於許多學校執教。曾出版了7本詩集，大部份的作品是抒發他對大自然的詠嘆，本詩「For the Beauty of the Earth」首次發表於1864，收錄於 Orby Shipley 所編輯的 &ldquo;<em>Lyra Eu&shy;cha&shy;rist&shy;ica, 2nd ed.</em> &rdquo;詩集中。</p>\r\n\r\n<p>&nbsp;</p>\r\n\r\n<p>&nbsp;&nbsp;&nbsp; 本詩優美的歌詞，很受許多作曲者的青睞，因此我們會發現許多搭配這首詩詞的不同旋律的詩歌。此有著美妙音律的曲調原創是威廉‧查特頓‧狄克斯（William Chatterton Dix,&nbsp; 1837-1898 ）所寫，後由康拉德‧科克將其引用為讚美詩。</p>\r\n\r\n<p>&nbsp;</p>\r\n\r\n<p>康拉德‧科克（Conrad Kocher, 1786-1872）是德國音樂家，曾在聖彼得堡和羅馬學習鋼琴演奏與作曲，他以「基督教音樂的守護聖者」在羅馬頗負聖名，並且在德國熱心於改革教堂音樂，是德國著名的作曲家和管風琴演奏者。他所譜寫的曲調是最為大眾所熟悉的。</p>\r\n\r\n<p>&nbsp;</p>\r\n\r\n<p>本詩最初是在一般的聚會中吟唱，後來變成在感恩節聚會及主日學中，最受大家喜愛吟唱的詩歌。</p>\r\n\r\n<p>&nbsp;</p>\r\n\r\n<p>詩詞創作源於《詩篇》107篇8節：「但願人因耶和華的慈愛和他向人所行的奇事，都稱讚他。」</p>",
+      "youtube_urls": [
+        {
+          "label": "438 - 頌主創造美好",
+          "url": "https://www.youtube.com/watch?v=BcpBR2iQyqU&list=PLye9rkov_g8CA_oaevJ0TasPUos5L3p_e&index=443"
+        }
+      ],
+      "sheet_score_pdf_url": "https://sacredmusic.tjc.org.tw/storage/uploads/hymn/score/sheet/438.pdf",
+      "sheet_score_images_url": [],
+      "num_score_pdf_url": "https://sacredmusic.tjc.org.tw/storage/uploads/hymn/score/num/438.pdf",
+      "num_score_xml_url": null,
+      "category": {
+        "id": 1,
+        "name": "讚美天父",
+        "slug": null,
+        "created_at": "2022-07-05T12:00:00.000000Z",
+        "updated_at": "2022-07-05T12:00:00.000000Z"
+      },
+      "tags": [],
+      "composers": [
+        {
+          "id": 70,
+          "name": "Conrad Kocher",
+          "image": null,
+          "introduction": "",
+          "created_at": "2022-07-05T12:00:00.000000Z",
+          "updated_at": "2022-07-05T12:00:00.000000Z",
+          "image_url": null,
+          "pivot": {
+            "hymn_song_id": 443,
+            "artist_id": 70
+          }
+        }
+      ],
+      "lyricists": [
+        {
+          "id": 130,
+          "name": "Folliot Sandford Pierpoint",
+          "image": null,
+          "introduction": "",
+          "created_at": "2022-07-05T12:00:00.000000Z",
+          "updated_at": "2022-07-05T12:00:00.000000Z",
+          "image_url": null,
+          "pivot": {
+            "hymn_song_id": 443,
+            "artist_id": 130
+          }
+        }
+      ],
+      "audio_files": [
+        {
+          "id": 892,
+          "song_id": 443,
+          "file": "uploads/hymn/audio/f4f53871cf18fe0ce14450a965cf83b5.m4a",
+          "audio_category_id": 3,
+          "created_at": "2022-10-21T01:09:43.000000Z",
+          "updated_at": "2023-04-20T03:13:00.000000Z",
+          "file_url": "https://sacredmusic.tjc.org.tw/storage/uploads/hymn/audio/f4f53871cf18fe0ce14450a965cf83b5.m4a",
+          "audio_category": {
+            "id": 3,
+            "name": "鋼琴",
+            "slug": null
+          }
+        },
+        {
+          "id": 893,
+          "song_id": 443,
+          "file": "uploads/hymn/audio/848f02115ec7c9055056982d24cb1e65.mp3",
+          "audio_category_id": 4,
+          "created_at": "2022-10-21T01:09:43.000000Z",
+          "updated_at": "2022-10-21T01:09:43.000000Z",
+          "file_url": "https://sacredmusic.tjc.org.tw/storage/uploads/hymn/audio/848f02115ec7c9055056982d24cb1e65.mp3",
+          "audio_category": {
+            "id": 4,
+            "name": "人聲",
+            "slug": null
+          }
+        }
+      ]
+    },
+    {
+      "id": 444,
+      "no": "439",
+      "name": "時刻交託主",
+      "lyrics": [
+        {
+          "text": "與耶穌同死才得以復生，與耶穌同活我恩典日增；\r\n仰望我恩主，榮光必照臨。時時刻刻我都與主相親。"
+        },
+        {
+          "text": "無有一試探主不開恩門；無有一重擔我主不減輕；\r\n無有一憂慮，我主不與分。時時刻刻我都蒙主鴻恩。"
+        },
+        {
+          "text": "無有一悲傷我主不慰問；無有一眼淚我主不憐憫；\r\n無有一危險，我主不施恩。時時刻刻我靠主得安寧。"
+        },
+        {
+          "text": "無有一軟弱我主不扶助；無有一病患我主不看顧；\r\n時也而刻也，得福或受苦，耶穌我救主都與我同渡。"
+        }
+      ],
+      "lyrics_chorus": "時時刻刻都蒙救主之恩；時時刻刻都靠主而得生；\r\n時時刻刻我都做主子民。仰望我恩主，榮光必照臨。",
+      "sheet_score_pdf": "uploads/hymn/score/sheet/439.pdf",
+      "sheet_score_images": "[]",
+      "num_score_pdf": "uploads/hymn/score/num/439.pdf",
+      "num_score_xml": "",
+      "category_id": 23,
+      "created_at": "2022-07-09T16:00:00.000000Z",
+      "updated_at": "2026-05-07T06:19:20.000000Z",
+      "status": "PUBLISHED",
+      "history": "<table align=\"left\">\r\n\t<tbody>\r\n\t\t<tr>\r\n\t\t\t<td style=\"vertical-align:top\">\r\n\t\t\t<p>本詩另有一標題為 -- 「Dying with Jesus, by death reckoned mine」。</p>\r\n\t\t\t</td>\r\n\t\t</tr>\r\n\t</tbody>\r\n</table>\r\n\r\n<p>&nbsp;</p>\r\n\r\n<p>&nbsp;</p>\r\n\r\n<p>作詞者韋特（Daniel Webster Whittle, 1840~1901）原名 Daniel W. Whittle，有些詩歌印著 El Nathan 是他的筆名。</p>\r\n\r\n<table align=\"left\">\r\n\t<tbody>\r\n\t\t<tr>\r\n\t\t\t<td style=\"vertical-align:top\">\r\n\t\t\t<p>韋特與慕迪二人曾協力舉開佈道會，另外，他和作曲家者麥格納罕（Mcgranahan）3等人都在慕迪的佈道團裡一起唱詩、一起服事，成為當時美國福音事工的領導者。</p>\r\n\t\t\t</td>\r\n\t\t</tr>\r\n\t</tbody>\r\n</table>\r\n\r\n<p>&nbsp;</p>\r\n\r\n<p>&nbsp;</p>\r\n\r\n<table align=\"left\">\r\n\t<tbody>\r\n\t\t<tr>\r\n\t\t\t<td style=\"vertical-align:top\">\r\n\t\t\t<p>韋特的一生離不開信仰，甚至在他人生最顛峰的時候，選擇委身於福音事工。他知道他信靠的是誰，神重用他，讓他生命的價值發揮到極至，藉著他的詩，讓他美好的信仰一直為主作見證。韋特說：「我希望我不致作一首沒有信息的聖詩，&hellip; 一首好詩應以神的話為基礎，並傳揚神愛的信息。」他在作詩方面的天分相當高超，所作的兩百多首詩大多數與麥格納罕的曲子配合，並且幾乎每首聖詩都成為膾炙人口的傑作。</p>\r\n\r\n\t\t\t<p>&nbsp;</p>\r\n\t\t\t</td>\r\n\t\t</tr>\r\n\t</tbody>\r\n</table>\r\n\r\n<p>本詩寫於1893年，並於1896年首次發行。歌詞源於《約翰福音》13章1節：「他既然愛世間屬自己的人，就愛他們到底。」</p>\r\n\r\n<p>&nbsp;</p>\r\n\r\n<p>本詩是作詞者韋特有一次參加在芝加哥舉辦的佈道會上，一位來自倫敦的傳教士亨利‧瓦利對他說 --「我覺得『我每時需要祢』這首詩還不夠貼切我的心思4，因為我是時時刻刻需要主」。 聽到這樣的心聲後，韋特覺得「I need Thee」是時刻需要主、每分每秒需要主，單單 「every hour」是不夠的，因此韋特即刻將其改寫成這首「Moment by Moment」，並由女兒梅（May Whittle Moody, 1870-1963）為此詩譜曲。</p>\r\n\r\n<p>&nbsp;</p>\r\n\r\n<p>這首詩後來由慕迪（Moody）將它寄到英國給瓦利傳教士，這首詩歌因而在英國流行起來，之後在戰爭期間，甚至也傳到了南非而大受歡迎。</p>\r\n\r\n<p>&nbsp;</p>\r\n\r\n<p>作曲者梅．惠特爾．慕迪（May Whittle Moody, 1870-1963）是本作詞者韋特的女兒、威廉．慕迪的妻子。1888-1889年，她在麻薩諸塞州諾思菲爾的奧伯林學院就學，1889-1891年就讀於倫敦皇家音樂學院。她是一位很有天賦的歌唱家，在福音傳教事工上與父親同工，也曾與Charles M. Al&shy;ex&shy;an&shy;der合著 &ldquo;<em>North&shy;field Hymn&shy;al No. 3</em>. &rdquo;。</p>\r\n\r\n<p>&nbsp;</p>\r\n\r\n<p>在本會讚美詩中，本詩與153首「時刻交託主」（God Will Take Care Of You）的中文歌詞幾乎完全相同。</p>",
+      "youtube_urls": [
+        {
+          "label": "439 - 時刻交託主",
+          "url": "https://www.youtube.com/watch?v=1T00ueb22z8&list=PLye9rkov_g8CA_oaevJ0TasPUos5L3p_e&index=444"
+        }
+      ],
+      "sheet_score_pdf_url": "https://sacredmusic.tjc.org.tw/storage/uploads/hymn/score/sheet/439.pdf",
+      "sheet_score_images_url": [],
+      "num_score_pdf_url": "https://sacredmusic.tjc.org.tw/storage/uploads/hymn/score/num/439.pdf",
+      "num_score_xml_url": null,
+      "category": {
+        "id": 23,
+        "name": "交託恩主",
+        "slug": null,
+        "created_at": "2022-07-05T12:00:00.000000Z",
+        "updated_at": "2022-07-05T12:00:00.000000Z"
+      },
+      "tags": [],
+      "composers": [
+        {
+          "id": 375,
+          "name": "May Whittle Moody",
+          "image": null,
+          "introduction": "",
+          "created_at": "2022-07-05T12:00:00.000000Z",
+          "updated_at": "2022-07-05T12:00:00.000000Z",
+          "image_url": null,
+          "pivot": {
+            "hymn_song_id": 444,
+            "artist_id": 375
+          }
+        }
+      ],
+      "lyricists": [
+        {
+          "id": 78,
+          "name": "Daniel Webster Whittle",
+          "image": null,
+          "introduction": "",
+          "created_at": "2022-07-05T12:00:00.000000Z",
+          "updated_at": "2022-07-05T12:00:00.000000Z",
+          "image_url": null,
+          "pivot": {
+            "hymn_song_id": 444,
+            "artist_id": 78
+          }
+        }
+      ],
+      "audio_files": [
+        {
+          "id": 894,
+          "song_id": 444,
+          "file": "uploads/hymn/audio/b13fb91e5511513dcb4206a0272ed922.m4a",
+          "audio_category_id": 3,
+          "created_at": "2022-10-21T01:10:00.000000Z",
+          "updated_at": "2023-04-20T03:15:10.000000Z",
+          "file_url": "https://sacredmusic.tjc.org.tw/storage/uploads/hymn/audio/b13fb91e5511513dcb4206a0272ed922.m4a",
+          "audio_category": {
+            "id": 3,
+            "name": "鋼琴",
+            "slug": null
+          }
+        },
+        {
+          "id": 895,
+          "song_id": 444,
+          "file": "uploads/hymn/audio/271cffcd977197ef9ccc13e0e675a586.mp3",
+          "audio_category_id": 4,
+          "created_at": "2022-10-21T01:10:00.000000Z",
+          "updated_at": "2022-10-21T01:10:00.000000Z",
+          "file_url": "https://sacredmusic.tjc.org.tw/storage/uploads/hymn/audio/271cffcd977197ef9ccc13e0e675a586.mp3",
+          "audio_category": {
+            "id": 4,
+            "name": "人聲",
+            "slug": null
+          }
+        }
+      ]
+    },
+    {
+      "id": 445,
+      "no": "440",
+      "name": "在主愛中團契",
+      "lyrics": [
+        {
+          "text": "在主基督耶穌愛中，不分南北西東；\r\n宇宙萬有浩瀚世界，契合在主愛中。"
+        },
+        {
+          "text": "在主愛中互諒、互信，彼此相愛、相親；\r\n基督慈懷有如環帶，契合萬族、萬民。"
+        },
+        {
+          "text": "主內弟兄國族不分，齊來攜手歡欣；\r\n同為兒女，事奉天父，契合如敘天倫。"
+        },
+        {
+          "text": "在主基督耶穌愛中，聯合各族、各民；\r\n主內同靈互為肢體，契合在主愛中。"
+        }
+      ],
+      "lyrics_chorus": "",
+      "sheet_score_pdf": "uploads/hymn/score/sheet/440.pdf",
+      "sheet_score_images": "[]",
+      "num_score_pdf": "uploads/hymn/score/num/440.pdf",
+      "num_score_xml": "",
+      "category_id": 33,
+      "created_at": "2022-07-09T16:00:00.000000Z",
+      "updated_at": "2023-10-11T06:53:14.000000Z",
+      "status": "PUBLISHED",
+      "history": "<p>本詩作詞者是鄧克利（William Arthur Dunkerley, 1852-1941）畢業於英國曼徹斯特的老特拉福德學校和維多利亞大學。 有一段時間他在法國經商，後來返回英國後，就以寫作為其全職工作。他也是一名登山專家及在倫敦的 Euling公理會擔任教師。他出版超過 40本小說和詩集。在讚美詩部份，他多以「John Oxenham」為筆名發表。本詩即為他於1908年為倫敦傳教士協會所推出的「The Or&shy;i&shy;ent in Lon&shy;don」展覽中「<em>Pa&shy;geant of Dark&shy;ness and Light</em>」所寫的詞。</p>\r\n\r\n<p>本詩作曲者雷那格（Alexander R. Reinagle, 1799-1877）出生於音樂世家。父親與祖父都是英國顯赫的音樂家。1822年 -1853年間曾任牛津聖彼得大教堂管風琴師，曾出版二本讚美詩作品集 &ldquo;<em>Psalm Tunes for the Voice and the Pi&shy;a&shy;no&shy;for&shy;te</em>, 1830&rdquo; 和 &ldquo;<em>A Collection Of Psalm and Hymn Tunes, 1840</em>&rdquo;。本詩原旋律是為《詩篇》118篇譜曲，後再配上和聲，重新發表於「古今聖詩集」中，因而被大量採用。</p>\r\n\r\n<p>本詩創作源於《馬太福音》8章11節：「我又告訴你們，從東從西，將有許多人來，在天國裡與亞伯拉罕、以撒、雅各、一同坐席。」《使徒行傳》10章34-35節也說：「彼得就開口說：『我真看出　神是不偏待人，原來各國中，那敬畏主行義的人，都為主所悅納。』」</p>",
+      "youtube_urls": [
+        {
+          "label": "440 - 在主愛中團契",
+          "url": "https://www.youtube.com/watch?v=Fg0dlmT9NDs&list=PLye9rkov_g8CA_oaevJ0TasPUos5L3p_e&index=445"
+        }
+      ],
+      "sheet_score_pdf_url": "https://sacredmusic.tjc.org.tw/storage/uploads/hymn/score/sheet/440.pdf",
+      "sheet_score_images_url": [],
+      "num_score_pdf_url": "https://sacredmusic.tjc.org.tw/storage/uploads/hymn/score/num/440.pdf",
+      "num_score_xml_url": null,
+      "category": {
+        "id": 33,
+        "name": "與主聯合",
+        "slug": null,
+        "created_at": "2022-07-05T12:00:00.000000Z",
+        "updated_at": "2022-07-05T12:00:00.000000Z"
+      },
+      "tags": [],
+      "composers": [
+        {
+          "id": 10,
+          "name": "Alexander R. Reinagle",
+          "image": null,
+          "introduction": "",
+          "created_at": "2022-07-05T12:00:00.000000Z",
+          "updated_at": "2022-07-05T12:00:00.000000Z",
+          "image_url": null,
+          "pivot": {
+            "hymn_song_id": 445,
+            "artist_id": 10
+          }
+        }
+      ],
+      "lyricists": [
+        {
+          "id": 296,
+          "name": "John Oxenham",
+          "image": null,
+          "introduction": "",
+          "created_at": "2022-07-05T12:00:00.000000Z",
+          "updated_at": "2022-07-05T12:00:00.000000Z",
+          "image_url": null,
+          "pivot": {
+            "hymn_song_id": 445,
+            "artist_id": 296
+          }
+        }
+      ],
+      "audio_files": [
+        {
+          "id": 896,
+          "song_id": 445,
+          "file": "uploads/hymn/audio/2aee962a54b23a8d380c85f9a032a8db.m4a",
+          "audio_category_id": 3,
+          "created_at": "2022-10-21T01:10:23.000000Z",
+          "updated_at": "2023-04-20T03:15:44.000000Z",
+          "file_url": "https://sacredmusic.tjc.org.tw/storage/uploads/hymn/audio/2aee962a54b23a8d380c85f9a032a8db.m4a",
+          "audio_category": {
+            "id": 3,
+            "name": "鋼琴",
+            "slug": null
+          }
+        },
+        {
+          "id": 897,
+          "song_id": 445,
+          "file": "uploads/hymn/audio/334fc658d480432d4f6f73e1ef0a0aba.mp3",
+          "audio_category_id": 4,
+          "created_at": "2022-10-21T01:10:23.000000Z",
+          "updated_at": "2022-10-21T01:10:23.000000Z",
+          "file_url": "https://sacredmusic.tjc.org.tw/storage/uploads/hymn/audio/334fc658d480432d4f6f73e1ef0a0aba.mp3",
+          "audio_category": {
+            "id": 4,
+            "name": "人聲",
+            "slug": null
+          }
+        }
+      ]
+    },
+    {
+      "id": 446,
+      "no": "441",
+      "name": "我立下決心",
+      "lyrics": [
+        {
+          "text": "我立下決心永不再留戀這世界的虛名，\r\n屬天的美景，寶貴的信息，已吸引我心靈。"
+        },
+        {
+          "text": "我立下決心歸向主耶穌，離開罪惡枷鎖，\r\n祂信實不變，祂公義永存，祂應許必成就。"
+        },
+        {
+          "text": "我立下決心跟隨主耶穌，忠誠仰望救主，\r\n聽從祂命令，遵行祂旨意，祂是生命、道路。"
+        },
+        {
+          "text": "我立下決心進主的國度，遠離罪惡道路，\r\n朋友雖遠離，仇敵雖攻擊，我必坦然見主。"
+        },
+        {
+          "text": "我立下決心，誰願意同行？朋友!請快決定，\r\n聖經有明訓，聖靈必引領，請來同享永生。"
+        }
+      ],
+      "lyrics_chorus": "耶穌!我來就祢，我靈自由歡喜。\r\n耶穌!至高真神，我要來就祢。",
+      "sheet_score_pdf": "uploads/hymn/score/sheet/441.pdf",
+      "sheet_score_images": "[]",
+      "num_score_pdf": "uploads/hymn/score/num/441.pdf",
+      "num_score_xml": "",
+      "category_id": 33,
+      "created_at": "2022-07-09T16:00:00.000000Z",
+      "updated_at": "2023-10-11T06:54:07.000000Z",
+      "status": "PUBLISHED",
+      "history": "<p>作曲者菲爾莫爾（James Henry Fillmore, 1849-1936），生平不詳。</p>\r\n\r\n<p>&nbsp;</p>\r\n\r\n<p>本詩是1896年，菲爾莫爾（James Henry Fillmore, 1849-1936）為了在舊金山的一個基督徒的集會所作，這詩歌後來由菲爾莫爾的音樂公司員工帕莫爾（Palmer Hartsough, 1844-1932）填詞，新的歌詞讓這首詩歌更大受歡迎，並收錄於 &ldquo;<em>The Praise Hymn&shy;al</em>&rdquo; 詩歌集中。</p>\r\n\r\n<p>&nbsp;</p>\r\n\r\n<p>作詞者帕莫爾原來工作的型式是以旅行方式在美國許多州內往來教授歌唱的老師，約1877年，在伊利諾州岩石島，他成立了一間音樂工作室，並在當地的浸信會擔任音樂總監。1893年後搬至俄亥俄州，在菲爾莫爾音樂公司服務。因而有機會為本詩作詞。</p>\r\n\r\n<p>&nbsp;</p>\r\n\r\n<p>本詩創作源於《加拉太書》5章1節：「基督釋放了我們，叫我們得以自由，所以要站立得穩，不要再被奴僕的軛挾制。」</p>\r\n\r\n<p>&nbsp;</p>\r\n\r\n<p>我們曾經收錄過一首讚美詩，由哈居（A.J. Hodge）作詞譜曲，標題名為「Have You Counted the Cost?」（本會舊詩歌集 138首「如果棄絕救主」3），於1923年發表，在當時基督教界廣為流傳且影響力相當大的一首詩歌。因其發人深省的詞意，也常被選在佈道會中吟唱。</p>\r\n\r\n<p>&nbsp;</p>\r\n\r\n<p>「棄絕我（耶穌）不領受我話的人，有審判他的，就是我所講的道，在末日要審判他。」（約翰福音十二章48節）</p>\r\n\r\n<p>&nbsp;</p>\r\n\r\n<p>因此當我們定意要生活在神的愛中時，就要很專心的直視目標，一如保羅在《腓利比書》3章13-14節，向我們描繪的身影 -- 「弟兄們！我不是以為自己已經得著了，我只有一件事，就是忘記背後努力面前的，向著標竿直跑，要得　神在基督耶穌裡從上面召我來得的獎賞。」</p>",
+      "youtube_urls": [
+        {
+          "label": "441 - 我立下決心",
+          "url": "https://www.youtube.com/watch?v=1b8ojQbtTIo&list=PLye9rkov_g8CA_oaevJ0TasPUos5L3p_e&index=446"
+        }
+      ],
+      "sheet_score_pdf_url": "https://sacredmusic.tjc.org.tw/storage/uploads/hymn/score/sheet/441.pdf",
+      "sheet_score_images_url": [],
+      "num_score_pdf_url": "https://sacredmusic.tjc.org.tw/storage/uploads/hymn/score/num/441.pdf",
+      "num_score_xml_url": null,
+      "category": {
+        "id": 33,
+        "name": "與主聯合",
+        "slug": null,
+        "created_at": "2022-07-05T12:00:00.000000Z",
+        "updated_at": "2022-07-05T12:00:00.000000Z"
+      },
+      "tags": [],
+      "composers": [
+        {
+          "id": 248,
+          "name": "James Henry Fillmore",
+          "image": null,
+          "introduction": "",
+          "created_at": "2022-07-05T12:00:00.000000Z",
+          "updated_at": "2022-07-05T12:00:00.000000Z",
+          "image_url": null,
+          "pivot": {
+            "hymn_song_id": 446,
+            "artist_id": 248
+          }
+        }
+      ],
+      "lyricists": [
+        {
+          "id": 387,
+          "name": "Palmer Hartsough",
+          "image": null,
+          "introduction": "",
+          "created_at": "2022-07-05T12:00:00.000000Z",
+          "updated_at": "2022-07-05T12:00:00.000000Z",
+          "image_url": null,
+          "pivot": {
+            "hymn_song_id": 446,
+            "artist_id": 387
+          }
+        }
+      ],
+      "audio_files": [
+        {
+          "id": 898,
+          "song_id": 446,
+          "file": "uploads/hymn/audio/eca2a4aa90a402f77c7c364283365bc5.m4a",
+          "audio_category_id": 3,
+          "created_at": "2022-10-21T01:15:07.000000Z",
+          "updated_at": "2023-04-20T03:19:16.000000Z",
+          "file_url": "https://sacredmusic.tjc.org.tw/storage/uploads/hymn/audio/eca2a4aa90a402f77c7c364283365bc5.m4a",
+          "audio_category": {
+            "id": 3,
+            "name": "鋼琴",
+            "slug": null
+          }
+        },
+        {
+          "id": 899,
+          "song_id": 446,
+          "file": "uploads/hymn/audio/0a417e2b2fbb04dff25027c104acbd9a.mp3",
+          "audio_category_id": 4,
+          "created_at": "2022-10-21T01:15:07.000000Z",
+          "updated_at": "2022-10-21T01:15:07.000000Z",
+          "file_url": "https://sacredmusic.tjc.org.tw/storage/uploads/hymn/audio/0a417e2b2fbb04dff25027c104acbd9a.mp3",
+          "audio_category": {
+            "id": 4,
+            "name": "人聲",
+            "slug": null
+          }
+        }
+      ]
+    },
+    {
+      "id": 447,
+      "no": "442",
+      "name": "神一路引領",
+      "lyrics": [
+        {
+          "text": "那蔭涼的草地，極茂盛馨香，神引領祂兒女前行；\r\n水流清涼，洗淨我旅途疲困，神引領祂兒女前行。"
+        },
+        {
+          "text": "有時登上山頭，見陽光燦爛，神引領祂兒女前行；\r\n有時行經幽谷，黑夜已深沉，神引領祂兒女前行。"
+        },
+        {
+          "text": "雖憂煩常來襲，撒但常攻擊，神引領祂兒女前行；\r\n靠主恩典得勝，仇敵終退敗，神引領祂兒女前行。"
+        },
+        {
+          "text": "從淤泥中救起，從塵世遠離，神引領祂兒女前行；\r\n在榮耀中被提入永遠光明，神引領祂兒女前行。"
+        }
+      ],
+      "lyrics_chorus": "或渡過江河，或越洪流，或經烈火，寶血都潔淨；\r\n憂傷時以詩歌安慰我心；無論晝夜，真神一路引領。",
+      "sheet_score_pdf": "uploads/hymn/score/sheet/442.pdf",
+      "sheet_score_images": "[]",
+      "num_score_pdf": "uploads/hymn/score/num/442.pdf",
+      "num_score_xml": "",
+      "category_id": 9,
+      "created_at": "2022-07-09T16:00:00.000000Z",
+      "updated_at": "2026-03-04T01:42:57.000000Z",
+      "status": "PUBLISHED",
+      "history": "<p>這首優美詩歌的詞和曲，背後有一段辛酸苦楚的故事。它出自於十九世紀一位默默無聞的傳道人楊喬奇（George A. Young），他也是一個木匠， 全家僅靠著微薄的薪俸，過著貧窮簡樸的生活，他和妻子一生都在偏僻的小鄉村做神忠心的僕人。</p>\r\n\r\n<p>&nbsp;</p>\r\n\r\n<p>&nbsp;&nbsp;&nbsp; 楊喬奇夫婦經過多年辛勤的勤儉儲蓄，終於擁有一間自己蓋成的小屋，全家滿懷欣喜，心滿意足。可是沒多久，當楊喬奇應邀赴他鄉傳福音時，當地有一些人對他所傳講的信息不滿，便趁機放火焚燬他的新屋。當他回家時，只剩一片灰燼，面對這樣的磨難，促使他寫成了這首聖詩，歌詞是來自《約伯記》約伯受試鍊與他心境相映的信息。</p>\r\n\r\n<p>&nbsp;&nbsp;&nbsp;</p>\r\n\r\n<p>&nbsp;&nbsp;&nbsp; 當一個人的境遇愈窮困、磨練愈艱苦，他的作品就愈精粹感人。 這首詩帶給極多屬於神的兒女，在人生的黑夜幽谷時，心靈上的安慰和激勵，無論歷經驚洪烈火，或平安或患難，神都一樣帶領和保守祂的兒女一路前行。</p>",
+      "youtube_urls": [
+        {
+          "label": "442 - 神一路引領",
+          "url": "https://www.youtube.com/watch?v=TpqHASK7T9Y&list=PLye9rkov_g8CA_oaevJ0TasPUos5L3p_e&index=447"
+        }
+      ],
+      "sheet_score_pdf_url": "https://sacredmusic.tjc.org.tw/storage/uploads/hymn/score/sheet/442.pdf",
+      "sheet_score_images_url": [],
+      "num_score_pdf_url": "https://sacredmusic.tjc.org.tw/storage/uploads/hymn/score/num/442.pdf",
+      "num_score_xml_url": null,
+      "category": {
+        "id": 9,
+        "name": "耶穌領導",
+        "slug": null,
+        "created_at": "2022-07-05T12:00:00.000000Z",
+        "updated_at": "2022-07-05T12:00:00.000000Z"
+      },
+      "tags": [],
+      "composers": [
+        {
+          "id": 103,
+          "name": "Edwin L. George A. Young",
+          "image": null,
+          "introduction": "",
+          "created_at": "2022-07-05T12:00:00.000000Z",
+          "updated_at": "2022-07-05T12:00:00.000000Z",
+          "image_url": null,
+          "pivot": {
+            "hymn_song_id": 447,
+            "artist_id": 103
+          }
+        }
+      ],
+      "lyricists": [
+        {
+          "id": 103,
+          "name": "Edwin L. George A. Young",
+          "image": null,
+          "introduction": "",
+          "created_at": "2022-07-05T12:00:00.000000Z",
+          "updated_at": "2022-07-05T12:00:00.000000Z",
+          "image_url": null,
+          "pivot": {
+            "hymn_song_id": 447,
+            "artist_id": 103
+          }
+        }
+      ],
+      "audio_files": [
+        {
+          "id": 900,
+          "song_id": 447,
+          "file": "uploads/hymn/audio/26895a1ffb793dbe8f8c1cb4ec06e421.m4a",
+          "audio_category_id": 3,
+          "created_at": "2022-10-21T01:15:50.000000Z",
+          "updated_at": "2023-04-20T03:19:39.000000Z",
+          "file_url": "https://sacredmusic.tjc.org.tw/storage/uploads/hymn/audio/26895a1ffb793dbe8f8c1cb4ec06e421.m4a",
+          "audio_category": {
+            "id": 3,
+            "name": "鋼琴",
+            "slug": null
+          }
+        },
+        {
+          "id": 901,
+          "song_id": 447,
+          "file": "uploads/hymn/audio/dc6fc3848913c979998a4865bee6a648.mp3",
+          "audio_category_id": 4,
+          "created_at": "2022-10-21T01:15:50.000000Z",
+          "updated_at": "2022-10-21T01:15:50.000000Z",
+          "file_url": "https://sacredmusic.tjc.org.tw/storage/uploads/hymn/audio/dc6fc3848913c979998a4865bee6a648.mp3",
+          "audio_category": {
+            "id": 4,
+            "name": "人聲",
+            "slug": null
+          }
+        }
+      ]
+    },
+    {
+      "id": 448,
+      "no": "443",
+      "name": "榮耀永歸耶穌",
+      "lyrics": [
+        {
+          "text": "榮耀永遠歸於耶穌，祂是真神獨生子，\r\n祂以恩慈救贖我們，祂釘十架成救恩。"
+        },
+        {
+          "text": "漂泊流浪困頓歲月，渴慕盼望主恩光，\r\n如今終於得見光明，耶穌是我的力量。"
+        },
+        {
+          "text": "蒙主眷顧保守聖潔，大能膀臂蔭庇我，\r\n在主愛中，我靈歌唱，歡然信靠樂交託。"
+        }
+      ],
+      "lyrics_chorus": "本乎恩，也因信耶穌，祂寶血使我得贖。\r\n願主保守永在愛中，緊緊跟隨慈愛主。",
+      "sheet_score_pdf": "uploads/hymn/score/sheet/443.pdf",
+      "sheet_score_images": "[]",
+      "num_score_pdf": "uploads/hymn/score/num/443.pdf",
+      "num_score_xml": "",
+      "category_id": 2,
+      "created_at": "2022-07-09T16:00:00.000000Z",
+      "updated_at": "2023-10-11T06:54:58.000000Z",
+      "status": "PUBLISHED",
+      "history": "<p>&nbsp;本詩詞曲都是散基（Ira David Sankey, 1840-1908）所作。他是著名的福音歌手。2</p>\r\n\r\n<p>　</p>\r\n\r\n<p>本詩源於《羅馬書》11章36節：「因為萬有都是本於他、倚靠他、歸於他，願榮耀歸給他，直到永遠。阿們。」</p>\r\n\r\n<p>　　</p>\r\n\r\n<p>&nbsp;&nbsp;&nbsp; 至高神的榮耀，在《啟示錄》中描述的清晰又威嚴 &ndash;</p>\r\n\r\n<p>&nbsp;</p>\r\n\r\n<p>4章11節：「我們的主、我們的　神、你是配得榮耀尊貴權柄的．因為你創造了萬物、並且萬物是因你的旨意被創造而有的。」</p>\r\n\r\n<p>&nbsp;</p>\r\n\r\n<p>5章14節：「我又看見且聽見，寶座與活物並長老的周圍，有許多天使的聲音，他們的數目有千千萬萬，大聲說：『曾被殺的羔羊，是配得權柄、豐富、智慧、能力、尊貴、榮耀、頌讚的』。 我又聽見，在天上、地上、地底下、滄海裡和天地間一切所有被造之物，都說：『但願頌讚、尊貴、榮耀、權勢，都歸給坐寶座的和羔羊，直到永永遠遠。』四活物就說：『阿們！』眾長老也俯伏敬拜。」</p>",
+      "youtube_urls": [
+        {
+          "label": "443 - 榮耀永歸耶穌",
+          "url": "https://www.youtube.com/watch?v=Jh7MoWsPPGU&list=PLye9rkov_g8CA_oaevJ0TasPUos5L3p_e&index=448"
+        }
+      ],
+      "sheet_score_pdf_url": "https://sacredmusic.tjc.org.tw/storage/uploads/hymn/score/sheet/443.pdf",
+      "sheet_score_images_url": [],
+      "num_score_pdf_url": "https://sacredmusic.tjc.org.tw/storage/uploads/hymn/score/num/443.pdf",
+      "num_score_xml_url": null,
+      "category": {
+        "id": 2,
+        "name": "讚美耶穌",
+        "slug": null,
+        "created_at": "2022-07-05T12:00:00.000000Z",
+        "updated_at": "2022-07-05T12:00:00.000000Z"
+      },
+      "tags": [],
+      "composers": [
+        {
+          "id": 229,
+          "name": "Ira David Sankey",
+          "image": null,
+          "introduction": "",
+          "created_at": "2022-07-05T12:00:00.000000Z",
+          "updated_at": "2022-07-05T12:00:00.000000Z",
+          "image_url": null,
+          "pivot": {
+            "hymn_song_id": 448,
+            "artist_id": 229
+          }
+        }
+      ],
+      "lyricists": [
+        {
+          "id": 229,
+          "name": "Ira David Sankey",
+          "image": null,
+          "introduction": "",
+          "created_at": "2022-07-05T12:00:00.000000Z",
+          "updated_at": "2022-07-05T12:00:00.000000Z",
+          "image_url": null,
+          "pivot": {
+            "hymn_song_id": 448,
+            "artist_id": 229
+          }
+        }
+      ],
+      "audio_files": [
+        {
+          "id": 902,
+          "song_id": 448,
+          "file": "uploads/hymn/audio/d10bf001515bff01e045f35c2fb07498.m4a",
+          "audio_category_id": 3,
+          "created_at": "2022-10-21T01:16:05.000000Z",
+          "updated_at": "2023-04-20T03:20:01.000000Z",
+          "file_url": "https://sacredmusic.tjc.org.tw/storage/uploads/hymn/audio/d10bf001515bff01e045f35c2fb07498.m4a",
+          "audio_category": {
+            "id": 3,
+            "name": "鋼琴",
+            "slug": null
+          }
+        },
+        {
+          "id": 903,
+          "song_id": 448,
+          "file": "uploads/hymn/audio/87b1af6546b0a82c8828d2e392876188.mp3",
+          "audio_category_id": 4,
+          "created_at": "2022-10-21T01:16:05.000000Z",
+          "updated_at": "2022-10-21T01:16:05.000000Z",
+          "file_url": "https://sacredmusic.tjc.org.tw/storage/uploads/hymn/audio/87b1af6546b0a82c8828d2e392876188.mp3",
+          "audio_category": {
+            "id": 4,
+            "name": "人聲",
+            "slug": null
+          }
+        }
+      ]
+    },
+    {
+      "id": 449,
+      "no": "444",
+      "name": "耶穌聖名最甜美",
+      "lyrics": [
+        {
+          "text": "曾聽過世上許多的美名，但未有一名如此的動聽。\r\n神聖至美名，安慰我心靈，是主耶穌的寶貴聖名。"
+        },
+        {
+          "text": "在天上地下沒有其他名，使我們如此愛慕和尊敬，\r\n萬福至美名，我們當歡迎，是主奇妙的榮耀聖名。"
+        },
+        {
+          "text": "當主再來時，與祂面對面，必稱謝讚美奇妙主恩典，\r\n賜我真自由，慈愛廣無邊，救主耶穌聖名最甘甜。"
+        }
+      ],
+      "lyrics_chorus": "耶穌聖名最美、最甘甜，祂一生所行，正合祂聖名。\r\n願深愛救主，奉獻我生命，最美麗甘甜是耶穌聖名。",
+      "sheet_score_pdf": "uploads/hymn/score/sheet/444.pdf",
+      "sheet_score_images": "[]",
+      "num_score_pdf": "uploads/hymn/score/num/444.pdf",
+      "num_score_xml": "",
+      "category_id": 2,
+      "created_at": "2022-07-09T16:00:00.000000Z",
+      "updated_at": "2023-10-11T06:55:24.000000Z",
+      "status": "PUBLISHED",
+      "history": "<p>本詩詞曲皆為Lela B. Long所作。作者生平不詳。</p>\r\n\r\n<p>跳耀的音符，彷彿《馬可福音》十一章描繪耶穌將近耶路撒冷城時的情景 --</p>\r\n\r\n<p>&nbsp;</p>\r\n\r\n<p>「他們把驢駒牽到耶穌那裡，把自己的衣服搭在上面，耶穌就騎上。有許多人，把衣服鋪在路上，也有人把田間的樹枝砍下來，鋪在路上。前行後隨的人，都喊著說：『和散那！〔和散那原有求救的意思在此乃是稱頌的話〕奉主名來的，是應當稱頌的。那將要來的我祖大衛之國，是應當稱頌的，高高在上和散那！』</p>\r\n\r\n<p>&nbsp;&nbsp;&nbsp; 快板的旋律，傳達著與人分享、報好信息的愉悅！&nbsp;&nbsp;</p>\r\n\r\n<p>&nbsp;《以弗所書》1章17-22節，將「天下人間，沒有賜下別的名，我們可以靠著得救」的 -- 耶穌之救恩 -- 說得極清楚：「求我們主耶穌基督的　神、榮耀的父，將那賜人智慧和啟示的靈，賞給你們、使你們真知道他。並且照明你們心中的眼睛，使你們知道他的恩召有何等指望！他在聖徒中得的基業，有何等豐盛的榮耀！並知道他向我們這信的人所顯的能力，是何等浩大！就是照他在基督身上，所運行的大能大力，使他從死裡復活，叫他在天上坐在自己的右邊，遠超過一切執政的、掌權的、有能的、主治的、和一切有名的。不但是今世的，連來世的也都超過了，又將萬有服在他的腳下，使他為教會作萬有之首。」</p>",
+      "youtube_urls": [
+        {
+          "label": "444 - 耶穌聖名最甜美",
+          "url": "https://www.youtube.com/watch?v=Ojz-E36H7nQ&list=PLye9rkov_g8CA_oaevJ0TasPUos5L3p_e&index=449"
+        }
+      ],
+      "sheet_score_pdf_url": "https://sacredmusic.tjc.org.tw/storage/uploads/hymn/score/sheet/444.pdf",
+      "sheet_score_images_url": [],
+      "num_score_pdf_url": "https://sacredmusic.tjc.org.tw/storage/uploads/hymn/score/num/444.pdf",
+      "num_score_xml_url": null,
+      "category": {
+        "id": 2,
+        "name": "讚美耶穌",
+        "slug": null,
+        "created_at": "2022-07-05T12:00:00.000000Z",
+        "updated_at": "2022-07-05T12:00:00.000000Z"
+      },
+      "tags": [],
+      "composers": [
+        {
+          "id": 337,
+          "name": "Lela B. Long",
+          "image": null,
+          "introduction": "",
+          "created_at": "2022-07-05T12:00:00.000000Z",
+          "updated_at": "2022-07-05T12:00:00.000000Z",
+          "image_url": null,
+          "pivot": {
+            "hymn_song_id": 449,
+            "artist_id": 337
+          }
+        }
+      ],
+      "lyricists": [
+        {
+          "id": 337,
+          "name": "Lela B. Long",
+          "image": null,
+          "introduction": "",
+          "created_at": "2022-07-05T12:00:00.000000Z",
+          "updated_at": "2022-07-05T12:00:00.000000Z",
+          "image_url": null,
+          "pivot": {
+            "hymn_song_id": 449,
+            "artist_id": 337
+          }
+        }
+      ],
+      "audio_files": [
+        {
+          "id": 904,
+          "song_id": 449,
+          "file": "uploads/hymn/audio/6f5037d99cfb5bd074a1422472cbfc55.m4a",
+          "audio_category_id": 3,
+          "created_at": "2022-10-21T01:16:22.000000Z",
+          "updated_at": "2023-04-20T03:21:22.000000Z",
+          "file_url": "https://sacredmusic.tjc.org.tw/storage/uploads/hymn/audio/6f5037d99cfb5bd074a1422472cbfc55.m4a",
+          "audio_category": {
+            "id": 3,
+            "name": "鋼琴",
+            "slug": null
+          }
+        },
+        {
+          "id": 905,
+          "song_id": 449,
+          "file": "uploads/hymn/audio/8c95bb9eb057a7d90046f8b8a07b0d2a.mp3",
+          "audio_category_id": 4,
+          "created_at": "2022-10-21T01:16:23.000000Z",
+          "updated_at": "2022-10-21T01:16:23.000000Z",
+          "file_url": "https://sacredmusic.tjc.org.tw/storage/uploads/hymn/audio/8c95bb9eb057a7d90046f8b8a07b0d2a.mp3",
+          "audio_category": {
+            "id": 4,
+            "name": "人聲",
+            "slug": null
+          }
+        }
+      ]
+    },
+    {
+      "id": 450,
+      "no": "445",
+      "name": "恩典大過我罪愆",
+      "lyrics": [
+        {
+          "text": "慈愛主滿有奇異恩典，這恩典遠超我的罪愆!\r\n各各他山上寶血流出，羔羊血能洗淨眾罪愆。"
+        },
+        {
+          "text": "罪惡絕望如寒風浪捲，威脅生命，將永遠淪陷；\r\n幸有救主無限大慈愛，引向十架，救恩贖罪愆。"
+        },
+        {
+          "text": "過犯眾多，自己難改變，罪惡、汙點也無法遮掩；\r\n但有主耶穌寶血泉源，洗我比雪潔白無罪愆。"
+        },
+        {
+          "text": "奇妙的、無窮的大恩典，白白賞賜，信者得恩眷！\r\n你是否渴望見主聖面？你是否願接受主恩典？"
+        }
+      ],
+      "lyrics_chorus": "真神恩典，潔淨我內心靠主恩典。\r\n真神恩典，恩典大過我的眾罪愆。",
+      "sheet_score_pdf": "uploads/hymn/score/sheet/445.pdf",
+      "sheet_score_images": "[]",
+      "num_score_pdf": "uploads/hymn/score/num/445.pdf",
+      "num_score_xml": "",
+      "category_id": 16,
+      "created_at": "2022-07-09T16:00:00.000000Z",
+      "updated_at": "2023-10-11T06:55:46.000000Z",
+      "status": "PUBLISHED",
+      "history": "<p>作詞者茱莉亞．約翰斯頓（Julia H. Johnston, 1849-1919）六歲起，定居於在伊利諾伊州的皮歐里亞。她父親是當地長老教會的牧師，她也指導當地的主日學達四十年之久，並且擔任長老教會傳教協會主席有二十年的時間。她創作了近五百首的詩歌。</p>\r\n\r\n<p>&nbsp;</p>\r\n\r\n<p>本詩寫於1911年，並首次發表於 &ldquo;<em>Hymns Tried and True, No.2</em>. &rdquo;<em>詩歌集中</em><em>。</em></p>\r\n\r\n<p>&nbsp;</p>\r\n\r\n<p>《以弗所書》一章5-10節：「因愛我們，就按著自己意旨所喜悅的，預定我們，藉著耶穌基督得兒子的名分，使他榮耀的恩典得著稱讚。這恩典是他在愛子裡所賜給我們的。我們藉這愛子的血，得蒙救贖，過犯得以赦免，乃是照他豐富的恩典。這恩典是　神用諸般智慧聰明，充充足足賞給我們的，都是照他自己所預定的美意，叫我們知道他旨意的奧秘，要照所安排的，在日期滿足的時候，使天上地上一切所有的，都在基督裡面同歸於一。」</p>\r\n\r\n<p>奇哉，神救贖的經綸，不在人的經驗中；大哉！神恩浩大，長闊高深無法測量，正是羅馬書五章20節所說：「律法本是外添的，叫過犯顯多。只是罪在那裡顯多，恩典就更顯多了。」</p>\r\n\r\n<p>本詩作曲者為唐納爾（Daniel B. Towner, 1850-1919）出生于賓州，父親是知名音樂家。唐納爾在1893年出任慕迪聖經學院的音樂系主任，培育了無數近代的聖樂人才。</p>",
+      "youtube_urls": [
+        {
+          "label": "445 - 恩典大過我罪愆",
+          "url": "https://www.youtube.com/watch?v=7zJn1eqUxWk&list=PLye9rkov_g8CA_oaevJ0TasPUos5L3p_e&index=450"
+        }
+      ],
+      "sheet_score_pdf_url": "https://sacredmusic.tjc.org.tw/storage/uploads/hymn/score/sheet/445.pdf",
+      "sheet_score_images_url": [],
+      "num_score_pdf_url": "https://sacredmusic.tjc.org.tw/storage/uploads/hymn/score/num/445.pdf",
+      "num_score_xml_url": null,
+      "category": {
+        "id": 16,
+        "name": "感念主恩",
+        "slug": null,
+        "created_at": "2022-07-05T12:00:00.000000Z",
+        "updated_at": "2022-07-05T12:00:00.000000Z"
+      },
+      "tags": [],
+      "composers": [
+        {
+          "id": 74,
+          "name": "Daniel Brink Towner",
+          "image": null,
+          "introduction": "",
+          "created_at": "2022-07-05T12:00:00.000000Z",
+          "updated_at": "2022-07-05T12:00:00.000000Z",
+          "image_url": null,
+          "pivot": {
+            "hymn_song_id": 450,
+            "artist_id": 74
+          }
+        }
+      ],
+      "lyricists": [
+        {
+          "id": 324,
+          "name": "Julia H. Johnston",
+          "image": null,
+          "introduction": "",
+          "created_at": "2022-07-05T12:00:00.000000Z",
+          "updated_at": "2022-07-05T12:00:00.000000Z",
+          "image_url": null,
+          "pivot": {
+            "hymn_song_id": 450,
+            "artist_id": 324
+          }
+        }
+      ],
+      "audio_files": [
+        {
+          "id": 906,
+          "song_id": 450,
+          "file": "uploads/hymn/audio/9922bb13dd08ab51d258a0a2e230efae.m4a",
+          "audio_category_id": 3,
+          "created_at": "2022-10-21T01:17:00.000000Z",
+          "updated_at": "2023-04-20T03:22:13.000000Z",
+          "file_url": "https://sacredmusic.tjc.org.tw/storage/uploads/hymn/audio/9922bb13dd08ab51d258a0a2e230efae.m4a",
+          "audio_category": {
+            "id": 3,
+            "name": "鋼琴",
+            "slug": null
+          }
+        },
+        {
+          "id": 907,
+          "song_id": 450,
+          "file": "uploads/hymn/audio/3990fb8e2b05da8a3ad15349070e98f0.mp3",
+          "audio_category_id": 4,
+          "created_at": "2022-10-21T01:17:00.000000Z",
+          "updated_at": "2022-10-21T01:17:00.000000Z",
+          "file_url": "https://sacredmusic.tjc.org.tw/storage/uploads/hymn/audio/3990fb8e2b05da8a3ad15349070e98f0.mp3",
+          "audio_category": {
+            "id": 4,
+            "name": "人聲",
+            "slug": null
+          }
+        }
+      ]
+    }
+  ],
+  "first_page_url": "https://sacredmusic.tjc.org.tw/api/hymn?page=1",
+  "from": 441,
+  "last_page": 48,
+  "last_page_url": "https://sacredmusic.tjc.org.tw/api/hymn?page=48",
+  "links": [
+    {
+      "url": "https://sacredmusic.tjc.org.tw/api/hymn?page=44",
+      "label": "pagination.previous",
+      "active": false
+    },
+    {
+      "url": "https://sacredmusic.tjc.org.tw/api/hymn?page=1",
+      "label": "1",
+      "active": false
+    },
+    {
+      "url": "https://sacredmusic.tjc.org.tw/api/hymn?page=2",
+      "label": "2",
+      "active": false
+    },
+    {
+      "url": null,
+      "label": "...",
+      "active": false
+    },
+    {
+      "url": "https://sacredmusic.tjc.org.tw/api/hymn?page=39",
+      "label": "39",
+      "active": false
+    },
+    {
+      "url": "https://sacredmusic.tjc.org.tw/api/hymn?page=40",
+      "label": "40",
+      "active": false
+    },
+    {
+      "url": "https://sacredmusic.tjc.org.tw/api/hymn?page=41",
+      "label": "41",
+      "active": false
+    },
+    {
+      "url": "https://sacredmusic.tjc.org.tw/api/hymn?page=42",
+      "label": "42",
+      "active": false
+    },
+    {
+      "url": "https://sacredmusic.tjc.org.tw/api/hymn?page=43",
+      "label": "43",
+      "active": false
+    },
+    {
+      "url": "https://sacredmusic.tjc.org.tw/api/hymn?page=44",
+      "label": "44",
+      "active": false
+    },
+    {
+      "url": "https://sacredmusic.tjc.org.tw/api/hymn?page=45",
+      "label": "45",
+      "active": true
+    },
+    {
+      "url": "https://sacredmusic.tjc.org.tw/api/hymn?page=46",
+      "label": "46",
+      "active": false
+    },
+    {
+      "url": "https://sacredmusic.tjc.org.tw/api/hymn?page=47",
+      "label": "47",
+      "active": false
+    },
+    {
+      "url": "https://sacredmusic.tjc.org.tw/api/hymn?page=48",
+      "label": "48",
+      "active": false
+    },
+    {
+      "url": "https://sacredmusic.tjc.org.tw/api/hymn?page=46",
+      "label": "pagination.next",
+      "active": false
+    }
+  ],
+  "next_page_url": "https://sacredmusic.tjc.org.tw/api/hymn?page=46",
+  "path": "https://sacredmusic.tjc.org.tw/api/hymn",
+  "per_page": 10,
+  "prev_page_url": "https://sacredmusic.tjc.org.tw/api/hymn?page=44",
+  "to": 450,
+  "total": 474
+}

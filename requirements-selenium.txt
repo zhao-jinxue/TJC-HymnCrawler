@@ -1,0 +1,13 @@
+# Selenium 保底引擎依赖（按需安装：仅在需要 DOM 兜底/旧链复现时）
+#
+#   pip install -r requirements-selenium.txt
+#   另需：Google Chrome + 与 Chrome 版本匹配的 chromedriver
+#
+# 用途：
+#   python crawler_selenium.py                    # 独立整链入口（等价重构前行为）
+#   python crawler_fast.py --engine selenium --step 1
+#   python crawler_fast.py --engine auto --step 2   # API 优先，逐首失败才降级 DOM
+
+-r requirements.txt
+
+selenium>=4.11

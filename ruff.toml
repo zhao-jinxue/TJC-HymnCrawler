@@ -1,0 +1,12 @@
+# ruff 门禁配置（2026-09-13 加入）
+#
+# 说明：项目内的「历史独立脚本」不在门禁范围内，避免为通过风格检查而改动行为——
+#   - `tool/**`            ：一次性数据处理/取证脚本（含本轮收编的 data_audit）
+#   - `test/test_step*.py` ：重构前的独立 Selenium 联调脚本（非 pytest 用例，需网络+浏览器）
+# 门禁覆盖：crawler_core / crawler_selenium.py / crawler_fast.py / test/ 下的 pytest 用例。
+extend-exclude = [
+    "tool",
+    "test/test_step1.py",
+    "test/test_step2.py",
+    "test/test_step3.py",
+]

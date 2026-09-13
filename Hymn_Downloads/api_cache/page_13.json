@@ -1,0 +1,1129 @@
+{
+  "current_page": 13,
+  "data": [
+    {
+      "id": 121,
+      "no": "120",
+      "name": "奉獻所有",
+      "lyrics": [
+        {
+          "text": "我將所有獻與耶穌，是甘心、樂意奉獻；\r\n我要時常愛主、靠主，與主相親至永遠。"
+        },
+        {
+          "text": "我將所有獻與耶穌，謙卑俯伏主前求；\r\n世界快樂甘願撇棄，求主今將我收留。"
+        }
+      ],
+      "lyrics_chorus": "將所有奉獻，將所有奉獻；\r\n獻與慈愛、尊貴救主，將所有奉獻。",
+      "sheet_score_pdf": "uploads/hymn/score/sheet/120.pdf",
+      "sheet_score_images": "[]",
+      "num_score_pdf": "uploads/hymn/score/num/120.pdf",
+      "num_score_xml": "",
+      "category_id": 19,
+      "created_at": "2022-07-09T16:00:00.000000Z",
+      "updated_at": "2023-04-07T03:23:38.000000Z",
+      "status": "PUBLISHED",
+      "history": "<p>此首詩歌常用於蘇格蘭與美國等地的奉獻儀式。<br />\r\n<br />\r\n作詞者范德（Judson W. Van DeVenter, 1865-1939）出生於美國密西根州農莊，熱愛藝術，大學畢業後在賓州一所公立學校任職美術老師。范德是一位虔誠的聖公會信徒，他擅長陪談並熱心地參與佈道事工，為此，許多友人勉勵他可以獻身傳道。然而，繼續在學校任職與獻身教會兩者之間令他猶豫不決，經過五年的掙扎終於全心獻主。<br />\r\n<br />\r\n這一抉擇影響范德一生，1896年在俄亥俄州的東巴勒斯坦佈道會，他把當初內心交戰與最後靈裡的順服寫成詩歌。他說：「我此生抉擇的時刻來到之際，我完全的順服。新日子進入我的生命，我成為傳道人，並發掘我靈魂深處那前所未見的恩賜。神將一首詩歌藏在我心中，觸動那柔纖的心弦，使我唱出心聲。」<br />\r\n<br />\r\n此首聖詩的正歌適合男女二重唱，副歌則是混聲四部合唱。它由范德的好友，溫敦（Winfield S. Weeden, 1847-1908）所譜曲。溫敦是音樂教員，他有嘹亮的歌喉，常在佈道會領唱。范德獻身為神職人員後，他們一同四出領會。其足跡遍及美國與英國的蘇格蘭。<br />\r\n<br />\r\n20世紀名佈道家葛理翰（Graham, Billy）曾回憶，范德是一位對他影響甚大的傳道者。他晚年定居佛州，並且常赴三一聖經學院講道，學生們深愛這位慈祥又屬靈的長者，常三五成群地晚上去他家中唱詩和交通。范德與溫敦對主無怨無悔的奉獻，如同銘刻在溫敦的墓碑上、這首詩歌的標題：「我奉獻了所有。」<br />\r\n<br />\r\n&nbsp;</p>",
+      "youtube_urls": [
+        {
+          "label": "120 - 奉獻所有",
+          "url": "https://www.youtube.com/watch?v=AlLQHZWKtZs&list=PLye9rkov_g8CA_oaevJ0TasPUos5L3p_e&index=121"
+        }
+      ],
+      "sheet_score_pdf_url": "https://sacredmusic.tjc.org.tw/storage/uploads/hymn/score/sheet/120.pdf",
+      "sheet_score_images_url": [],
+      "num_score_pdf_url": "https://sacredmusic.tjc.org.tw/storage/uploads/hymn/score/num/120.pdf",
+      "num_score_xml_url": null,
+      "category": {
+        "id": 19,
+        "name": "甘心奉獻",
+        "slug": null,
+        "created_at": "2022-07-05T12:00:00.000000Z",
+        "updated_at": "2022-07-05T12:00:00.000000Z"
+      },
+      "tags": [],
+      "composers": [
+        {
+          "id": 518,
+          "name": "Winfield S. Weeden",
+          "image": null,
+          "introduction": "",
+          "created_at": "2022-07-05T12:00:00.000000Z",
+          "updated_at": "2022-07-05T12:00:00.000000Z",
+          "image_url": null,
+          "pivot": {
+            "hymn_song_id": 121,
+            "artist_id": 518
+          }
+        }
+      ],
+      "lyricists": [
+        {
+          "id": 322,
+          "name": "Judson W. Van DeVenter",
+          "image": null,
+          "introduction": "",
+          "created_at": "2022-07-05T12:00:00.000000Z",
+          "updated_at": "2022-07-05T12:00:00.000000Z",
+          "image_url": null,
+          "pivot": {
+            "hymn_song_id": 121,
+            "artist_id": 322
+          }
+        }
+      ],
+      "audio_files": [
+        {
+          "id": 123,
+          "song_id": 121,
+          "file": "uploads/hymn/audio/6fefe3b58d02469ed1e06b384430a0bd.m4a",
+          "audio_category_id": 3,
+          "created_at": "2022-08-26T02:34:21.000000Z",
+          "updated_at": "2022-08-26T02:34:21.000000Z",
+          "file_url": "https://sacredmusic.tjc.org.tw/storage/uploads/hymn/audio/6fefe3b58d02469ed1e06b384430a0bd.m4a",
+          "audio_category": {
+            "id": 3,
+            "name": "鋼琴",
+            "slug": null
+          }
+        },
+        {
+          "id": 329,
+          "song_id": 121,
+          "file": "uploads/hymn/audio/06e259d060b4e57b24602e0533bf0b97.mp3",
+          "audio_category_id": 4,
+          "created_at": "2022-10-11T02:49:29.000000Z",
+          "updated_at": "2022-10-11T02:49:29.000000Z",
+          "file_url": "https://sacredmusic.tjc.org.tw/storage/uploads/hymn/audio/06e259d060b4e57b24602e0533bf0b97.mp3",
+          "audio_category": {
+            "id": 4,
+            "name": "人聲",
+            "slug": null
+          }
+        }
+      ]
+    },
+    {
+      "id": 122,
+      "no": "121",
+      "name": "我獻何物給耶穌？",
+      "lyrics": [
+        {
+          "text": "我獻何物給耶穌，報祂賜我大福？\r\n深知萬一難報答，只將身心歸屬；\r\n我獻愛心給耶穌，終生事主、順服，\r\n恩主必定肯悅納，所獻活祭禮物。"
+        },
+        {
+          "text": "我獻愛心給耶穌，撒但無法阻擋，\r\n因主明說要愛祂，此言我永不忘；\r\n若要主心得滿足，只有愛祂堅強，\r\n打破玉瓶澆香膏，使主滿身芬香。"
+        },
+        {
+          "text": "我獻愛心給耶穌，並非空說不行，\r\n應當遵守祂真道，力行祂新命令；\r\n受苦、捨命不足惜，為祂廣傳福音，\r\n努力餵養祂群羊，勇敢做祂精兵。"
+        }
+      ],
+      "lyrics_chorus": "",
+      "sheet_score_pdf": "uploads/hymn/score/sheet/121.pdf",
+      "sheet_score_images": "[]",
+      "num_score_pdf": "uploads/hymn/score/num/121.pdf",
+      "num_score_xml": "",
+      "category_id": 19,
+      "created_at": "2022-07-09T16:00:00.000000Z",
+      "updated_at": "2023-08-10T03:30:15.000000Z",
+      "status": "PUBLISHED",
+      "history": "<p>本詩與365首的英文標題完全相同，然經查證，本詩的英文標題應該是「What can I Give to Jesus」。本會應是當時取了一首古老的曲調，另搭配了365首的英文歌詞而成。原詩「What can I Give to Jesus」的作詞、作曲者皆不可考。<br />\r\n<br />\r\n《約翰壹書》第二章2節：「祂為我們的罪作了挽回祭，不是單為我們的罪，也是為普天下人的罪。」神子耶穌為了世人的罪被釘死在十架上，受盡羞辱、流盡寶血，而那原是我們應承擔的懲罰！思及此不禁滿懷感恩而問：我能獻何物給耶穌做回報呢？此亦即中文歌詞所描述的。<br />\r\n<br />\r\n《約翰福音》第十四章15節，耶穌說：「你們若愛我，就必遵守我的命令。」而主的命令為何？「你要盡心、盡性、盡意、盡力愛主你的神。其次就是說：要愛人如己。」（可十二30-31）。耶穌命令的總歸就是愛神、愛人。我們若能照此而行，就是連撒但也無法阻擋，這是報答主恩最好的方法了。<br />\r\n<br />\r\n&nbsp;</p>",
+      "youtube_urls": [
+        {
+          "label": "121 - 我獻何物給耶穌？",
+          "url": "https://www.youtube.com/watch?v=fz9Z3jjvfyQ&list=PLye9rkov_g8CA_oaevJ0TasPUos5L3p_e&index=122"
+        }
+      ],
+      "sheet_score_pdf_url": "https://sacredmusic.tjc.org.tw/storage/uploads/hymn/score/sheet/121.pdf",
+      "sheet_score_images_url": [],
+      "num_score_pdf_url": "https://sacredmusic.tjc.org.tw/storage/uploads/hymn/score/num/121.pdf",
+      "num_score_xml_url": null,
+      "category": {
+        "id": 19,
+        "name": "甘心奉獻",
+        "slug": null,
+        "created_at": "2022-07-05T12:00:00.000000Z",
+        "updated_at": "2022-07-05T12:00:00.000000Z"
+      },
+      "tags": [],
+      "composers": [
+        {
+          "id": 382,
+          "name": "Old Melody",
+          "image": null,
+          "introduction": "",
+          "created_at": "2022-07-05T12:00:00.000000Z",
+          "updated_at": "2022-07-05T12:00:00.000000Z",
+          "image_url": null,
+          "pivot": {
+            "hymn_song_id": 122,
+            "artist_id": 382
+          }
+        }
+      ],
+      "lyricists": [
+        {
+          "id": 38,
+          "name": "Bernard of Clairvaux",
+          "image": null,
+          "introduction": "",
+          "created_at": "2022-07-05T12:00:00.000000Z",
+          "updated_at": "2022-07-05T12:00:00.000000Z",
+          "image_url": null,
+          "pivot": {
+            "hymn_song_id": 122,
+            "artist_id": 38
+          }
+        }
+      ],
+      "audio_files": [
+        {
+          "id": 124,
+          "song_id": 122,
+          "file": "uploads/hymn/audio/2af91766c970fb42bce18aa3ef8fae69.m4a",
+          "audio_category_id": 3,
+          "created_at": "2022-08-26T02:35:40.000000Z",
+          "updated_at": "2022-08-26T02:35:40.000000Z",
+          "file_url": "https://sacredmusic.tjc.org.tw/storage/uploads/hymn/audio/2af91766c970fb42bce18aa3ef8fae69.m4a",
+          "audio_category": {
+            "id": 3,
+            "name": "鋼琴",
+            "slug": null
+          }
+        },
+        {
+          "id": 330,
+          "song_id": 122,
+          "file": "uploads/hymn/audio/8d090f1aa8f3577f543373a59a7c4eee.mp3",
+          "audio_category_id": 4,
+          "created_at": "2022-10-11T02:49:51.000000Z",
+          "updated_at": "2022-10-11T02:49:51.000000Z",
+          "file_url": "https://sacredmusic.tjc.org.tw/storage/uploads/hymn/audio/8d090f1aa8f3577f543373a59a7c4eee.mp3",
+          "audio_category": {
+            "id": 4,
+            "name": "人聲",
+            "slug": null
+          }
+        }
+      ]
+    },
+    {
+      "id": 123,
+      "no": "122",
+      "name": "彼此相愛",
+      "lyrics": [
+        {
+          "text": "兄弟相愛、相親，須要心誠、意真；\r\n彼此聯合，同意、同心，真是神家的人。"
+        },
+        {
+          "text": "在父寶座之前，都蒙天父愛憐；\r\n彼此饒恕，互相代禱，快樂在地如天。"
+        },
+        {
+          "text": "我也將你體諒，你也代我擔當；\r\n若見同靈愁苦非常，大家同感心傷。"
+        },
+        {
+          "text": "在世雖有勞苦，盡心、竭力相助；\r\n等主來時，接回天家，共享無窮鴻福。"
+        }
+      ],
+      "lyrics_chorus": "",
+      "sheet_score_pdf": "uploads/hymn/score/sheet/122.pdf",
+      "sheet_score_images": "[]",
+      "num_score_pdf": "uploads/hymn/score/num/122.pdf",
+      "num_score_xml": "",
+      "category_id": 20,
+      "created_at": "2022-07-09T16:00:00.000000Z",
+      "updated_at": "2024-12-06T08:28:04.000000Z",
+      "status": "PUBLISHED",
+      "history": "<p>這首描述教會弟兄姊妹手足情深的詩歌，有一個美麗而感人的故事。<br />\r\n<br />\r\n1765年，25歲的約翰浮瑟特（John Fawcett）和他的新婚妻子瑪麗（Mary）在英國溫斯蓋約克夏村（Yorkshire Village, Wainsgate）一間窮困的浸信會小教堂開始擔任牧師。初無牧師宿舍，輪住各戶；早餐馬鈴薯，晚餐還是馬鈴薯。<br />\r\n<br />\r\n獻身服事於貧苦的環境七年後，1772年他在日記上寫著：「這些年來，家裡人口增加的速度比收入要快得多。」不久，他接到倫敦有名有勢力的卡特里（Carters Lane）浸信會大禮拜堂派專人登門禮聘。他們決定承接那大教會的牧職。<br />\r\n<br />\r\n再來的星期天，浮瑟特在約克夏教會為那些悲傷含淚的教區居民作最後一次的講道並辭行。當家具書籍全裝上車，夫妻倆同坐在箱子上流淚。瑪麗哭著說：「我不能忍受了！我們怎麼能離開。」浮瑟特說：「我也不能忍受離開，我們不走了！要留在這裡和我們的信徒在一起。」車上的東西馬上卸下來放回原處。<br />\r\n<br />\r\n接下來的第一個星期天，浮瑟特講道引用《路加福音》第十二章15節「因為人的生命不在乎家道豐富」為題，並以誦讀他的新詩〈兄弟彼此相愛〉（Brotherly Love.）作為禮拜的結束。<br />\r\n<br />\r\n浮瑟特為記念這件事所作的這首信徒友愛的詩，十年後才在他的聖詩集Hymns Adapted to the Circumstances of Public Worship and Private Devotion Leeds（1782）發表。<br />\r\n<br />\r\n浮瑟特和瑪麗帶著堅定的信心繼續留在溫斯蓋約克夏這個小村莊四十五年，直到1817年7月25日息勞為止，他們的年薪不到25英磅。<br />\r\n<br />\r\n準備一篇好信息已屬不易，但浮瑟特每次講道，還自己作一首聖詩。他可以說是18世紀非英國國教傳教士的模範，貧窮、自修在一個令人筋疲力竭的教區，其實並不多人能像他一樣，達到最後的目標。<br />\r\n<br />\r\n本首詩作曲者梅遜（Lowell Mason, 1792-1872），因他對美國音樂的卓越貢獻，被尊稱為「美國公立教育與教會音樂之父」。</p>",
+      "youtube_urls": [
+        {
+          "label": "122 - 彼此相愛",
+          "url": "https://www.youtube.com/watch?v=v_blYTrAVcQ&list=PLye9rkov_g8CA_oaevJ0TasPUos5L3p_e&index=123"
+        }
+      ],
+      "sheet_score_pdf_url": "https://sacredmusic.tjc.org.tw/storage/uploads/hymn/score/sheet/122.pdf",
+      "sheet_score_images_url": [],
+      "num_score_pdf_url": "https://sacredmusic.tjc.org.tw/storage/uploads/hymn/score/num/122.pdf",
+      "num_score_xml_url": null,
+      "category": {
+        "id": 20,
+        "name": "彼此相愛",
+        "slug": null,
+        "created_at": "2022-07-05T12:00:00.000000Z",
+        "updated_at": "2022-07-05T12:00:00.000000Z"
+      },
+      "tags": [],
+      "composers": [
+        {
+          "id": 184,
+          "name": "Hans G. Nageli",
+          "image": null,
+          "introduction": "",
+          "created_at": "2022-07-05T12:00:00.000000Z",
+          "updated_at": "2022-07-05T12:00:00.000000Z",
+          "image_url": null,
+          "pivot": {
+            "hymn_song_id": 123,
+            "artist_id": 184
+          }
+        },
+        {
+          "id": 348,
+          "name": "Lowell Mason",
+          "image": null,
+          "introduction": "",
+          "created_at": "2022-07-05T12:00:00.000000Z",
+          "updated_at": "2022-07-05T12:00:00.000000Z",
+          "image_url": null,
+          "pivot": {
+            "hymn_song_id": 123,
+            "artist_id": 348
+          }
+        }
+      ],
+      "lyricists": [
+        {
+          "id": 285,
+          "name": "John Fawcett",
+          "image": null,
+          "introduction": "",
+          "created_at": "2022-07-05T12:00:00.000000Z",
+          "updated_at": "2022-07-05T12:00:00.000000Z",
+          "image_url": null,
+          "pivot": {
+            "hymn_song_id": 123,
+            "artist_id": 285
+          }
+        }
+      ],
+      "audio_files": [
+        {
+          "id": 125,
+          "song_id": 123,
+          "file": "uploads/hymn/audio/34f2c2680b21f7699729d61b806a83d2.m4a",
+          "audio_category_id": 3,
+          "created_at": "2022-08-26T02:36:07.000000Z",
+          "updated_at": "2022-08-26T02:36:07.000000Z",
+          "file_url": "https://sacredmusic.tjc.org.tw/storage/uploads/hymn/audio/34f2c2680b21f7699729d61b806a83d2.m4a",
+          "audio_category": {
+            "id": 3,
+            "name": "鋼琴",
+            "slug": null
+          }
+        },
+        {
+          "id": 331,
+          "song_id": 123,
+          "file": "uploads/hymn/audio/7f42db94c4c9bf868b90beac89873a0a.mp3",
+          "audio_category_id": 4,
+          "created_at": "2022-10-11T02:50:16.000000Z",
+          "updated_at": "2022-10-11T02:50:16.000000Z",
+          "file_url": "https://sacredmusic.tjc.org.tw/storage/uploads/hymn/audio/7f42db94c4c9bf868b90beac89873a0a.mp3",
+          "audio_category": {
+            "id": 4,
+            "name": "人聲",
+            "slug": null
+          }
+        }
+      ]
+    },
+    {
+      "id": 124,
+      "no": "123",
+      "name": "聖徒送行",
+      "lyrics": [
+        {
+          "text": "願主保護你，再會有期；以祂慈手引你、領你，\r\n如羊在圈愛你、憐你。願主保護你，再會有期。"
+        },
+        {
+          "text": "願主保護你，再會有期；以祂愛旗招你、率你，\r\n主之聖言訓你、誨你。願主保護你，再會有期。"
+        },
+        {
+          "text": "願主保護你，再會有期；雖有艱難困你、擾你，\r\n主之聖臂扶你、抱你，。願主保護你，再會有期。"
+        },
+        {
+          "text": "願主保護你，再會有期；全能翼下覆你、庇你，\r\n各樣恩惠賜你、隨你。願主保護你再會有期。"
+        }
+      ],
+      "lyrics_chorus": "等再會，等再會，等再會，在耶穌足前；\r\n等再會，等再會，願主保護你，再會有期。",
+      "sheet_score_pdf": "uploads/hymn/score/sheet/123.pdf",
+      "sheet_score_images": "[]",
+      "num_score_pdf": "uploads/hymn/score/num/123.pdf",
+      "num_score_xml": "",
+      "category_id": 20,
+      "created_at": "2022-07-09T16:00:00.000000Z",
+      "updated_at": "2023-08-10T03:40:02.000000Z",
+      "status": "PUBLISHED",
+      "history": "<p>作者欒勤（Jeremiah E. Rankin, 1828-1904）生於美國新罕布夏州。1885年，神學院畢業後，先後出任美國東岸幾個著名的公理教會為牧師。1899年，擔任華盛頓霍華大學（Howard University）的校長。這是一所著名的黑人高等學府，以霍華將軍命名。<br />\r\n<br />\r\n欒勤編輯過許多福音聖詩集，本詩是他最有名的聖詩。1882年某日，他在書房查考資料，對「再見」的英文Farewell，Good-bye，和So long的字義細心研究。他從《使徒行傳》第十五章29節及第二十三章30節中的「願你們平安」（Farewell）的希臘原文中，發現它有更廣泛的含意，意思是：<br />\r\n<br />\r\n「神使你強壯、堅定，享有健康、喜樂。」於是他寫下了這首詩的第一節，寄給二位音樂家譜曲。這兩位作曲家，一位是已享盛名的音樂家，另一位是未受過音樂專業訓練的小學教員，但後者所譜的曲與欒勤所寫的詞意配合無間。欒勤聽後大喜，完成了八節十六行的詩，其中一半的詞句是「願主同在直到再相會」。今日詩集選用的是原作第一、二、四、七節。<br />\r\n<br />\r\n作曲者陶默（William Gould Tomer,1833-1896）出生於德國，移居美國。他曾在霍華將軍麾下，參加美國的南北戰爭，戰後在銀行任職。1896年，在陶默的安息禮拜中，也用此詩歌紀念。<br />\r\n<br />\r\n慕迪與散基時常在佈道會結束時唱這首詩，因而傳遍歐美，被譯成多國文字。全世界基督徒在送別時，都愛唱此歌作為祝頌。它也成了許多禮拜結束和基督徒會議閉幕時的祝福詩歌。幾乎在每一本聖詩集上都有這首詩歌。<br />\r\n<br />\r\n&nbsp;</p>",
+      "youtube_urls": [
+        {
+          "label": "123 - 聖徒送行",
+          "url": "https://www.youtube.com/watch?v=N18sGVp0HaQ&list=PLye9rkov_g8CA_oaevJ0TasPUos5L3p_e&index=124"
+        }
+      ],
+      "sheet_score_pdf_url": "https://sacredmusic.tjc.org.tw/storage/uploads/hymn/score/sheet/123.pdf",
+      "sheet_score_images_url": [],
+      "num_score_pdf_url": "https://sacredmusic.tjc.org.tw/storage/uploads/hymn/score/num/123.pdf",
+      "num_score_xml_url": null,
+      "category": {
+        "id": 20,
+        "name": "彼此相愛",
+        "slug": null,
+        "created_at": "2022-07-05T12:00:00.000000Z",
+        "updated_at": "2022-07-05T12:00:00.000000Z"
+      },
+      "tags": [],
+      "composers": [
+        {
+          "id": 488,
+          "name": "William Gould Tomer",
+          "image": null,
+          "introduction": "",
+          "created_at": "2022-07-05T12:00:00.000000Z",
+          "updated_at": "2022-07-05T12:00:00.000000Z",
+          "image_url": null,
+          "pivot": {
+            "hymn_song_id": 124,
+            "artist_id": 488
+          }
+        }
+      ],
+      "lyricists": [
+        {
+          "id": 269,
+          "name": "Jeremiah Eames Rankin",
+          "image": null,
+          "introduction": "",
+          "created_at": "2022-07-05T12:00:00.000000Z",
+          "updated_at": "2022-07-05T12:00:00.000000Z",
+          "image_url": null,
+          "pivot": {
+            "hymn_song_id": 124,
+            "artist_id": 269
+          }
+        }
+      ],
+      "audio_files": [
+        {
+          "id": 126,
+          "song_id": 124,
+          "file": "uploads/hymn/audio/0f5f5fd20dbf9a14e062cc1877329a62.m4a",
+          "audio_category_id": 3,
+          "created_at": "2022-08-26T02:36:23.000000Z",
+          "updated_at": "2022-08-26T02:36:23.000000Z",
+          "file_url": "https://sacredmusic.tjc.org.tw/storage/uploads/hymn/audio/0f5f5fd20dbf9a14e062cc1877329a62.m4a",
+          "audio_category": {
+            "id": 3,
+            "name": "鋼琴",
+            "slug": null
+          }
+        },
+        {
+          "id": 332,
+          "song_id": 124,
+          "file": "uploads/hymn/audio/d6abf58571ac5b63e2693c23c05a9d9d.mp3",
+          "audio_category_id": 4,
+          "created_at": "2022-10-11T02:50:36.000000Z",
+          "updated_at": "2022-10-11T02:50:36.000000Z",
+          "file_url": "https://sacredmusic.tjc.org.tw/storage/uploads/hymn/audio/d6abf58571ac5b63e2693c23c05a9d9d.mp3",
+          "audio_category": {
+            "id": 4,
+            "name": "人聲",
+            "slug": null
+          }
+        }
+      ]
+    },
+    {
+      "id": 125,
+      "no": "124_a",
+      "name": "實行愛心(甲)",
+      "lyrics": [
+        {
+          "text": "愛心乃是恆久忍耐，任苦、任勞，不生怨艾；\r\n愛心乃是富有恩慈，待人如己，樂善、好施；\r\n愛心乃是毫不嫉妒，不忌賢能，不懷陰毒；\r\n愛心乃是毫不自誇，謙遜為懷，出言無邪。"
+        },
+        {
+          "text": "愛心乃是絕不張狂，尊重別人，舉止端莊；\r\n愛心乃是不做羞事，光明、公正，毫不自欺；\r\n愛心乃是不求己益，捨己助人，盡力所及；\r\n愛心乃是不輕發怒，心性溫和，寧可讓步。"
+        },
+        {
+          "text": "愛心乃是不計人惡，饒恕人過，如主饒我；\r\n愛心乃是不喜不義，待人以德，嫉惡如敵；\r\n愛心乃是只喜真理，棄絕異端，嚴守正義；\r\n愛心乃是凡事包容、遮掩、體諒，度量寬宏。"
+        },
+        {
+          "text": "愛心乃是凡事相信，忠誠相處，毫不妄疑；\r\n愛心乃是凡事盼望，多留餘地，殘燈重光；\r\n愛心乃是凡事忍耐，百忍堂中，永有和諧；\r\n愛心乃是永不止息，努力實行，福樂無極。"
+        }
+      ],
+      "lyrics_chorus": "",
+      "sheet_score_pdf": "uploads/hymn/score/sheet/124_a.pdf",
+      "sheet_score_images": "[]",
+      "num_score_pdf": "uploads/hymn/score/num/124_a.pdf",
+      "num_score_xml": "",
+      "category_id": 20,
+      "created_at": "2022-07-09T16:00:00.000000Z",
+      "updated_at": "2026-05-27T07:32:41.000000Z",
+      "status": "PUBLISHED",
+      "history": "<p>作詞者高登．羅賓（Gurdon Robins, 1813-1883）是浸信會宣教士，亦為一書商。美國南北戰爭時，他志願從軍，戰後擔任公職；他所作的聖詩均以無名氏（Anonymous）發表於The Psalmis雜誌。<br />\r\n<br />\r\n124首甲調，作曲者倫納德．馬歇爾（Leonard Marshall, 1809-?），是一名男高音，教育家和作曲家。出生於紐約，但去世的年代不詳。他曾在新英格蘭地區極負盛名的音樂會擔任主要男高音的獨唱。他一生中大部分的時間，多奉獻於教會的音樂教育上。本詩之譜曲完成於1852年。</p>",
+      "youtube_urls": [
+        {
+          "label": "124 甲 - 實行愛心",
+          "url": "https://www.youtube.com/watch?v=MnPS5NZOGZ4&list=PLye9rkov_g8CA_oaevJ0TasPUos5L3p_e&index=125"
+        }
+      ],
+      "sheet_score_pdf_url": "https://sacredmusic.tjc.org.tw/storage/uploads/hymn/score/sheet/124_a.pdf",
+      "sheet_score_images_url": [],
+      "num_score_pdf_url": "https://sacredmusic.tjc.org.tw/storage/uploads/hymn/score/num/124_a.pdf",
+      "num_score_xml_url": null,
+      "category": {
+        "id": 20,
+        "name": "彼此相愛",
+        "slug": null,
+        "created_at": "2022-07-05T12:00:00.000000Z",
+        "updated_at": "2022-07-05T12:00:00.000000Z"
+      },
+      "tags": [],
+      "composers": [
+        {
+          "id": 338,
+          "name": "Leonard Marshall",
+          "image": null,
+          "introduction": "",
+          "created_at": "2022-07-05T12:00:00.000000Z",
+          "updated_at": "2022-07-05T12:00:00.000000Z",
+          "image_url": null,
+          "pivot": {
+            "hymn_song_id": 125,
+            "artist_id": 338
+          }
+        }
+      ],
+      "lyricists": [
+        {
+          "id": 180,
+          "name": "Gurdon Robins",
+          "image": null,
+          "introduction": "",
+          "created_at": "2022-07-05T12:00:00.000000Z",
+          "updated_at": "2022-07-05T12:00:00.000000Z",
+          "image_url": null,
+          "pivot": {
+            "hymn_song_id": 125,
+            "artist_id": 180
+          }
+        }
+      ],
+      "audio_files": [
+        {
+          "id": 127,
+          "song_id": 125,
+          "file": "uploads/hymn/audio/1814e695e640d8426c275921475f37f4.m4a",
+          "audio_category_id": 3,
+          "created_at": "2022-08-26T02:36:42.000000Z",
+          "updated_at": "2022-08-26T02:36:42.000000Z",
+          "file_url": "https://sacredmusic.tjc.org.tw/storage/uploads/hymn/audio/1814e695e640d8426c275921475f37f4.m4a",
+          "audio_category": {
+            "id": 3,
+            "name": "鋼琴",
+            "slug": null
+          }
+        },
+        {
+          "id": 334,
+          "song_id": 125,
+          "file": "uploads/hymn/audio/cd576951c1e6c89268b1bf9f2726e74f.mp3",
+          "audio_category_id": 4,
+          "created_at": "2022-10-11T02:51:18.000000Z",
+          "updated_at": "2022-10-11T02:51:18.000000Z",
+          "file_url": "https://sacredmusic.tjc.org.tw/storage/uploads/hymn/audio/cd576951c1e6c89268b1bf9f2726e74f.mp3",
+          "audio_category": {
+            "id": 4,
+            "name": "人聲",
+            "slug": null
+          }
+        }
+      ]
+    },
+    {
+      "id": 126,
+      "no": "124_b",
+      "name": "實行愛心(乙)",
+      "lyrics": [
+        {
+          "text": "愛心乃是恆久忍耐，任苦、任勞，不生怨艾；\r\n愛心乃是富有恩慈，待人如己，樂善、好施；\r\n愛心乃是毫不嫉妒，不忌賢能，不懷陰毒；\r\n愛心乃是毫不自誇，謙遜為懷，出言無邪。"
+        },
+        {
+          "text": "愛心乃是絕不張狂，尊重別人，舉止端莊；\r\n愛心乃是不做羞事，光明、公正，毫不自欺；\r\n愛心乃是不求己益，捨己助人，盡力所及；\r\n愛心乃是不輕發怒，心性溫和，寧可讓步。"
+        },
+        {
+          "text": "愛心乃是不計人惡，饒恕人過，如主饒我；\r\n愛心乃是不喜不義，待人以德，嫉惡如敵；\r\n愛心乃是只喜真理，棄絕異端，嚴守正義；\r\n愛心乃是凡事包容、遮掩、體諒，度量寬宏。"
+        },
+        {
+          "text": "愛心乃是凡事相信，忠誠相處，毫不妄疑；\r\n愛心乃是凡事盼望，多留餘地，殘燈重光；\r\n愛心乃是凡事忍耐，百忍堂中，永有和諧；\r\n愛心乃是永不止息，努力實行，福樂無極。"
+        }
+      ],
+      "lyrics_chorus": "",
+      "sheet_score_pdf": "uploads/hymn/score/sheet/124_b.pdf",
+      "sheet_score_images": "[]",
+      "num_score_pdf": "uploads/hymn/score/num/124_b.pdf",
+      "num_score_xml": "",
+      "category_id": 20,
+      "created_at": "2022-07-09T16:00:00.000000Z",
+      "updated_at": "2026-05-27T07:33:07.000000Z",
+      "status": "PUBLISHED",
+      "history": "<p>作詞者高登．羅賓（Gurdon Robins, 1813-1883）是浸信會宣教士，亦為一書商。美國南北戰爭時，他志願從軍，戰後擔任公職；他所作的聖詩均以無名氏（Anonymous）發表於The Psalmis雜誌。<br />\r\n<br />\r\n124首乙調，作曲者丹尼爾．陶能（Daniel B. Towner, 1850-1919），是美國福音詩歌知名作者，曾任慕迪聖經學院的音樂指揮。<br />\r\n<br />\r\n中文詩歌的歌詞，應為本會根據《哥林多前書》第十三章4-8節，使徒保羅對「愛」所做的註解，也是大家耳熟能詳的所謂「愛的真諦」而填詞。<br />\r\n<br />\r\n英文歌詞乃根據《箴言》第二章21節：「正直人必在世上居住，完全人必在地上存留。」與《詩篇》第三十七篇9節：「因為作惡的必被剪除，惟有等候耶和華的必承受地土。」<br />\r\n<br />\r\n&nbsp;</p>",
+      "youtube_urls": [
+        {
+          "label": "124 乙 - 實行愛心",
+          "url": "https://www.youtube.com/watch?v=xl-ER2cVab8&list=PLye9rkov_g8CA_oaevJ0TasPUos5L3p_e&index=126"
+        }
+      ],
+      "sheet_score_pdf_url": "https://sacredmusic.tjc.org.tw/storage/uploads/hymn/score/sheet/124_b.pdf",
+      "sheet_score_images_url": [],
+      "num_score_pdf_url": "https://sacredmusic.tjc.org.tw/storage/uploads/hymn/score/num/124_b.pdf",
+      "num_score_xml_url": null,
+      "category": {
+        "id": 20,
+        "name": "彼此相愛",
+        "slug": null,
+        "created_at": "2022-07-05T12:00:00.000000Z",
+        "updated_at": "2022-07-05T12:00:00.000000Z"
+      },
+      "tags": [],
+      "composers": [
+        {
+          "id": 73,
+          "name": "Daniel B. Towner",
+          "image": null,
+          "introduction": "",
+          "created_at": "2022-07-05T12:00:00.000000Z",
+          "updated_at": "2022-07-05T12:00:00.000000Z",
+          "image_url": null,
+          "pivot": {
+            "hymn_song_id": 126,
+            "artist_id": 73
+          }
+        }
+      ],
+      "lyricists": [
+        {
+          "id": 180,
+          "name": "Gurdon Robins",
+          "image": null,
+          "introduction": "",
+          "created_at": "2022-07-05T12:00:00.000000Z",
+          "updated_at": "2022-07-05T12:00:00.000000Z",
+          "image_url": null,
+          "pivot": {
+            "hymn_song_id": 126,
+            "artist_id": 180
+          }
+        }
+      ],
+      "audio_files": [
+        {
+          "id": 128,
+          "song_id": 126,
+          "file": "uploads/hymn/audio/46fd104819f260e8659d012fe09847d7.m4a",
+          "audio_category_id": 3,
+          "created_at": "2022-08-26T02:36:59.000000Z",
+          "updated_at": "2022-08-26T02:36:59.000000Z",
+          "file_url": "https://sacredmusic.tjc.org.tw/storage/uploads/hymn/audio/46fd104819f260e8659d012fe09847d7.m4a",
+          "audio_category": {
+            "id": 3,
+            "name": "鋼琴",
+            "slug": null
+          }
+        },
+        {
+          "id": 333,
+          "song_id": 126,
+          "file": "uploads/hymn/audio/e1185de064b2c8932ece4d3f7bd2837c.mp3",
+          "audio_category_id": 4,
+          "created_at": "2022-10-11T02:50:53.000000Z",
+          "updated_at": "2022-10-11T02:50:53.000000Z",
+          "file_url": "https://sacredmusic.tjc.org.tw/storage/uploads/hymn/audio/e1185de064b2c8932ece4d3f7bd2837c.mp3",
+          "audio_category": {
+            "id": 4,
+            "name": "人聲",
+            "slug": null
+          }
+        }
+      ]
+    },
+    {
+      "id": 127,
+      "no": "125",
+      "name": "別離詩",
+      "lyrics": [
+        {
+          "text": "蒙主安排美好時期，共聚一堂學真理，\r\n一靈相通，一愛相繫，奉獻身心順主意，\r\n思念救主，恩愛無極，相愛合一建主體；\r\n今雖離別，盼望再會，聖靈同在勿傷悲，\r\n願共遵守救主命令，發光照耀鄉、鎮、市。"
+        },
+        {
+          "text": "聖靈所賜諸般真理，時刻奉行永不移，\r\n一信共守，一主共依，同做精兵齊努力，\r\n廣傳福音，為道爭戰，引導多人至神前；\r\n彼此代禱，靈裡交通，身雖遠別心不離，\r\n結出善果榮歸真神，永遠團聚主來時。"
+        }
+      ],
+      "lyrics_chorus": "",
+      "sheet_score_pdf": "uploads/hymn/score/sheet/125.pdf",
+      "sheet_score_images": "[]",
+      "num_score_pdf": "uploads/hymn/score/num/125.pdf",
+      "num_score_xml": "",
+      "category_id": 20,
+      "created_at": "2022-07-09T16:00:00.000000Z",
+      "updated_at": "2026-05-27T07:36:09.000000Z",
+      "status": "PUBLISHED",
+      "history": "<p>這是一首敘述同靈彼此相愛的詩歌。信徒齊聚一堂學習真理，一靈相通，一愛相繫，大有彼得所說：「主啊，我們在這裡真好！」（太十七4），那般沉甸甸的充實感。主耶穌在世經常需要上山禱告，使靈性的力量飽足，以便下山走入群眾，傳福音，救病苦。我們也有許多聚首彼此造就的機會；詩歌的標題雖名為「別離詩」，實則是對即將分散出去，作主精兵的信徒寄予重望。<br />\r\n<br />\r\n而我們唯有藉著彼此的代禱，凝聚默契，才能在各處齊心為道爭戰。我們原屬同一個靈，因此，身雖離別，心則不離，別離也不感傷。眾所盼望的是，在收割時期能使主的禾稼滿倉，歡喜永遠團聚於天家。<br />\r\n<br />\r\n&nbsp;</p>",
+      "youtube_urls": [
+        {
+          "label": "125 - 別離詩",
+          "url": "https://www.youtube.com/watch?v=opl1YwwnmyA&list=PLye9rkov_g8CA_oaevJ0TasPUos5L3p_e&index=127"
+        }
+      ],
+      "sheet_score_pdf_url": "https://sacredmusic.tjc.org.tw/storage/uploads/hymn/score/sheet/125.pdf",
+      "sheet_score_images_url": [],
+      "num_score_pdf_url": "https://sacredmusic.tjc.org.tw/storage/uploads/hymn/score/num/125.pdf",
+      "num_score_xml_url": null,
+      "category": {
+        "id": 20,
+        "name": "彼此相愛",
+        "slug": null,
+        "created_at": "2022-07-05T12:00:00.000000Z",
+        "updated_at": "2022-07-05T12:00:00.000000Z"
+      },
+      "tags": [],
+      "composers": [
+        {
+          "id": 466,
+          "name": "Unknown",
+          "image": null,
+          "introduction": "",
+          "created_at": "2022-07-05T12:00:00.000000Z",
+          "updated_at": "2022-07-05T12:00:00.000000Z",
+          "image_url": null,
+          "pivot": {
+            "hymn_song_id": 127,
+            "artist_id": 466
+          }
+        }
+      ],
+      "lyricists": [],
+      "audio_files": [
+        {
+          "id": 129,
+          "song_id": 127,
+          "file": "uploads/hymn/audio/83d0a7cd1d1875869266c7c8bc56403a.m4a",
+          "audio_category_id": 3,
+          "created_at": "2022-08-26T02:37:13.000000Z",
+          "updated_at": "2022-08-26T02:37:13.000000Z",
+          "file_url": "https://sacredmusic.tjc.org.tw/storage/uploads/hymn/audio/83d0a7cd1d1875869266c7c8bc56403a.m4a",
+          "audio_category": {
+            "id": 3,
+            "name": "鋼琴",
+            "slug": null
+          }
+        },
+        {
+          "id": 335,
+          "song_id": 127,
+          "file": "uploads/hymn/audio/dad45b3b7261df86ec5c3a6fb2c07861.mp3",
+          "audio_category_id": 4,
+          "created_at": "2022-10-11T02:51:38.000000Z",
+          "updated_at": "2022-10-11T02:51:38.000000Z",
+          "file_url": "https://sacredmusic.tjc.org.tw/storage/uploads/hymn/audio/dad45b3b7261df86ec5c3a6fb2c07861.mp3",
+          "audio_category": {
+            "id": 4,
+            "name": "人聲",
+            "slug": null
+          }
+        }
+      ]
+    },
+    {
+      "id": 128,
+      "no": "126",
+      "name": "兄弟相愛",
+      "lyrics": [
+        {
+          "text": "同蒙恩召，屬靈兄弟，主內彼此團契；\r\n以靈相通，以愛相繫，大家聯為一體。"
+        },
+        {
+          "text": "一主、一信、一洗、一神，同為神國子民；\r\n同靈聯合，屬主歸真，勝於骨肉之親。"
+        },
+        {
+          "text": "情誼深厚，友愛相親，表現一家精神；\r\n彼此相助，凡事相信，永遠和睦、同心。"
+        },
+        {
+          "text": "靈內相聚，永不分散，不分時間、空間；\r\n福樂美滿，在地如天，欣感主恩無邊。"
+        }
+      ],
+      "lyrics_chorus": "靈風吹薰，靈雨滋潤；\r\n靈園百果最香新，共享主恩無盡。",
+      "sheet_score_pdf": "uploads/hymn/score/sheet/126.pdf",
+      "sheet_score_images": "[]",
+      "num_score_pdf": "uploads/hymn/score/num/126.pdf",
+      "num_score_xml": "",
+      "category_id": 20,
+      "created_at": "2022-07-09T16:00:00.000000Z",
+      "updated_at": "2025-10-07T05:41:36.000000Z",
+      "status": "PUBLISHED",
+      "history": "<p>原文歌詞出處不詳，但中文歌詞則是出自中國靈修學院的賈玉銘牧師，當他在山東滕縣華北神學院任教時，每天必寫一首聖詩，共寫了540餘首聖詩。本詩歌詞是他應基督徒學生團契之請而寫的，後來為許多教會採用。本詩頗能道出弟兄姊妹在靈內聯繫的情誼（摘錄自浸信會出版的《聖詩史話》）。<br />\r\n<br />\r\n「他們的心必像澆灌的園子，他們也不再有一點愁煩。」（耶三十一12）<br />\r\n<br />\r\n「我賜給你們一條新命令，乃是叫你們彼此相愛；我怎樣愛你們，你們也要怎樣相愛。」（約十三34-35）<br />\r\n<br />\r\n本會通常在同靈歡聚，或是教會同靈互訪時吟唱這首詩歌；從這首詩歌，感受主內彼此團契的歡欣氣氛、體會同享豐盛主恩之情。<br />\r\n<br />\r\n使徒約翰說：「從來沒有人見過神，我們若彼此相愛，神就住在我們裡面，愛祂的心在我們裡面得以完全了」（約壹四12）。敬神、愛人這兩條誡命是道理的總綱（太二十二40），由此可知，敬神、愛人兩件事是同等的重要。大衛作詩歌唱：看哪，弟兄和睦同居，是何等的善，何等的美！（詩一三三1）。<br />\r\n<br />\r\n同靈和睦相處，才能同心同行、同得造就。所羅門王也說，朋友乃時常親愛，弟兄為患難而生（箴十七17）。我們看不見天上的父，然而主藉著弟兄姊妹的愛心幫助與扶持，讓我們體會主的同在與看顧，享受在地如天的福氣，感念主愛的無限。<br />\r\n<br />\r\n&nbsp;</p>",
+      "youtube_urls": [
+        {
+          "label": "126 - 兄弟相愛",
+          "url": "https://www.youtube.com/watch?v=GgWju4JlVOs&list=PLye9rkov_g8CA_oaevJ0TasPUos5L3p_e&index=128"
+        }
+      ],
+      "sheet_score_pdf_url": "https://sacredmusic.tjc.org.tw/storage/uploads/hymn/score/sheet/126.pdf",
+      "sheet_score_images_url": [],
+      "num_score_pdf_url": "https://sacredmusic.tjc.org.tw/storage/uploads/hymn/score/num/126.pdf",
+      "num_score_xml_url": null,
+      "category": {
+        "id": 20,
+        "name": "彼此相愛",
+        "slug": null,
+        "created_at": "2022-07-05T12:00:00.000000Z",
+        "updated_at": "2022-07-05T12:00:00.000000Z"
+      },
+      "tags": [],
+      "composers": [
+        {
+          "id": 466,
+          "name": "Unknown",
+          "image": null,
+          "introduction": "",
+          "created_at": "2022-07-05T12:00:00.000000Z",
+          "updated_at": "2022-07-05T12:00:00.000000Z",
+          "image_url": null,
+          "pivot": {
+            "hymn_song_id": 128,
+            "artist_id": 466
+          }
+        }
+      ],
+      "lyricists": [],
+      "audio_files": [
+        {
+          "id": 130,
+          "song_id": 128,
+          "file": "uploads/hymn/audio/954bb87c660b4c9dd3a6422d7ef54312.m4a",
+          "audio_category_id": 3,
+          "created_at": "2022-08-26T02:37:29.000000Z",
+          "updated_at": "2022-08-26T02:37:29.000000Z",
+          "file_url": "https://sacredmusic.tjc.org.tw/storage/uploads/hymn/audio/954bb87c660b4c9dd3a6422d7ef54312.m4a",
+          "audio_category": {
+            "id": 3,
+            "name": "鋼琴",
+            "slug": null
+          }
+        },
+        {
+          "id": 336,
+          "song_id": 128,
+          "file": "uploads/hymn/audio/8dcf2c61c5c715965ebab57f3d1993b2.mp3",
+          "audio_category_id": 4,
+          "created_at": "2022-10-11T02:51:59.000000Z",
+          "updated_at": "2022-10-11T02:51:59.000000Z",
+          "file_url": "https://sacredmusic.tjc.org.tw/storage/uploads/hymn/audio/8dcf2c61c5c715965ebab57f3d1993b2.mp3",
+          "audio_category": {
+            "id": 4,
+            "name": "人聲",
+            "slug": null
+          }
+        }
+      ]
+    },
+    {
+      "id": 129,
+      "no": "127",
+      "name": "切實相愛",
+      "lyrics": [
+        {
+          "text": "愛主之人彼此相愛，\r\n和睦、謙誠相待；\r\n這是救主寶貴命令，\r\n應當體主心懷。"
+        },
+        {
+          "text": "弟兄若有愁苦、患難，\r\n總要彼此擔當；\r\n同做肢體，心心相感，\r\n苦樂息息相關。"
+        },
+        {
+          "text": "不貪權位，不爭虛名，\r\n剷除嫉妒紛爭；\r\n若有過失，憑愛相勸，\r\n表明同靈之情。"
+        },
+        {
+          "text": "各人心中激發主愛，\r\n湧出如同活泉；\r\n無間、無阻，相親、相敬，\r\n在地彷彿在天。"
+        }
+      ],
+      "lyrics_chorus": "",
+      "sheet_score_pdf": "uploads/hymn/score/sheet/127.pdf",
+      "sheet_score_images": "[]",
+      "num_score_pdf": "uploads/hymn/score/num/127.pdf",
+      "num_score_xml": "",
+      "category_id": 20,
+      "created_at": "2022-07-09T16:00:00.000000Z",
+      "updated_at": "2023-08-10T06:11:19.000000Z",
+      "status": "PUBLISHED",
+      "history": "<p>作者庫爾柏出生於英格蘭，是位著名的英國詩人與聖樂學家。庫爾柏的父親是聖公會牧師，母親出身貴族。母親在他六歲時不幸逝世。庫爾柏的祖父是法官，叔祖是上議院議長，因此家人要他攻讀法律。</p>\r\n\r\n<p>在二十三歲時取得律師資格進而投考上議院秘書時，患得患失之心，加上家人反對他和表妹結婚，他終於精神崩潰。當進入精神病院後，終日抑鬱，他三度企圖自殺，然而在關鍵時刻神往往對他施以憐憫，從死蔭幽谷之中救他回來。</p>\r\n\r\n<p>1769年12月9日，庫爾柏譔寫首詩歌給予當年他最摯愛的好友－安溫（Mrs. Unwin）女士。安溫長期卧病在床，使得庫爾柏遭受打擊，他掛念著安溫的病情，並分享自身的經驗來互相勉勵，認為唯有切實相愛，把一切交託給主才能蒙主保守。</p>\r\n\r\n<p>歌詞內容引自《詩篇》、《希伯來書》與《約翰壹書》等出處。當庫爾柏起筆時，因為心理焦慮使得身軀疲憊不堪，直到深夜只創作出兩行歌詞。隔日清晨忽然有個聲音進入他的內心，這一經歷使他從人生低潮重新站起。聲音中為他帶來了無限的靈感，便振筆疾書寫下了剩餘的歌詞。1772年，歌詞收錄讚美詩篇選集 &ldquo;<em>Collection of Psalms and Hymns&rdquo;</em>，七年後重新修訂，把原有的第四節刪去，並出版於奧爾尼讚美詩 &ldquo;<em>Ｏlney Hymns</em>&rdquo;，作者引自《創世紀》5章24節：「以諾與神同行，神將他取去他就不在世了。」的「與神同行」（Oh, for a Closer Walk）做為標題。</p>\r\n\r\n<p>庫爾柏雖經常處在憂鬱、猜疑和消沉的意志之中，但是其對抗奮鬥的過程常與主親密走在一起。那與主同行的關係，就如同歌詞所描述的，神的話語使我們與主同繫一起。<br />\r\n&nbsp;</p>",
+      "youtube_urls": [
+        {
+          "label": "127 - 切實相愛",
+          "url": "https://www.youtube.com/watch?v=TmYk-eAXlYg&list=PLye9rkov_g8CA_oaevJ0TasPUos5L3p_e&index=129"
+        }
+      ],
+      "sheet_score_pdf_url": "https://sacredmusic.tjc.org.tw/storage/uploads/hymn/score/sheet/127.pdf",
+      "sheet_score_images_url": [],
+      "num_score_pdf_url": "https://sacredmusic.tjc.org.tw/storage/uploads/hymn/score/num/127.pdf",
+      "num_score_xml_url": null,
+      "category": {
+        "id": 20,
+        "name": "彼此相愛",
+        "slug": null,
+        "created_at": "2022-07-05T12:00:00.000000Z",
+        "updated_at": "2022-07-05T12:00:00.000000Z"
+      },
+      "tags": [],
+      "composers": [
+        {
+          "id": 411,
+          "name": "Robert Simpson",
+          "image": null,
+          "introduction": "",
+          "created_at": "2022-07-05T12:00:00.000000Z",
+          "updated_at": "2022-07-05T12:00:00.000000Z",
+          "image_url": null,
+          "pivot": {
+            "hymn_song_id": 129,
+            "artist_id": 411
+          }
+        }
+      ],
+      "lyricists": [
+        {
+          "id": 482,
+          "name": "William Cowper",
+          "image": null,
+          "introduction": "",
+          "created_at": "2022-07-05T12:00:00.000000Z",
+          "updated_at": "2022-07-05T12:00:00.000000Z",
+          "image_url": null,
+          "pivot": {
+            "hymn_song_id": 129,
+            "artist_id": 482
+          }
+        }
+      ],
+      "audio_files": [
+        {
+          "id": 131,
+          "song_id": 129,
+          "file": "uploads/hymn/audio/e0eca0000dc453535cb2625b4f0f1dd3.m4a",
+          "audio_category_id": 3,
+          "created_at": "2022-08-26T02:37:47.000000Z",
+          "updated_at": "2022-08-26T02:37:47.000000Z",
+          "file_url": "https://sacredmusic.tjc.org.tw/storage/uploads/hymn/audio/e0eca0000dc453535cb2625b4f0f1dd3.m4a",
+          "audio_category": {
+            "id": 3,
+            "name": "鋼琴",
+            "slug": null
+          }
+        },
+        {
+          "id": 337,
+          "song_id": 129,
+          "file": "uploads/hymn/audio/92153c9f36427208dbf42e82316c60db.mp3",
+          "audio_category_id": 4,
+          "created_at": "2022-10-11T02:52:23.000000Z",
+          "updated_at": "2022-10-11T02:52:23.000000Z",
+          "file_url": "https://sacredmusic.tjc.org.tw/storage/uploads/hymn/audio/92153c9f36427208dbf42e82316c60db.mp3",
+          "audio_category": {
+            "id": 4,
+            "name": "人聲",
+            "slug": null
+          }
+        }
+      ]
+    },
+    {
+      "id": 130,
+      "no": "128",
+      "name": "快樂聖日",
+      "lyrics": [
+        {
+          "text": "今日紀念安息聖日，蒙主祝福，大得平安；\r\n耶穌、門徒都守安息，按著規矩進入聖殿。"
+        },
+        {
+          "text": "紀念聖日，主必降福，大家聚會，真是歡喜；\r\n聽講聖經，切心祈禱，領受靈糧，飽足無比。"
+        },
+        {
+          "text": "同心合意敬拜恩主，哈利路亞，讚美真神！\r\n在世紀念安息聖日，進入神國永享安息。"
+        }
+      ],
+      "lyrics_chorus": "快樂日，快樂日，耶穌寶血洗淨我罪；\r\n安息聖日，主必降福，賜下聖靈充滿我心；\r\n快樂日，快樂日，享主聖日，大得平安。",
+      "sheet_score_pdf": "uploads/hymn/score/sheet/128.pdf",
+      "sheet_score_images": "[]",
+      "num_score_pdf": "uploads/hymn/score/num/128.pdf",
+      "num_score_xml": "",
+      "category_id": 21,
+      "created_at": "2022-07-09T16:00:00.000000Z",
+      "updated_at": "2023-08-10T06:14:53.000000Z",
+      "status": "PUBLISHED",
+      "history": "<p>本詩作者陶德瑞（Philip Doddridge, 1702-1751）生於倫敦，是身為商人的父親二十個子女中年紀最小的一位。祖父與外祖父都曾是非英國國教的傳道人，自幼在母親教導下接受基本的宗教薰陶。畢業於吉窩（Kibworth）神學院，21歲開始傳道，嗣後在諾坦普頓（North-ampton）主持一間神學院達二十二年之久，培育了新教無數的傳道人才。<br />\r\n<br />\r\n在神學研究方面有精湛的成果，著作當中以The Rise and Progress in the Soul (1745)最負盛名。1736年獲亞伯丁大學（Aberdeen University）贈與神學博士學位。<br />\r\n<br />\r\n他寫了近四百首詩歌，其中多為符合經訓的佳作，廣被吟唱，其中最著名的即是本詩。他的詩歌在他生前並未付梓，直到他離世四年後，才由他的好友Job Orton為其彙編出版，名為Doddridge Hymns。<br />\r\n<br />\r\n他是繼以撒．華滋（Issac Wates）和查理‧衛斯理（Charles Wesley）之後，英國18世紀優秀的聖詩作者。<br />\r\n<br />\r\n他的詩通常是他講章的摘要，講完道後，藉詩歌使會眾重溫他的信息。本詩是作者根據《歷代志下》第十五章15節而作，原名是「與神盟約而喜樂」（Rejoicing in Our Covenant Engagements to God），原詩有五節歌詞，沒有副歌，但在1854年出版的The Wesleyan Sacred Harp詩歌集中，由作曲者林伯特為其加入副歌部分。<br />\r\n<br />\r\n本會英文詩歌取其一、三-五節歌詞，中文則僅三節歌詞。這首詩的曲調一直到100年後才由英國著名的音樂學者林伯特（Edward F. Rimbault, 1816-1876）為其定調。主文部分的旋律取自某匿名音樂家的作品，副歌則是引用林伯特所作的〈快樂地〉（Happy Land）。<br />\r\n<br />\r\n林伯特（Edward F. Rimbault, 1816-1876）生於倫敦，父親是音樂家，他隨父親學習，16歲時就在教會司琴，嗣後任數大教堂管風琴師。他是享有盛名的多產作家，編寫了許多民謠、牧歌及聖樂，也是美國哈佛大學的榮譽博士。<br />\r\n<br />\r\n&nbsp;</p>",
+      "youtube_urls": [
+        {
+          "label": "128 - 快樂聖日",
+          "url": "https://www.youtube.com/watch?v=okf8DMVGwe4&list=PLye9rkov_g8CA_oaevJ0TasPUos5L3p_e&index=130"
+        }
+      ],
+      "sheet_score_pdf_url": "https://sacredmusic.tjc.org.tw/storage/uploads/hymn/score/sheet/128.pdf",
+      "sheet_score_images_url": [],
+      "num_score_pdf_url": "https://sacredmusic.tjc.org.tw/storage/uploads/hymn/score/num/128.pdf",
+      "num_score_xml_url": null,
+      "category": {
+        "id": 21,
+        "name": "紀念聖日",
+        "slug": null,
+        "created_at": "2022-07-05T12:00:00.000000Z",
+        "updated_at": "2022-07-05T12:00:00.000000Z"
+      },
+      "tags": [],
+      "composers": [
+        {
+          "id": 97,
+          "name": "Edward F. Rimbault",
+          "image": null,
+          "introduction": "",
+          "created_at": "2022-07-05T12:00:00.000000Z",
+          "updated_at": "2022-07-05T12:00:00.000000Z",
+          "image_url": null,
+          "pivot": {
+            "hymn_song_id": 130,
+            "artist_id": 97
+          }
+        }
+      ],
+      "lyricists": [
+        {
+          "id": 392,
+          "name": "Philip Doddridge",
+          "image": null,
+          "introduction": "",
+          "created_at": "2022-07-05T12:00:00.000000Z",
+          "updated_at": "2022-07-05T12:00:00.000000Z",
+          "image_url": null,
+          "pivot": {
+            "hymn_song_id": 130,
+            "artist_id": 392
+          }
+        }
+      ],
+      "audio_files": [
+        {
+          "id": 132,
+          "song_id": 130,
+          "file": "uploads/hymn/audio/27aea5a666b286bcd8208e47eebaa510.m4a",
+          "audio_category_id": 3,
+          "created_at": "2022-08-26T02:38:09.000000Z",
+          "updated_at": "2022-08-26T02:38:09.000000Z",
+          "file_url": "https://sacredmusic.tjc.org.tw/storage/uploads/hymn/audio/27aea5a666b286bcd8208e47eebaa510.m4a",
+          "audio_category": {
+            "id": 3,
+            "name": "鋼琴",
+            "slug": null
+          }
+        },
+        {
+          "id": 338,
+          "song_id": 130,
+          "file": "uploads/hymn/audio/2c9728000e9e6876a0f45e3159360edd.mp3",
+          "audio_category_id": 4,
+          "created_at": "2022-10-11T02:52:41.000000Z",
+          "updated_at": "2022-10-11T02:52:41.000000Z",
+          "file_url": "https://sacredmusic.tjc.org.tw/storage/uploads/hymn/audio/2c9728000e9e6876a0f45e3159360edd.mp3",
+          "audio_category": {
+            "id": 4,
+            "name": "人聲",
+            "slug": null
+          }
+        }
+      ]
+    }
+  ],
+  "first_page_url": "https://sacredmusic.tjc.org.tw/api/hymn?page=1",
+  "from": 121,
+  "last_page": 48,
+  "last_page_url": "https://sacredmusic.tjc.org.tw/api/hymn?page=48",
+  "links": [
+    {
+      "url": "https://sacredmusic.tjc.org.tw/api/hymn?page=12",
+      "label": "pagination.previous",
+      "active": false
+    },
+    {
+      "url": "https://sacredmusic.tjc.org.tw/api/hymn?page=1",
+      "label": "1",
+      "active": false
+    },
+    {
+      "url": "https://sacredmusic.tjc.org.tw/api/hymn?page=2",
+      "label": "2",
+      "active": false
+    },
+    {
+      "url": null,
+      "label": "...",
+      "active": false
+    },
+    {
+      "url": "https://sacredmusic.tjc.org.tw/api/hymn?page=10",
+      "label": "10",
+      "active": false
+    },
+    {
+      "url": "https://sacredmusic.tjc.org.tw/api/hymn?page=11",
+      "label": "11",
+      "active": false
+    },
+    {
+      "url": "https://sacredmusic.tjc.org.tw/api/hymn?page=12",
+      "label": "12",
+      "active": false
+    },
+    {
+      "url": "https://sacredmusic.tjc.org.tw/api/hymn?page=13",
+      "label": "13",
+      "active": true
+    },
+    {
+      "url": "https://sacredmusic.tjc.org.tw/api/hymn?page=14",
+      "label": "14",
+      "active": false
+    },
+    {
+      "url": "https://sacredmusic.tjc.org.tw/api/hymn?page=15",
+      "label": "15",
+      "active": false
+    },
+    {
+      "url": "https://sacredmusic.tjc.org.tw/api/hymn?page=16",
+      "label": "16",
+      "active": false
+    },
+    {
+      "url": null,
+      "label": "...",
+      "active": false
+    },
+    {
+      "url": "https://sacredmusic.tjc.org.tw/api/hymn?page=47",
+      "label": "47",
+      "active": false
+    },
+    {
+      "url": "https://sacredmusic.tjc.org.tw/api/hymn?page=48",
+      "label": "48",
+      "active": false
+    },
+    {
+      "url": "https://sacredmusic.tjc.org.tw/api/hymn?page=14",
+      "label": "pagination.next",
+      "active": false
+    }
+  ],
+  "next_page_url": "https://sacredmusic.tjc.org.tw/api/hymn?page=14",
+  "path": "https://sacredmusic.tjc.org.tw/api/hymn",
+  "per_page": 10,
+  "prev_page_url": "https://sacredmusic.tjc.org.tw/api/hymn?page=12",
+  "to": 130,
+  "total": 474
+}

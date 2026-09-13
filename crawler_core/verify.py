@@ -24,6 +24,7 @@ import sqlite3
 import sys
 from collections import defaultdict
 
+from . import api_client
 from .config import DB_PATH, MAP_FILE, PROBE_REPORT, SAVE_ROOT
 from .downloader import verify_file_integrity
 
@@ -75,6 +76,37 @@ def load_probe_data():
     with open(PROBE_REPORT, "r", encoding="utf-8") as f:
         report = json.load(f)
     return {e["hymn_number"]: e for e in report}
+
+
+# 不可用原因 → 中文说明（数据驱动归档文案，§5.9.3）
+UNAVAILABLE_LABELS = {
+    "api_null": "API 空记录(file_url=null)，永不可用",
+    "http_4xx": "服务端缺失(4xx)，已归档不重试",
+    "network": "网络不可达(重试后仍失败，下次运行自动重试)",
+    "site_removed": "官网已下架(本地留档)",
+}
+
+
+def load_unavailable(probe_map):
+    """probe_report 的 `_unavailable` 汇总 → {hymn_number: {标签: info}}（数据驱动）"""
+    out = {}
+    for h, entry in (probe_map or {}).items():
+        if not isinstance(entry, dict):
+            continue
+        items = entry.get("_unavailable") or api_client.unavailable_items(entry)
+        if items:
+            out[h] = items
+    return out
+
+
+def describe_unavailable(info):
+    """单条不可用资源 → 中文说明（含 HTTP 状态）"""
+    reason = info.get("_unavailable") or ("site_removed" if info.get("_site_removed") else "network")
+    text = UNAVAILABLE_LABELS.get(reason, reason)
+    status = info.get("_http_status")
+    if status:
+        text += f" [HTTP {status}]"
+    return text
 
 
 def list_hymn_dirs():
@@ -288,8 +320,9 @@ def main():
         print(f"   {group:<12} {s['expected']:>5} {s['existing']:>5} {s['complete']:>5} "
               f"{s['missing']:>5} {s['corrupt']:>5} {rate:>7}%")
 
-    # ---------- 3. #62 归档 ----------
-    print("\n🗂️  [3/5] 失败任务归档检查...")
+    # ---------- 3. 失败任务归档（数据驱动：reads probe_report `_unavailable`） ----------
+    print("\n🗂️  [3/5] 失败任务归档检查（数据驱动：probe_report._unavailable）...")
+    unavailable_map = load_unavailable(probe_map)
     conn = sqlite3.connect(DB_PATH)
     row = conn.execute(
         "SELECT hymn_number, title, download_status, integrity_status "
@@ -299,12 +332,27 @@ def main():
     archive_notes = []
     for h, title, ds, ins in row:
         note = f"#{h} {title} | download={ds} | integrity={ins}"
-        if h == "62":
-            note += " | 原因: 服务器端缺失(人聲版 404)，已归档，不重试"
+        if h in unavailable_map:
+            note += " | 原因: " + "；".join(
+                f"{label} {describe_unavailable(info)}" for label, info in unavailable_map[h].items())
         archive_notes.append(note)
         print(f"   {note}")
     if not row:
         print("   ✅ 无失败任务")
+
+    # 不可用资源清单（含已 completed 的诗歌，如 #62 人聲版 404；site_removed 单列）
+    unavailable_notes = []
+    site_removed_notes = []
+    for h in sorted(unavailable_map, key=lambda x: (len(x), x)):
+        for label, info in unavailable_map[h].items():
+            text = f"#{h} {label}: {describe_unavailable(info)}"
+            if info.get("_site_removed"):
+                site_removed_notes.append(text)
+            else:
+                unavailable_notes.append(text)
+    print(f"   ℹ️ 源站不可用资源 {len(unavailable_notes)} 条（已摘出期望集合，不计入缺失）")
+    if site_removed_notes:
+        print(f"   ℹ️ 官网已下架但本地留档 {len(site_removed_notes)} 条（site_removed）")
 
     # ---------- 4. 生成报告 ----------
     print("\n📝 [4/5] 生成 final_report.txt ...")
@@ -337,12 +385,25 @@ def main():
     else:
         lines.append("  ✅ 无悬挂引用（DB 路径全部命中磁盘文件）")
     lines.append("")
-    lines.append("四、失败任务清单（服务端缺失，已归档，不重试）")
+    lines.append("四、失败任务清单与不可用资源归档")
     if archive_notes:
+        lines.append("  失败任务（download_status != completed 或 integrity != passed）:")
         for n in archive_notes:
-            lines.append(f"  - {n}")
+            lines.append(f"    - {n}")
     else:
-        lines.append("  ✅ 无")
+        lines.append("  失败任务: ✅ 无")
+    lines.append(f"  源站不可用资源（{len(unavailable_notes)} 条，已摘出期望集合、不计入缺失）:")
+    if unavailable_notes:
+        for n in unavailable_notes:
+            lines.append(f"    - {n}")
+    else:
+        lines.append("    ✅ 无")
+    lines.append(f"  官网已下架但本地留档（{len(site_removed_notes)} 条，保留不删）:")
+    if site_removed_notes:
+        for n in site_removed_notes:
+            lines.append(f"    - {n}")
+    else:
+        lines.append("    ✅ 无")
     lines.append("")
     lines.append("五、风险与说明")
     lines.append("  - url_map.txt 不在 git 跟踪内（.gitignore 规则 /Hymn_Downloads/** 忽略），")

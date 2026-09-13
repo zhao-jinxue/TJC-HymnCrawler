@@ -17,6 +17,9 @@ __pycache__/
 /Hymn_Downloads/step7_progress.json
 /Hymn_Downloads/lyrics_progress.json
 
+# 资源留档目录（如 #349 换诗后的历史文件）：仅跟踪说明文件，资源本体不入库（体积大）
+!/Hymn_Downloads/**/_archive/README.txt
+
 # 数据库文件（probe_report.json 保留跟踪，作为 db 重建的保险）
 *.db-journal
 

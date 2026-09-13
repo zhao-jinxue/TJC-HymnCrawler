@@ -12,7 +12,7 @@ from .config import DB_PATH, SAVE_ROOT
 
 
 def init_db():
-    """初始化数据库，迁移到最新结构（v6: 含 chorus 副歌字段）"""
+    """初始化数据库，迁移到最新结构（v7: api_raw + chorus 副歌字段）"""
     conn = sqlite3.connect(DB_PATH)
     try:
         c = conn.cursor()
@@ -34,8 +34,10 @@ def init_db():
             _migrate_v5_png_fields(c)
             # 幂等补副歌字段（v6）
             ensure_chorus_field(c)
+            # 幂等补 API 原始记录字段（v7）
+            ensure_v7_fields(c)
             _backfill_from_probe(c, conn)
-            print("📊 数据库结构已是最新版（v6）。")
+            print("📊 数据库结构已是最新版（v7）。")
         else:
             _create_table_v4(c)
 
@@ -175,6 +177,23 @@ def ensure_chorus_field(c):
     return False
 
 
+def ensure_v7_fields(c):
+    """v7: 幂等补添 `api_raw`（API 原始记录 JSON）字段
+
+    只加这一列（决策 ⑤）：分类/标签/YouTube/updated_at/prev_no/next_no/history HTML
+    等官网 API 独有信息全部塞进 JSON，现有列语义不变 → 旧代码与旧查询零影响。
+    读取侧统一用 `api_client.api_field(value, "category.name")` 等取值助手。
+    """
+    c.execute("PRAGMA table_info(tjc_hymn)")
+    columns = {col[1] for col in c.fetchall()}
+    if "api_raw" not in columns:
+        c.execute("ALTER TABLE tjc_hymn ADD COLUMN api_raw TEXT DEFAULT ''")
+        c.connection.commit()
+        print("📦 数据库新增 api_raw 字段（v7，API 原始记录 JSON）。")
+        return True
+    return False
+
+
 def _backfill_from_probe(c, conn):
     """从 probe_report.json 回填 audio_versions / audio_version_list / download_status"""
     pr_path = os.path.join(os.path.dirname(DB_PATH), "probe_report.json")
@@ -233,7 +252,7 @@ def _backfill_from_probe(c, conn):
 # ================= 建表 =================
 
 def _create_table_v4(c):
-    """创建 v6 版 tjc_hymn 表（v4 字段 + PNG 图片路径字段 + chorus 副歌）"""
+    """创建 v7 版 tjc_hymn 表（v4 字段 + PNG 图片路径 + chorus 副歌 + api_raw 原始记录）"""
     c.execute('''CREATE TABLE IF NOT EXISTS tjc_hymn (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 hymn_number TEXT UNIQUE NOT NULL,
@@ -261,6 +280,7 @@ def _create_table_v4(c):
                 audio_version_list TEXT DEFAULT '[]',
                 download_status TEXT DEFAULT 'pending',
                 integrity_status TEXT DEFAULT 'unchecked',
+                api_raw TEXT DEFAULT '',
                 updated_at TIMESTAMP DEFAULT (datetime('now', 'localtime'))
             )''')
 
@@ -268,17 +288,24 @@ def _create_table_v4(c):
 # ================= 数据写入 =================
 
 def save_to_db(hymn_data):
-    """保存单首数据到数据库 (UPSERT)，自动维护 audio_version_list"""
+    """保存单首数据到数据库 (UPSERT)，自动维护 audio_version_list
+
+    v7：新增 `api_raw`（API 原始记录 JSON）写入；title/作者/源考同样遵循
+    「空值不覆盖旧值」——API 侧缺失（如 #25/#31/#66/#299 无 lyricists、#349 无 history）
+    时保留库内既有值，避免文本回退成 Unknown/空串。
+    """
     conn = sqlite3.connect(DB_PATH)
     try:
         c = conn.cursor()
         ensure_chorus_field(c)  # 幂等确保 v6 字段存在
+        ensure_v7_fields(c)     # 幂等确保 v7 字段存在
 
         av = hymn_data.get("audio_versions", {})
         audio_json = json.dumps(av, ensure_ascii=False)
         version_list_json = json.dumps(list(av.keys()), ensure_ascii=False)
         ds = hymn_data.get("download_status", "pending")
         ins = hymn_data.get("integrity_status", "unchecked")
+        api_raw = hymn_data.get("api_raw", "") or ""
 
         sql = '''INSERT INTO tjc_hymn
                  (hymn_number, title, lyricist, composer, source_info, verse_count,
@@ -286,11 +313,18 @@ def save_to_db(hymn_data):
                   verse_6, verse_7, verse_8, verse_9, verse_10, chorus,
                   staff_img_path, numbered_img_path,
                   audio_versions, audio_version_list,
-                  download_status, integrity_status)
-                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                  download_status, integrity_status, api_raw)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                  ON CONFLICT(hymn_number) DO UPDATE SET
-                    title = excluded.title, lyricist = excluded.lyricist,
-                    composer = excluded.composer, source_info = excluded.source_info,
+                    -- 文本字段：新值为空/Unknown 时保留旧值（API 缺失不覆盖既有成果）
+                    title = CASE WHEN excluded.title IS NULL OR excluded.title IN ('', 'Unknown')
+                                 THEN tjc_hymn.title ELSE excluded.title END,
+                    lyricist = CASE WHEN excluded.lyricist IS NULL OR excluded.lyricist IN ('', 'Unknown')
+                                    THEN tjc_hymn.lyricist ELSE excluded.lyricist END,
+                    composer = CASE WHEN excluded.composer IS NULL OR excluded.composer IN ('', 'Unknown')
+                                    THEN tjc_hymn.composer ELSE excluded.composer END,
+                    source_info = CASE WHEN excluded.source_info IS NULL OR excluded.source_info = ''
+                                       THEN tjc_hymn.source_info ELSE excluded.source_info END,
                     verse_count = excluded.verse_count,
                     verse_1 = excluded.verse_1, verse_2 = excluded.verse_2,
                     verse_3 = excluded.verse_3, verse_4 = excluded.verse_4,
@@ -314,6 +348,9 @@ def save_to_db(hymn_data):
                                            THEN tjc_hymn.download_status ELSE excluded.download_status END,
                     integrity_status = CASE WHEN excluded.integrity_status IS NULL OR excluded.integrity_status IN ('', 'unchecked')
                                             THEN tjc_hymn.integrity_status ELSE excluded.integrity_status END,
+                    -- API 原始记录：空值时保留旧值（DOM 保底路径不带 api_raw）
+                    api_raw = CASE WHEN excluded.api_raw IS NULL OR excluded.api_raw = ''
+                                   THEN tjc_hymn.api_raw ELSE excluded.api_raw END,
                     updated_at = datetime('now', 'localtime')
                 '''
         params = [
@@ -324,7 +361,7 @@ def save_to_db(hymn_data):
         params.extend(hymn_data["verses"])
         params.append(hymn_data.get("chorus", "") or "")
         params.extend([hymn_data["staff_img_path"], hymn_data["numbered_img_path"],
-                       audio_json, version_list_json, ds, ins])
+                       audio_json, version_list_json, ds, ins, api_raw])
         c.execute(sql, params)
         conn.commit()
     finally:
@@ -492,6 +529,101 @@ def count_failed():
 
 # ================= 打印状态 =================
 
+def rebuild_hymn_category(records):
+    """用 API 记录重建 `hymn_category` 整表（决策 ⑥；先建临时表再原子替换，失败回滚）
+
+    表结构（§5.6）：id / name（繁体）/ slug / hymn_count / updated_at
+
+    Args:
+        records: `api_client.fetch_all()` 的全量记录（含 category 对象）
+    Returns:
+        {"categories": n, "hymns": n, "top": [(name, count), ...]}
+    """
+    stats = {}
+    for rec in records or []:
+        cat = rec.get("category") if isinstance(rec, dict) else None
+        if not isinstance(cat, dict):
+            continue
+        cid = cat.get("id")
+        name = (cat.get("name") or "").strip()
+        if cid is None or not name:
+            continue
+        item = stats.setdefault(cid, {
+            "id": int(cid), "name": name, "slug": (cat.get("slug") or ""),
+            "hymn_count": 0, "updated_at": (cat.get("updated_at") or ""),
+        })
+        item["hymn_count"] += 1
+
+    rows = [stats[cid] for cid in sorted(stats)]
+    conn = sqlite3.connect(DB_PATH)
+    try:
+        c = conn.cursor()
+        c.execute("DROP TABLE IF EXISTS hymn_category_new")
+        c.execute('''CREATE TABLE hymn_category_new (
+                        id          INTEGER PRIMARY KEY,
+                        name        TEXT NOT NULL,
+                        slug        TEXT DEFAULT '',
+                        hymn_count  INTEGER DEFAULT 0,
+                        updated_at  TEXT DEFAULT ''
+                    )''')
+        c.executemany(
+            "INSERT INTO hymn_category_new (id, name, slug, hymn_count, updated_at) "
+            "VALUES (?, ?, ?, ?, ?)",
+            [(r["id"], r["name"], r["slug"], r["hymn_count"], r["updated_at"]) for r in rows],
+        )
+        c.execute("DROP TABLE IF EXISTS hymn_category")
+        c.execute("ALTER TABLE hymn_category_new RENAME TO hymn_category")
+        conn.commit()
+    except Exception:
+        conn.rollback()  # 重建失败回滚, 保留旧表
+        raise
+    finally:
+        conn.close()
+
+    top = sorted(((r["name"], r["hymn_count"]) for r in rows), key=lambda x: -x[1])[:5]
+    print(f"📚 hymn_category 已用 API 重建：{len(rows)} 类 / {sum(r['hymn_count'] for r in rows)} 首")
+    print(f"   分布前 5: {', '.join(f'{n}({c})' for n, c in top)}")
+    return {"categories": len(rows), "hymns": sum(r["hymn_count"] for r in rows), "top": top}
+
+
+def load_hymn_category():
+    """读取 hymn_category → [{id, name, slug, hymn_count, updated_at}]（表不存在返回 []）"""
+    conn = sqlite3.connect(DB_PATH)
+    try:
+        cur = conn.execute(
+            "SELECT id, name, slug, hymn_count, updated_at FROM hymn_category ORDER BY id")
+        cols = ("id", "name", "slug", "hymn_count", "updated_at")
+        return [dict(zip(cols, row)) for row in cur.fetchall()]
+    except sqlite3.OperationalError:
+        return []
+    finally:
+        conn.close()
+
+
+def api_raw_stats():
+    """api_raw 覆盖情况 → {"rows": n, "latest": iso, "audio_total": n}"""
+    conn = sqlite3.connect(DB_PATH)
+    try:
+        c = conn.cursor()
+        try:
+            rows = c.execute("SELECT COUNT(*) FROM tjc_hymn WHERE api_raw != ''").fetchone()[0]
+            latest = c.execute(
+                "SELECT json_extract(api_raw, '$.updated_at') FROM tjc_hymn "
+                "WHERE api_raw != '' ORDER BY json_extract(api_raw, '$.updated_at') DESC LIMIT 1"
+            ).fetchone()
+        except sqlite3.OperationalError:  # 未迁移 v7 时不报错
+            return {"rows": 0, "latest": None, "audio_total": 0}
+        audio_total = 0
+        for (av,) in c.execute("SELECT audio_version_list FROM tjc_hymn"):
+            try:
+                audio_total += len(json.loads(av or "[]"))
+            except (json.JSONDecodeError, TypeError):  # 历史脏数据忽略
+                continue
+        return {"rows": rows, "latest": latest[0] if latest else None, "audio_total": audio_total}
+    finally:
+        conn.close()
+
+
 def print_db_status():
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
@@ -577,6 +709,18 @@ def print_db_status():
             print("   完整性状态:")
             for s, cnt in sorted(is_counts.items(), key=lambda x: -x[1]):
                 print(f"     {s}: {cnt}")
+
+        # ---- v7：api_raw / hymn_category / 音频条数 / 最新 API 更新时间（§5.6）----
+        v7 = api_raw_stats()
+        print(f"   API 原始记录(api_raw): {v7['rows']}/{total}"
+              f"{' ✅' if v7['rows'] >= total else '（执行 Step 2 或菜单 10 补齐）'}")
+        if v7["latest"]:
+            print(f"   最新 API updated_at: {v7['latest']}")
+        print(f"   音频条目数（audio_version_list 合计）: {v7['audio_total']}")
+        cats = load_hymn_category()
+        if cats:
+            print(f"   hymn_category 分类数: {len(cats)}"
+                  f"（API 重建，最近更新 {max(c['updated_at'] for c in cats) or '—'}）")
 
         # ---- 文件存在性校验汇总 ----
         total_missing = sum(len(v) for v in missing_files.values())

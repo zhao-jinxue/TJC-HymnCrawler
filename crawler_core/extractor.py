@@ -1,30 +1,35 @@
 # crawler_core/extractor.py
-# Step 2: 提取诗歌详情页文本
-# v2: 精确等待替代固定 sleep（提速）+ 断点续爬（progress 文件持久化）
+# Step 2: 提取诗歌详情（默认 API 直出全部字段；DOM 保底见 selenium_legacy/extractor_dom.py）
+#
+# v3（2026-09-12 API 重构，§5.3）：
+#   - 主路径：官网 API 一次拿全量（列表接口命中 api_cache/），再并发补详情
+#     （详情多 prev_no/next_no，写入 DB `api_raw`）→ `api_client.to_db_record()`
+#     直出 title/词曲/源考/歌词/副歌，单首 ≈0.2 s，全量 474 首 ≤ 30 s；
+#   - 断点续爬沿用 `step2_progress.json`，语义与旧版一致；
+#   - 记录级失败（validate_record 报缺 / 编号不匹配 / 详情 404）时：
+#     `--engine auto` 或 `USE_SELENIUM_FALLBACK=1` 才降级 DOM，否则登记 failed 不中断其它首；
+#   - `group_lyrics_boxes` 保留在此（纯文本归并规则，DOM 兜底与单测共用）。
 
 import json
 import os
-import re
 import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
-from selenium.common.exceptions import TimeoutException
-from selenium.webdriver.common.by import By
-from selenium.webdriver.support import expected_conditions as EC
-from selenium.webdriver.support.ui import WebDriverWait
-
-from .config import MAP_FILE, SAVE_ROOT
+from . import api_client, naming
+from .config import (
+    API_MAX_WORKERS,
+    CRAWL_ENGINE,
+    MAP_FILE,
+    SAVE_ROOT,
+    USE_SELENIUM_FALLBACK,
+)
 from .db import save_to_db
-from .driver import init_driver
-from .lyrics_api import fetch_hymn_lyrics
 
 # 断点进度文件（记录已成功处理的 hymn_number，被 .gitignore 忽略）
 PROGRESS_FILE = os.path.join(SAVE_ROOT, "step2_progress.json")
 
-
-def _lyrics_ready(driver):
-    """歌词区出现非空文本即视为就绪（精确等待替代固定 sleep）"""
-    els = driver.find_elements(By.CSS_SELECTOR, ".lyrics_box")
-    return any((e.text or "").strip() for e in els)
+# 进度落盘间隔（首）
+PROGRESS_FLUSH_EVERY = 25
 
 
 def group_lyrics_boxes(tab_boxes):
@@ -84,53 +89,194 @@ def clear_progress():
         os.remove(PROGRESS_FILE)
 
 
+def _normalize_engine(engine):
+    """引擎名归一（非法值回落 api）"""
+    name = (engine or CRAWL_ENGINE or "api").strip().lower()
+    return name if name in ("api", "selenium", "auto") else "api"
+
+
 class Extractor:
 
-    def __init__(self):
-        pass  # 使用 init_driver() 按需创建
+    def __init__(self, engine=None):
+        self.engine = _normalize_engine(engine)
+        self.driver = None  # 仅 DOM 降级/保底路径按需创建
 
-    def extract_all(self, songs, driver=None, resume=True):
-        """提取所有诗歌的详情，支持断点续爬。
+    # ---------- 入口 ----------
+
+    def extract_all(self, songs, driver=None, resume=True, engine=None, use_cache=None):
+        """提取所有诗歌详情（支持断点续爬）
 
         Args:
-            songs: 待提取歌曲列表（来自 load_url_map()）
-            driver: 可选 Selenium driver；None 时内部创建并自动关闭
+            songs: 待提取歌曲列表（来自 `load_url_map()`）
+            driver: 可选 Selenium driver（仅 selenium/auto 路径使用；API 路径不会创建浏览器）
             resume: True 时跳过进度文件中已成功的编号；False 全量重抓
+            engine: 覆盖 `config.CRAWL_ENGINE`
         Returns:
             {"success": N, "failed": M, "skipped": K}
         """
-        close_driver = False
-        if driver is None:
-            driver = init_driver()
-            close_driver = True
+        engine = _normalize_engine(engine or self.engine)
+        done = load_progress() if resume else set()
+        pending = [s for s in songs if s["hymn_number"] not in done]
+        skipped = len(songs) - len(pending)
+        if skipped > 0:
+            print(f"\n⏭️ 断点续爬：已跳过 {skipped} 首已成功处理（progress 文件存在）。")
+            print(f"   如需全量重跑：删除 {PROGRESS_FILE} 或调用 clear_progress()")
+
+        print(f"\n📝 Step 2: 提取 {len(pending)} 首详情（引擎：{engine}）")
+        start = time.time()
+
+        if engine == "selenium":
+            success, fail, unresolved = self._extract_legacy(pending, driver)
+        else:
+            success, fail, unresolved = self._extract_api(pending, use_cache=use_cache)
+            if engine == "auto" and unresolved:
+                success, fail = self._fallback_dom(unresolved, success, fail, driver)
+
+        elapsed = time.time() - start
+        print(f"\n🏁 Step 2: 成功 {success} | 失败 {fail} | 跳过 {skipped} | 耗时 {elapsed:.1f}s")
+        return {"success": success, "failed": fail, "skipped": skipped}
+
+    # ---------- API 主路径 ----------
+
+    def _load_records(self, pending, use_cache=None):
+        """取记录：列表接口一次拿全量（缓存命中）→ 并发详情补 prev_no/next_no
+
+        详情失败时回退列表记录（列表 == 详情，仅少 prev_no/next_no），保证不因单首抖动丢数据。
+        """
+        base = {}
+        try:
+            base = {str(r.get("no") or ""): r for r in
+                    api_client.fetch_all(use_cache=use_cache, progress=True)}
+        except api_client.ApiError as e:
+            print(f"  ⚠️ 列表接口失败（{e}），改为逐首详情兜底")
+
+        nos = [s["hymn_number"] for s in pending]
+        details = api_client.fetch_hymns(nos, workers=API_MAX_WORKERS) if nos else {}
+        records = {}
+        for no in nos:
+            rec = details.get(no) or base.get(no)
+            if rec:
+                records[no] = rec
+        return records
+
+    def _extract_api(self, pending, use_cache=None):
+        """并发提取（写库在主线程串行，避免 SQLite 写锁竞争）
+
+        Returns:
+            (success, fail, unresolved)：unresolved 为记录级失败、可交 DOM 降级的 song 列表
+        """
+        records = self._load_records(pending, use_cache=use_cache)
+        done = load_progress()
+        success = 0
+        fail = 0
+        unresolved = []
+
+        def prepare(song):
+            """并发部分：只做 CPU/网络，不碰 DB"""
+            rec = records.get(song["hymn_number"])
+            if not rec:
+                return song, None, ["record:not_found"]
+            problems = api_client.validate_record(rec)
+            if problems:
+                return song, None, problems
+            return song, api_client.to_db_record(rec), []
+
+        total = len(pending)
+        with ThreadPoolExecutor(max_workers=max(1, API_MAX_WORKERS)) as pool:
+            futures = {pool.submit(prepare, s): s for s in pending}
+            for i, fut in enumerate(as_completed(futures), 1):
+                song = futures[fut]
+                try:
+                    song, data, problems = fut.result()
+                except Exception as e:  # noqa: BLE001 - 单首异常不中断整体（§5.9.2 L2）
+                    fail += 1
+                    print(f"  [{i}/{total}] #{song['hymn_number']} ⚠️ {type(e).__name__}: {e}")
+                    continue
+
+                if problems:
+                    fail += 1
+                    unresolved.append(song)
+                    print(f"  [{i}/{total}] #{song['hymn_number']} ⚠️ 字段异常 {problems}")
+                    continue
+
+                try:
+                    save_to_db(data)
+                except Exception as e:  # noqa: BLE001 - 写库异常登记 failed, 继续其它首
+                    fail += 1
+                    print(f"  [{i}/{total}] #{song['hymn_number']} ⚠️ 入库失败 {type(e).__name__}: {e}")
+                    continue
+
+                if data["verse_count"] > 0:
+                    success += 1
+                    done.add(song["hymn_number"])
+                else:
+                    fail += 1
+                    print(f"  [{i}/{total}] #{song['hymn_number']} ⚠️ API 无歌词")
+
+                if i % PROGRESS_FLUSH_EVERY == 0 or i == total:
+                    save_progress(done)
+                    print(f"  📈 {i}/{total} | 成功 {success} | 失败 {fail}")
+        save_progress(done)
+        return success, fail, unresolved
+
+    # ---------- DOM 保底路径 ----------
+
+    def _ensure_driver(self):
+        """按需创建浏览器（仅 DOM 路径；API 路径不会调用）"""
+        from .driver import init_driver
+
+        if self.driver is None:
+            self.driver = init_driver()
+        return self.driver
+
+    def _fallback_dom(self, unresolved, success, fail, driver=None):
+        """记录级降级：仅对 API 失败的那几首走 DOM（§4.4 auto 模式）"""
+        from .selenium_legacy import selenium_available
+
+        if not selenium_available():
+            print(f"  ⚠️ {len(unresolved)} 首待 DOM 降级，但未安装 selenium → 保持 failed。"
+                  "（安装保底依赖：pip install -r requirements-selenium.txt）")
+            return success, fail
+
+        driver = driver or self._ensure_driver()
+        print(f"  🔁 {len(unresolved)} 首降级 DOM（保底引擎）...")
+        done = load_progress()
+        for song in unresolved:
+            try:
+                data = self._parse_one_dom(driver, song)
+                save_to_db(data)
+            except Exception as e:  # noqa: BLE001 - 降级失败保持 failed, 不中断其它首
+                print(f"  ⚠️ #{song['hymn_number']} DOM 降级失败 {type(e).__name__}: {e}")
+                continue
+            if data["verse_count"] > 0:
+                success += 1
+                fail -= 1  # 该首此前计入 failed, 现补回
+                done.add(song["hymn_number"])
+                save_progress(done)
+                print(f"  ✅ #{song['hymn_number']} DOM 降级成功（{data['verse_count']} 节）")
+        return success, fail
+
+    def _extract_legacy(self, pending, driver=None):
+        """Selenium 保底整链（等价重构前行为）"""
+        from .selenium_legacy.driver import SELENIUM_HINT
 
         try:
-            # 断点续爬：过滤已成功编号
-            done = set()
-            if resume:
-                done = load_progress()
+            owned = driver is None
+            driver = driver or self._ensure_driver()
+        except RuntimeError as e:
+            print(f"  ❌ {e}")
+            raise RuntimeError(SELENIUM_HINT) from e
 
-            pending = []
-            for s in songs:
-                if s["hymn_number"] in done:
-                    continue
-                pending.append(s)
-
-            total = len(pending)
-            skipped = len(songs) - len(pending)
-            if skipped > 0:
-                print(f"\n⏭️ 断点续爬：已跳过 {skipped} 首已成功处理（progress 文件存在）。")
-                print(f"   如需全量重跑：删除 {PROGRESS_FILE} 或调用 clear_progress()")
-
-            print(f"\n📝 Step 2: 提取 {total} 首详情")
-            success = 0
-            fail = 0
-            start = time.time()
-
-            for i, song in enumerate(pending):
-                print(f"  [{i+1}/{total}] {song['hymn_number']}...", end="", flush=True)
+        done = load_progress()
+        success = 0
+        fail = 0
+        total = len(pending)
+        start = time.time()
+        try:
+            for i, song in enumerate(pending, 1):
+                print(f"  [{i}/{total}] {song['hymn_number']}...", end="", flush=True)
                 try:
-                    data = self._parse_one(driver, song)
+                    data = self._parse_one_dom(driver, song)
                     save_to_db(data)
                 except Exception as e:  # noqa: BLE001 - 单首异常不中断整体, 记录后继续
                     fail += 1
@@ -140,172 +286,64 @@ class Extractor:
                 if data["verse_count"] > 0:
                     success += 1
                     done.add(song["hymn_number"])
-                    # 每成功一首立即持久化，保证异常中断后可从下次继续
                     save_progress(done)
                     print(f" ✅ {data['title']} ({data['verse_count']}节)")
                 else:
                     fail += 1
                     print(" ❌")
 
-                if (i + 1) % 10 == 0:
+                if i % 10 == 0:
                     elapsed = time.time() - start
-                    speed = (i + 1) / elapsed
-                    rem = (total - i - 1) / speed if speed > 0 else 0
-                    print(f"\n  📈 {i+1}/{total} | {speed:.1f}首/s | 预计剩余 {rem:.0f}s")
-
-            elapsed = time.time() - start
-            print(f"\n🏁 Step 2: 成功 {success} | 失败 {fail} | 跳过 {skipped} | 耗时 {elapsed:.1f}s")
-
-            return {"success": success, "failed": fail, "skipped": skipped}
+                    speed = i / elapsed if elapsed > 0 else 0
+                    rem = (total - i) / speed if speed > 0 else 0
+                    print(f"\n  📈 {i}/{total} | {speed:.1f}首/s | 预计剩余 {rem:.0f}s")
         finally:
-            if close_driver:
-                driver.quit()
+            if owned and self.driver is not None:
+                self.close()
+        return success, fail, []
+
+    # ---------- 单首解析（兼容旧签名） ----------
 
     def _parse_one(self, driver, song):
-        """解析单首诗歌"""
-        result = {
-            "hymn_number": song['hymn_number'],
-            "title": "Unknown",
-            "lyricist": "Unknown",
-            "composer": "Unknown",
-            "source_info": "",
-            "verse_count": 0,
-            "verses": [""] * 10,
-            "chorus": "",
-            "staff_img_path": "",
-            "numbered_img_path": "",
-            "audio_versions": {}
-        }
-
-        url = song['url']
-
+        """单首解析：API 主路径；失败且开启降级时走 DOM（原签名保持不变）"""
+        allow_dom = USE_SELENIUM_FALLBACK or self.engine in ("selenium", "auto")
         try:
-            driver.get("about:blank")
-            driver.get(url)
-        except TimeoutException:
+            rec = api_client.fetch_hymn(song["hymn_number"])
+            if rec:
+                problems = api_client.validate_record(rec)
+                if not problems:
+                    return api_client.to_db_record(rec)
+            else:
+                problems = ["record:not_found"]
+        except api_client.ApiError as e:
+            problems = [f"api_error:{e}"]
+
+        if not allow_dom:
+            raise api_client.ApiUnavailableError(
+                f"#{song['hymn_number']} API 记录不可用 {problems}"
+                "（如需 DOM 降级：--engine auto 或 USE_SELENIUM_FALLBACK=1）")
+        return self._parse_one_dom(driver or self._ensure_driver(), song)
+
+    def _parse_one_dom(self, driver, song):
+        """DOM 解析（实现见 selenium_legacy/extractor_dom.py，此处仅懒加载转发）"""
+        from .selenium_legacy.extractor_dom import parse_one_dom
+
+        return parse_one_dom(driver, song)
+
+    def close(self):
+        """关闭浏览器（幂等；API 路径无需调用）"""
+        if self.driver is None:
+            return
+        try:
+            self.driver.quit()
+        except Exception:  # noqa: S110, BLE001 - 清理失败不影响主流程
             pass
-        except Exception as e:  # noqa: BLE001 - 页面访问异常时降级返回空
-            print(f" ⚠️ {e}")
-            return result
-
-        try:
-            WebDriverWait(driver, 12).until(
-                EC.presence_of_element_located((By.CSS_SELECTOR, "#page_banner"))
-            )
-        except TimeoutException:
-            return result
-
-        try:
-            WebDriverWait(driver, 5).until(
-                EC.presence_of_element_located((By.CSS_SELECTOR, ".tab_box, .lyrics_box"))
-            )
-        except TimeoutException:
-            pass
-        # 用精确等待替代固定 sleep(0.8)+sleep(0.5)：歌词区域出现非空文本即继续
-        try:
-            WebDriverWait(driver, 5).until(_lyrics_ready)
-        except TimeoutException:
-            pass
-
-        # 标题
-        try:
-            title_el = driver.find_elements(By.CSS_SELECTOR, "#page_banner .title")
-            if title_el:
-                raw = title_el[0].text.strip()
-                if raw:
-                    clean = re.sub(r'^\d+(?:_[a-zA-Z])?\s*', '', raw)
-                    result["title"] = clean if clean else "Unknown"
-        except Exception:  # noqa: S110, BLE001 nosec B110 - 元素可能不存在, 容错跳过
-            pass
-
-        # 作词/作曲
-        try:
-            author_els = driver.find_elements(By.CSS_SELECTOR, ".author_name")
-            if len(author_els) >= 1:
-                result["lyricist"] = author_els[0].text.strip() or "Unknown"
-            if len(author_els) >= 2:
-                result["composer"] = author_els[1].text.strip() or "Unknown"
-        except Exception:  # noqa: S110, BLE001 nosec B110 - 元素可能不存在, 容错跳过
-            pass
-
-        # 源考
-        try:
-            boxes = driver.find_elements(By.CSS_SELECTOR, ".music_data_box")
-            for box in boxes:
-                inner = box.get_attribute("innerHTML")
-                if "詩歌源考" in inner:
-                    try:
-                        trigger = box.find_element(By.CSS_SELECTOR, ".title, .panel-heading, h3, h4")
-                        cls = trigger.get_attribute("class") or ""
-                        if "collapsed" in cls or "closed" in cls:
-                            trigger.click()
-                            time.sleep(0.3)
-                    except Exception:  # noqa: S110, BLE001 nosec B110 - 折叠面板可能不可点, 容错跳过
-                        pass
-                    content = box.find_element(By.CSS_SELECTOR, ".content")
-                    raw = content.text.strip()
-                    result["source_info"] = raw[4:].strip() if raw.startswith("詩歌源考") else raw
-                    break
-        except Exception:  # noqa: S110, BLE001 nosec B110 - 源考区块可能不存在, 容错跳过
-            pass
-
-        # 歌词：官网 API 为权威源（正歌 lyrics[] + 副歌 lyrics_chorus 分离存放），
-        # 失败时才回退 DOM 解析（见 _extract_lyrics_from_dom）
-        api_lyrics = fetch_hymn_lyrics(song["hymn_number"])
-        if api_lyrics["verses"]:
-            lyrics_parts = api_lyrics["verses"]
-            result["chorus"] = api_lyrics["chorus"]
-        else:
-            lyrics_parts, chorus = self._extract_lyrics_from_dom(driver)
-            result["chorus"] = chorus
-
-        result["verse_count"] = min(len(lyrics_parts), 10)
-        for i in range(min(10, len(lyrics_parts))):
-            result["verses"][i] = lyrics_parts[i]
-
-        return result
-
-    @staticmethod
-    def _extract_lyrics_from_dom(driver):
-        """回退方案：从渲染后的 DOM 提炼歌词
-
-        官网每个「第N節」Tab 下依次有多个 .lyrics_box：第 1 个是本节歌词，
-        其后为副歌（每节重复同一段）。旧版每个 Tab 只取第一个 box 便 break，
-        导致副歌整段丢失——此处改为收集全部 box 后交 group_lyrics_boxes 归并。
-
-        Returns:
-            (verses: list[str], chorus: str)
-        """
-        tab_boxes = []
-        try:
-            tabs = driver.find_elements(By.CSS_SELECTOR, ".tab_box .tab")
-        except Exception:  # noqa: BLE001 - 无 Tab 结构时退化为整页 box
-            tabs = []
-
-        if tabs:
-            for tab in tabs:
-                try:
-                    tab.click()
-                    WebDriverWait(driver, 2).until(_lyrics_ready)
-                except Exception:  # noqa: S112, BLE001 nosec B112 - 单个 Tab 点击失败时跳过该 Tab
-                    continue
-                try:
-                    boxes = driver.find_elements(By.CSS_SELECTOR, ".lyrics_box")
-                    tab_boxes.append([(b.text or "").strip() for b in boxes])
-                except Exception:  # noqa: S110, BLE001 nosec B110 - 歌词区解析失败时跳过该 Tab
-                    pass
-        else:
-            try:
-                boxes = driver.find_elements(By.CSS_SELECTOR, ".lyrics_box")
-                tab_boxes.append([(b.text or "").strip() for b in boxes])
-            except Exception:  # noqa: S110, BLE001 nosec B110 - 无歌词框时容错
-                pass
-
-        return group_lyrics_boxes(tab_boxes)
+        finally:
+            self.driver = None
 
 
 def load_url_map():
-    """从 url_map.txt 加载歌曲列表"""
+    """从 url_map.txt 加载歌曲列表（seq / hymn_number / title / url）"""
     songs = []
     if not os.path.exists(MAP_FILE):
         return songs
@@ -322,3 +360,15 @@ def load_url_map():
                     "url": url
                 })
     return songs
+
+
+__all__ = [
+    "PROGRESS_FILE",
+    "Extractor",
+    "clear_progress",
+    "group_lyrics_boxes",
+    "load_progress",
+    "load_url_map",
+    "naming",
+    "save_progress",
+]

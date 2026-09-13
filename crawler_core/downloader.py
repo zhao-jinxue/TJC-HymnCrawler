@@ -13,8 +13,19 @@ import urllib3
 urllib3.disable_warnings()
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
-from .config import HEADERS, PROBE_REPORT, SAVE_ROOT
+from .config import (
+    DOWNLOAD_BACKOFF,
+    DOWNLOAD_RETRIES,
+    HEADERS,
+    PROBE_REPORT,
+    SAVE_ROOT,
+)
 from .db import batch_update_integrity, sync_download_status_to_db
+
+
+def _retryable_status(status):
+    """429 / 5xx 可重试；其它 4xx 为资源真缺失"""
+    return status == 429 or 500 <= status < 600
 
 
 def run_download(probe_report=None):
@@ -92,17 +103,26 @@ def run_download(probe_report=None):
     fail = 0
 
     def download_one(item):
-        try:
-            resp = requests.get(item["url"], headers=HEADERS, timeout=30, verify=False)  # nosec B501 - 目标站点为自有证书环境, 刻意关闭SSL校验
-            if resp.status_code == 200:
-                os.makedirs(os.path.dirname(item["path"]), exist_ok=True)
-                with open(item["path"], 'wb') as f:
-                    f.write(resp.content)
-                return (item, True)
-            else:
-                return (item, False)
-        except Exception:  # noqa: BLE001 - 网络/写入异常视为下载失败, 返回 False
-            return (item, False)
+        """下载单个资源：瞬时类失败（超时/SSL/5xx/429）退避重试，4xx 视为真缺失不重试"""
+        retries = max(1, DOWNLOAD_RETRIES)
+        last_err = None
+        for attempt in range(retries):
+            try:
+                resp = requests.get(item["url"], headers=HEADERS, timeout=30, verify=False)  # nosec B501 - 目标站点为自有证书环境, 刻意关闭SSL校验
+                if resp.status_code == 200:
+                    os.makedirs(os.path.dirname(item["path"]), exist_ok=True)
+                    with open(item["path"], 'wb') as f:
+                        f.write(resp.content)
+                    return (item, True)
+                last_err = f"HTTP {resp.status_code}"
+                if not _retryable_status(resp.status_code):
+                    break  # 4xx(非 429) → 资源真缺失, 不浪费重试
+            except Exception as e:  # noqa: BLE001 - 网络/写入异常视为下载失败, 记录后重试
+                last_err = f"{type(e).__name__}: {e}"
+            if attempt < retries - 1:
+                time.sleep(DOWNLOAD_BACKOFF ** (attempt + 1))
+        item["_download_error"] = last_err
+        return (item, False)
 
     with ThreadPoolExecutor(max_workers=10) as pool:
         futures = {pool.submit(download_one, item): item for item in items}

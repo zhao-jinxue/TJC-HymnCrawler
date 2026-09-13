@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """pytest 冒烟测试：覆盖核心纯函数（不依赖网络/Selenium，稳定快速）。
 
 运行: python3 -m pytest test_smoke.py -v
@@ -13,8 +12,8 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))  # 项目根�
 sys.path.insert(0, ROOT)
 os.chdir(ROOT)
 
-from crawler_core.verify import parse_hymn_number_from_path
 from crawler_core.db import resolve_png
+from crawler_core.verify import parse_hymn_number_from_path
 
 
 # ---------- step4: 路径解析编号 ----------

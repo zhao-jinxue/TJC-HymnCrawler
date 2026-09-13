@@ -1,5 +1,5 @@
 # crawler_core/lyrics_api.py
-# 歌词补全（v6）：从官网 JSON API 刷新正歌 + 副歌
+# 歌词补全（v7）：官网 JSON API 刷新正歌 + 副歌（薄封装 `api_client`）
 #
 # 背景（2026-09-12 修复）：
 #   官网详情页每个「第N節」Tab 下依次有多个 .lyrics_box，第 1 个是本节的歌词，
@@ -7,6 +7,9 @@
 #   .lyrics_box 便 break，导致 270 首有副歌的诗歌副歌整段丢失（合计 559 行）。
 #   官网 API（GET /api/hymn/{no}）本身把正歌与副歌分开：lyrics[].text 与 lyrics_chorus。
 #   本模块以 API 为权威数据源，全量刷新 verse_1..10 + chorus，不依赖浏览器。
+#
+# v7（2026-09-12 API 重构）：请求/重试/字段映射统一委托 `api_client`（避免重复实现），
+#   本模块只保留「歌词刷新」的业务编排（进度、写库、统计）。
 #
 # 用法：
 #   python -c "from crawler_core.lyrics_api import run; run()"
@@ -17,9 +20,8 @@ import os
 import sqlite3
 import time
 
-import requests
-
-from .config import API_HYMN_URL, DB_PATH, HEADERS, SAVE_ROOT
+from . import api_client
+from .config import DB_PATH, SAVE_ROOT
 from .db import ensure_chorus_field
 
 # 断点进度文件（记录已成功刷新的 hymn_number，被 .gitignore 忽略）
@@ -33,45 +35,30 @@ REQUEST_INTERVAL = 0.15
 
 
 def normalize_text(text):
-    """统一换行（\\r\\n → \\n）并去除首尾空白"""
-    if not text:
-        return ""
-    return text.replace("\r\n", "\n").replace("\r", "\n").strip()
+    """统一换行（\\r\\n → \\n）并去除首尾空白（转发 api_client 实现）"""
+    return api_client.normalize_text(text)
 
 
 def fetch_hymn_lyrics(hymn_number, retries=3, timeout=20):
-    """调用官网 API 获取单首诗歌歌词
+    """调用官网 API 获取单首诗歌歌词（薄封装：api_client.fetch_hymn + to_lyrics）
 
     Args:
         hymn_number: 诗歌编号（如 "12" / "51_a"）
-        retries: 失败重试次数
+        retries: 失败重试次数（429/5xx/超时/SSL 退避重试；4xx 真缺失不重试）
         timeout: 单次请求超时秒数
     Returns:
         dict: {"verses": [str, ...], "chorus": str, "error": str | None}
               失败时 verses 为空列表且 error 为原因描述
     """
-    url = API_HYMN_URL.format(hymn_number)
-    last_err = None
-    for attempt in range(retries):
-        try:
-            # 目标站点为自有证书环境, 与 downloader/probe 保持一致刻意关闭校验
-            resp = requests.get(url, headers=HEADERS, timeout=timeout, verify=False)  # nosec B501
-            if resp.status_code != 200:
-                last_err = f"HTTP {resp.status_code}"
-            else:
-                data = resp.json()
-                verses = [normalize_text(item.get("text")) for item in (data.get("lyrics") or [])]
-                verses = [v for v in verses if v]
-                return {
-                    "verses": verses,
-                    "chorus": normalize_text(data.get("lyrics_chorus")),
-                    "error": None,
-                }
-        except Exception as e:  # noqa: BLE001 - 网络/解析异常统一降级为错误描述
-            last_err = f"{type(e).__name__}: {e}"
-        if attempt < retries - 1:
-            time.sleep(0.5 * (attempt + 1))
-    return {"verses": [], "chorus": "", "error": last_err or "unknown error"}
+    try:
+        rec = api_client.fetch_hymn(hymn_number, retries=retries, timeout=timeout)
+    except api_client.ApiError as e:
+        return {"verses": [], "chorus": "", "error": str(e)}
+    if not rec:
+        return {"verses": [], "chorus": "", "error": "HTTP 404"}
+    verses, chorus = api_client.to_lyrics(rec)
+    return {"verses": verses, "chorus": chorus, "error": None}
+
 
 
 def load_progress():

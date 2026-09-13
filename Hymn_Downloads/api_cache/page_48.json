@@ -1,0 +1,514 @@
+{
+  "current_page": 48,
+  "data": [
+    {
+      "id": 471,
+      "no": "466",
+      "name": "讚美耶穌基督",
+      "lyrics": [
+        {
+          "text": "晨光燦爛耀空，我靈甦醒歌頌。\r\n讚美耶穌基督！或祈禱，或作工，\r\n我心仰望耶穌，讚美耶穌基督！"
+        },
+        {
+          "text": "會堂鐘鳴處處，聲音響遍山谷。\r\n讚美耶穌基督！傾聽悠揚音符，\r\n快樂信息鼓舞，讚美耶穌基督！"
+        },
+        {
+          "text": "當黑夜變白晝，我心快樂呼求。\r\n讚美耶穌基督！詠唱聖詩良久，\r\n黑暗權勢消除，讚美耶穌基督！"
+        },
+        {
+          "text": "天城永恆歌曲，是最優美旋律。\r\n讚美耶穌基督！穹蒼海洋歡喜，\r\n萬有應聲歡呼，讚美耶穌基督！"
+        }
+      ],
+      "lyrics_chorus": "",
+      "sheet_score_pdf": "uploads/hymn/score/sheet/466.pdf",
+      "sheet_score_images": "[]",
+      "num_score_pdf": "uploads/hymn/score/num/466.pdf",
+      "num_score_xml": "",
+      "category_id": 47,
+      "created_at": "2022-07-09T16:00:00.000000Z",
+      "updated_at": "2023-10-11T07:07:22.000000Z",
+      "status": "PUBLISHED",
+      "history": "<p><em>本詩是收錄於德文</em><em> &ldquo;</em><em>Ka&shy;thol&shy;isch&shy;es Ge&shy;sang&shy;buch</em><em>&rdquo; </em><em>詩歌集中的一首詩歌</em><em>。後經卡素爾（</em>Edward Caswall，1814-1878）將其譯成英文，1854年發表於 &ldquo;<em>Ca&shy;tho&shy;lic Hymns</em> &rdquo;詩集中。</p>\r\n\r\n<p>&nbsp;</p>\r\n\r\n<p>本詩內容顯見原作者是一位愛好大自然的人，可能住在德國緬恩河與其支流兩岸的丘陵地帶，在梅因斯與萊茵河匯合中小城市、碉堡、教堂、寺院，星羅棋布，山川秀麗，激發了作者吟詠寫詩的靈感。</p>\r\n\r\n<p>&nbsp;</p>\r\n\r\n<p>作曲者約瑟夫．班比（Joseph Barnby, 1838-1896）是十九世紀英國著名的聖樂作曲家，歷任許多大教堂管風琴師及詩班指揮。2。</p>\r\n\r\n<p>&nbsp;</p>\r\n\r\n<p>聖經詩篇中，也多有地方，詩人以生活經驗來成為向神的禱告，如《詩篇》五篇3節：「耶和華阿！早晨你必聽我的聲音。早晨我必向你陳明我的心意，並要儆醒。」</p>\r\n\r\n<p>&nbsp;</p>\r\n\r\n<p>《詩篇》59篇16-17節：「但我要歌頌你的力量，早晨要高唱你的慈愛。因為你作過我的高臺。在我急難的日子，作過我的避難所。我的力量阿！我要歌頌你。因為　神是我的高臺，是賜恩與我的　神。」</p>\r\n\r\n<p>&nbsp;</p>\r\n\r\n<p>本詩要輕快活潑的唱，不要徐緩，因為清晨、甦醒、快樂、永恆都是帶有活潑力量的！</p>",
+      "youtube_urls": [
+        {
+          "label": "466 - 讚美耶穌基督",
+          "url": "https://www.youtube.com/watch?v=ahmtZ0Ceua4&list=PLye9rkov_g8CA_oaevJ0TasPUos5L3p_e&index=471"
+        }
+      ],
+      "sheet_score_pdf_url": "https://sacredmusic.tjc.org.tw/storage/uploads/hymn/score/sheet/466.pdf",
+      "sheet_score_images_url": [],
+      "num_score_pdf_url": "https://sacredmusic.tjc.org.tw/storage/uploads/hymn/score/num/466.pdf",
+      "num_score_xml_url": null,
+      "category": {
+        "id": 47,
+        "name": "附錄",
+        "slug": null,
+        "created_at": "2022-07-05T12:00:00.000000Z",
+        "updated_at": "2022-07-05T12:00:00.000000Z"
+      },
+      "tags": [],
+      "composers": [
+        {
+          "id": 311,
+          "name": "Joseph Barnby",
+          "image": null,
+          "introduction": "",
+          "created_at": "2022-07-05T12:00:00.000000Z",
+          "updated_at": "2022-07-05T12:00:00.000000Z",
+          "image_url": null,
+          "pivot": {
+            "hymn_song_id": 471,
+            "artist_id": 311
+          }
+        }
+      ],
+      "lyricists": [
+        {
+          "id": 329,
+          "name": "Katholiches Gesangbuch",
+          "image": null,
+          "introduction": "",
+          "created_at": "2022-07-05T12:00:00.000000Z",
+          "updated_at": "2022-07-05T12:00:00.000000Z",
+          "image_url": null,
+          "pivot": {
+            "hymn_song_id": 471,
+            "artist_id": 329
+          }
+        }
+      ],
+      "audio_files": [
+        {
+          "id": 948,
+          "song_id": 471,
+          "file": "uploads/hymn/audio/2ea0ebfcb33244d0872606657a2112c9.m4a",
+          "audio_category_id": 3,
+          "created_at": "2022-10-21T01:29:04.000000Z",
+          "updated_at": "2023-04-20T03:41:29.000000Z",
+          "file_url": "https://sacredmusic.tjc.org.tw/storage/uploads/hymn/audio/2ea0ebfcb33244d0872606657a2112c9.m4a",
+          "audio_category": {
+            "id": 3,
+            "name": "鋼琴",
+            "slug": null
+          }
+        },
+        {
+          "id": 949,
+          "song_id": 471,
+          "file": "uploads/hymn/audio/b2d8a07bd02d0d07086d62239cfb318e.mp3",
+          "audio_category_id": 4,
+          "created_at": "2022-10-21T01:29:04.000000Z",
+          "updated_at": "2022-10-21T01:29:04.000000Z",
+          "file_url": "https://sacredmusic.tjc.org.tw/storage/uploads/hymn/audio/b2d8a07bd02d0d07086d62239cfb318e.mp3",
+          "audio_category": {
+            "id": 4,
+            "name": "人聲",
+            "slug": null
+          }
+        }
+      ]
+    },
+    {
+      "id": 472,
+      "no": "467",
+      "name": "主的應許",
+      "lyrics": [
+        {
+          "text": "縱然黑暗環繞，晴空不再，但我深知我必永不孤單。\r\n有ㄧ良友必要永遠領我，祂的應許必會成就周全。"
+        },
+        {
+          "text": "災禍速臨我身，親友離開，但我必要緊緊跟隨我主。\r\n祂以恩臂扶持、大愛懷抱，領我前程，度過黑暗險阻。"
+        },
+        {
+          "text": "雖然荊棘滿途，世事無常，主必不會掩面，祂必看顧。\r\n無論何時何地，主愛不離，我要尊崇讚美慈悲救主。"
+        }
+      ],
+      "lyrics_chorus": "祂必信守應許之言，不論前途有多艱險；\r\n祂必信守應許絕不落空，祂必永遠信守應許之言。",
+      "sheet_score_pdf": "uploads/hymn/score/sheet/467.pdf",
+      "sheet_score_images": "[]",
+      "num_score_pdf": "uploads/hymn/score/num/467.pdf",
+      "num_score_xml": "",
+      "category_id": 47,
+      "created_at": "2022-07-09T16:00:00.000000Z",
+      "updated_at": "2025-02-21T06:15:47.000000Z",
+      "status": "PUBLISHED",
+      "history": "<p>本詩作詞者詹姆士．羅（James Rowe, 1865-1933）在德州及田納西州的音樂出版社工作。本會另收錄作者的二首詩歌 -- 讚美詩第 343首「愛拯救我」（Love Lifted Me）與384首 「我願效法耶穌」（I Would Be Like Jesus）。2</p>\r\n\r\n<p>&nbsp;</p>\r\n\r\n<p>本詩源自《彼得後書》三章9節：「主所應許的尚未成就，有人以為他是耽延。其實不是耽延，乃是寬容你們，不願有一人沉淪，乃願人人都悔改。」筆者以為，下列二節經文更能表達本詩的要傳達的信息。</p>\r\n\r\n<p>舊約《彌迦書》三章17-19節中，曾有一幅絕望之中仰望神的描寫：「雖然無花果樹不發旺，葡萄樹不結果，橄欖樹也不效力，田地不出糧食，圈中絕了羊，棚內也沒有牛。然而我要因耶和華歡欣，因救我的　神喜樂。主耶和華是我的力量，他使我的腳快如母鹿的蹄，又使我穩行在高處。」</p>\r\n\r\n<p>新約《哥林多後書》一章20節也說道：「　神的應許，不論有多少，在基督都是是的。所以藉著他也都是實在的，〔實在原文作阿們〕叫　神因我們得榮耀。」</p>\r\n\r\n<p>　　作曲者Henry P. Morton, 20th century ，生平不詳。</p>",
+      "youtube_urls": [
+        {
+          "label": "467 - 主的應許",
+          "url": "https://www.youtube.com/watch?v=XEwcO9I1K5c&list=PLye9rkov_g8CA_oaevJ0TasPUos5L3p_e&index=472"
+        }
+      ],
+      "sheet_score_pdf_url": "https://sacredmusic.tjc.org.tw/storage/uploads/hymn/score/sheet/467.pdf",
+      "sheet_score_images_url": [],
+      "num_score_pdf_url": "https://sacredmusic.tjc.org.tw/storage/uploads/hymn/score/num/467.pdf",
+      "num_score_xml_url": null,
+      "category": {
+        "id": 47,
+        "name": "附錄",
+        "slug": null,
+        "created_at": "2022-07-05T12:00:00.000000Z",
+        "updated_at": "2022-07-05T12:00:00.000000Z"
+      },
+      "tags": [],
+      "composers": [
+        {
+          "id": 206,
+          "name": "Henry P. Morton",
+          "image": null,
+          "introduction": "",
+          "created_at": "2022-07-05T12:00:00.000000Z",
+          "updated_at": "2022-07-05T12:00:00.000000Z",
+          "image_url": null,
+          "pivot": {
+            "hymn_song_id": 472,
+            "artist_id": 206
+          }
+        }
+      ],
+      "lyricists": [
+        {
+          "id": 257,
+          "name": "James Rowe",
+          "image": null,
+          "introduction": "",
+          "created_at": "2022-07-05T12:00:00.000000Z",
+          "updated_at": "2022-07-05T12:00:00.000000Z",
+          "image_url": null,
+          "pivot": {
+            "hymn_song_id": 472,
+            "artist_id": 257
+          }
+        }
+      ],
+      "audio_files": [
+        {
+          "id": 950,
+          "song_id": 472,
+          "file": "uploads/hymn/audio/8d3af990247c46d0dd1fa05a200793bd.m4a",
+          "audio_category_id": 3,
+          "created_at": "2022-10-21T01:29:22.000000Z",
+          "updated_at": "2023-04-20T03:42:00.000000Z",
+          "file_url": "https://sacredmusic.tjc.org.tw/storage/uploads/hymn/audio/8d3af990247c46d0dd1fa05a200793bd.m4a",
+          "audio_category": {
+            "id": 3,
+            "name": "鋼琴",
+            "slug": null
+          }
+        },
+        {
+          "id": 951,
+          "song_id": 472,
+          "file": "uploads/hymn/audio/5fc9d3311f4c2590071a89d0bb5ed4eb.mp3",
+          "audio_category_id": 4,
+          "created_at": "2022-10-21T01:29:22.000000Z",
+          "updated_at": "2022-10-21T01:29:22.000000Z",
+          "file_url": "https://sacredmusic.tjc.org.tw/storage/uploads/hymn/audio/5fc9d3311f4c2590071a89d0bb5ed4eb.mp3",
+          "audio_category": {
+            "id": 4,
+            "name": "人聲",
+            "slug": null
+          }
+        }
+      ]
+    },
+    {
+      "id": 473,
+      "no": "468",
+      "name": "寶貴回憶",
+      "lyrics": [
+        {
+          "text": "蒙主賜下寶貴回憶，時刻滋潤我心田。\r\n日夜思想歷歷在目，過往見證在眼前。"
+        },
+        {
+          "text": "慈愛父母、溫暖家庭，寂寞歲月伴我行。\r\n家鄉事物，童年情景，記憶浮現在我心。"
+        },
+        {
+          "text": "寂靜深夜思緒迴旋，昔日往事湧心田。\r\n記憶徘徊，喜樂再現，一切美好如在天。"
+        },
+        {
+          "text": "品嘗甘苦，經歷人間，未來時日主恩眷。\r\n當我沉思，盼望更堅，寶貴回憶溢心間。"
+        }
+      ],
+      "lyrics_chorus": "寶貴回憶，歷歷在前，如潮湧入我心田。\r\n寂靜深夜，思緒迴旋過往見證在眼前。",
+      "sheet_score_pdf": "uploads/hymn/score/sheet/468.pdf",
+      "sheet_score_images": "[]",
+      "num_score_pdf": "uploads/hymn/score/num/468.pdf",
+      "num_score_xml": "",
+      "category_id": 47,
+      "created_at": "2022-07-09T16:00:00.000000Z",
+      "updated_at": "2023-10-11T07:09:24.000000Z",
+      "status": "PUBLISHED",
+      "history": "<p>本詩詞、曲均為萊特（J. B. F. Wright, 1877 -&nbsp; ）所作。美國人。與大多數作詞、作曲者相較，萊特並未受教於豐富的音樂培養，他的創作總是用他的文字，呼應浮現的靈感，如其所述 -- 「當我感受到一股從天而來的激動時，這些文字總是自己來到我的腦海裡」，萊特是「The Church of God」的一員，在很年輕的時候就開始寫作的服事。本詩首次發表於1952年。</p>\r\n\r\n<p>&nbsp;</p>\r\n\r\n<p>《箴言》10章7節：「義人的紀念被稱讚．惡人的名字必朽爛。」</p>\r\n\r\n<p>&nbsp;</p>\r\n\r\n<p>&nbsp;&nbsp;&nbsp; 這是一首很適合個人吟唱的詩歌。音樂是一把鑰匙，能開啟我們記憶中的的寶庫，隨著它拾起寶庫中的收藏一一端詳、回憶與感謝。</p>\r\n\r\n<p>&nbsp;</p>\r\n\r\n<p>&nbsp;&nbsp;&nbsp; 《希伯來書》12章1節：「我們既有這許多的見證人，如同雲彩圍著我們」，因著默想榜樣的行止而生發生活的力量，經過時間的滌盡與沉澱，所有的記憶都更能釋放真實的光彩，對這一切擁有的豐富，感謝又感謝是回應神不止息的心意！一如複歌所云 &ndash;</p>\r\n\r\n<p>&nbsp;</p>\r\n\r\n<p>「寶貴回憶，歷歷在前，如潮湧入我心田。</p>\r\n\r\n<p>寂靜深夜，思緒迴旋，過往見證在眼前。」</p>",
+      "youtube_urls": [
+        {
+          "label": "468 - 寶貴回憶",
+          "url": "https://www.youtube.com/watch?v=fT9XTPl1qRs&list=PLye9rkov_g8CA_oaevJ0TasPUos5L3p_e&index=473"
+        }
+      ],
+      "sheet_score_pdf_url": "https://sacredmusic.tjc.org.tw/storage/uploads/hymn/score/sheet/468.pdf",
+      "sheet_score_images_url": [],
+      "num_score_pdf_url": "https://sacredmusic.tjc.org.tw/storage/uploads/hymn/score/num/468.pdf",
+      "num_score_xml_url": null,
+      "category": {
+        "id": 47,
+        "name": "附錄",
+        "slug": null,
+        "created_at": "2022-07-05T12:00:00.000000Z",
+        "updated_at": "2022-07-05T12:00:00.000000Z"
+      },
+      "tags": [],
+      "composers": [
+        {
+          "id": 234,
+          "name": "J. B. F. Wright",
+          "image": null,
+          "introduction": "",
+          "created_at": "2022-07-05T12:00:00.000000Z",
+          "updated_at": "2022-07-05T12:00:00.000000Z",
+          "image_url": null,
+          "pivot": {
+            "hymn_song_id": 473,
+            "artist_id": 234
+          }
+        }
+      ],
+      "lyricists": [
+        {
+          "id": 234,
+          "name": "J. B. F. Wright",
+          "image": null,
+          "introduction": "",
+          "created_at": "2022-07-05T12:00:00.000000Z",
+          "updated_at": "2022-07-05T12:00:00.000000Z",
+          "image_url": null,
+          "pivot": {
+            "hymn_song_id": 473,
+            "artist_id": 234
+          }
+        }
+      ],
+      "audio_files": [
+        {
+          "id": 952,
+          "song_id": 473,
+          "file": "uploads/hymn/audio/5576df8ec86c5a7ff1aefca519ec0aec.m4a",
+          "audio_category_id": 3,
+          "created_at": "2022-10-21T01:29:41.000000Z",
+          "updated_at": "2023-04-20T03:43:43.000000Z",
+          "file_url": "https://sacredmusic.tjc.org.tw/storage/uploads/hymn/audio/5576df8ec86c5a7ff1aefca519ec0aec.m4a",
+          "audio_category": {
+            "id": 3,
+            "name": "鋼琴",
+            "slug": null
+          }
+        },
+        {
+          "id": 953,
+          "song_id": 473,
+          "file": "uploads/hymn/audio/4781933a9bbd03d59b7becb95ac21039.mp3",
+          "audio_category_id": 4,
+          "created_at": "2022-10-21T01:29:41.000000Z",
+          "updated_at": "2022-10-21T01:29:41.000000Z",
+          "file_url": "https://sacredmusic.tjc.org.tw/storage/uploads/hymn/audio/4781933a9bbd03d59b7becb95ac21039.mp3",
+          "audio_category": {
+            "id": 4,
+            "name": "人聲",
+            "slug": null
+          }
+        }
+      ]
+    },
+    {
+      "id": 474,
+      "no": "469",
+      "name": "靈恩大會",
+      "lyrics": [
+        {
+          "text": "靈恩大會今開了，弟兄姊妹全來到\r\n靜聽真道專心誠實作禱告\r\n各樣俗事全拋棄，一切雜念都丟掉\r\n虛心迫切，祈求聖靈快臨到"
+        },
+        {
+          "text": "聖靈降臨真奇妙，各樣恩賜都顯照\r\n方言、靈歌、靈笑、靈哭、靈舞蹈\r\n如鴿、如風、如火舌又如江河水滔滔\r\n賞賜力量、醫病、趕鬼傳真道"
+        },
+        {
+          "text": "聖靈功能像火燒，能把我們重改造\r\n除去污穢，洗去雜質，成美好\r\n啟迪我們明真道代替我們做禱告\r\n加添力量幫助我們行天道"
+        }
+      ],
+      "lyrics_chorus": "聖靈乃是無價寶，世界上無處可找\r\n得了聖靈真快樂，可到天堂真美好\r\n我們大家都要求這真至寶",
+      "sheet_score_pdf": "uploads/hymn/score/sheet/469.pdf",
+      "sheet_score_images": "[]",
+      "num_score_pdf": "uploads/hymn/score/num/469.pdf",
+      "num_score_xml": "",
+      "category_id": 47,
+      "created_at": "2022-07-09T16:00:00.000000Z",
+      "updated_at": "2024-04-19T06:05:00.000000Z",
+      "status": "PUBLISHED",
+      "history": "<p>本詩作詞者不詳。作曲者為羅德（George Frederick. Root, 1820-1895）所作。他在美國的音樂史上佔有顯著的地位。2</p>\r\n\r\n<p>&nbsp;</p>\r\n\r\n<p>本會中文歌詞出自聖經《路加福音》24章49節說：「我要將我父所應許的降在你們身上，你們要在城裡等候，直到你們領受從上頭來的能力。」我父所應許的聖靈要降在我們身上，並領受從上頭來聖靈的能力。</p>",
+      "youtube_urls": [
+        {
+          "label": "469 - 靈恩大會",
+          "url": "https://www.youtube.com/watch?v=TBIBfEJD5yo&list=PLye9rkov_g8CA_oaevJ0TasPUos5L3p_e&index=474"
+        }
+      ],
+      "sheet_score_pdf_url": "https://sacredmusic.tjc.org.tw/storage/uploads/hymn/score/sheet/469.pdf",
+      "sheet_score_images_url": [],
+      "num_score_pdf_url": "https://sacredmusic.tjc.org.tw/storage/uploads/hymn/score/num/469.pdf",
+      "num_score_xml_url": null,
+      "category": {
+        "id": 47,
+        "name": "附錄",
+        "slug": null,
+        "created_at": "2022-07-05T12:00:00.000000Z",
+        "updated_at": "2022-07-05T12:00:00.000000Z"
+      },
+      "tags": [],
+      "composers": [
+        {
+          "id": 162,
+          "name": "George Frederick. Root",
+          "image": null,
+          "introduction": "",
+          "created_at": "2022-07-05T12:00:00.000000Z",
+          "updated_at": "2022-07-05T12:00:00.000000Z",
+          "image_url": null,
+          "pivot": {
+            "hymn_song_id": 474,
+            "artist_id": 162
+          }
+        }
+      ],
+      "lyricists": [
+        {
+          "id": 102,
+          "name": "Edwin L. Bowyer",
+          "image": null,
+          "introduction": "",
+          "created_at": "2022-07-05T12:00:00.000000Z",
+          "updated_at": "2022-07-05T12:00:00.000000Z",
+          "image_url": null,
+          "pivot": {
+            "hymn_song_id": 474,
+            "artist_id": 102
+          }
+        }
+      ],
+      "audio_files": [
+        {
+          "id": 954,
+          "song_id": 474,
+          "file": "uploads/hymn/audio/ef550808acdb7794b0c94a6b3febd185.m4a",
+          "audio_category_id": 3,
+          "created_at": "2022-10-21T01:29:58.000000Z",
+          "updated_at": "2023-04-20T03:44:17.000000Z",
+          "file_url": "https://sacredmusic.tjc.org.tw/storage/uploads/hymn/audio/ef550808acdb7794b0c94a6b3febd185.m4a",
+          "audio_category": {
+            "id": 3,
+            "name": "鋼琴",
+            "slug": null
+          }
+        },
+        {
+          "id": 955,
+          "song_id": 474,
+          "file": "uploads/hymn/audio/f56f3b20e32d4d3378fa171ee0eb4399.mp3",
+          "audio_category_id": 4,
+          "created_at": "2022-10-21T01:29:58.000000Z",
+          "updated_at": "2022-10-21T01:29:58.000000Z",
+          "file_url": "https://sacredmusic.tjc.org.tw/storage/uploads/hymn/audio/f56f3b20e32d4d3378fa171ee0eb4399.mp3",
+          "audio_category": {
+            "id": 4,
+            "name": "人聲",
+            "slug": null
+          }
+        }
+      ]
+    }
+  ],
+  "first_page_url": "https://sacredmusic.tjc.org.tw/api/hymn?page=1",
+  "from": 471,
+  "last_page": 48,
+  "last_page_url": "https://sacredmusic.tjc.org.tw/api/hymn?page=48",
+  "links": [
+    {
+      "url": "https://sacredmusic.tjc.org.tw/api/hymn?page=47",
+      "label": "pagination.previous",
+      "active": false
+    },
+    {
+      "url": "https://sacredmusic.tjc.org.tw/api/hymn?page=1",
+      "label": "1",
+      "active": false
+    },
+    {
+      "url": "https://sacredmusic.tjc.org.tw/api/hymn?page=2",
+      "label": "2",
+      "active": false
+    },
+    {
+      "url": null,
+      "label": "...",
+      "active": false
+    },
+    {
+      "url": "https://sacredmusic.tjc.org.tw/api/hymn?page=39",
+      "label": "39",
+      "active": false
+    },
+    {
+      "url": "https://sacredmusic.tjc.org.tw/api/hymn?page=40",
+      "label": "40",
+      "active": false
+    },
+    {
+      "url": "https://sacredmusic.tjc.org.tw/api/hymn?page=41",
+      "label": "41",
+      "active": false
+    },
+    {
+      "url": "https://sacredmusic.tjc.org.tw/api/hymn?page=42",
+      "label": "42",
+      "active": false
+    },
+    {
+      "url": "https://sacredmusic.tjc.org.tw/api/hymn?page=43",
+      "label": "43",
+      "active": false
+    },
+    {
+      "url": "https://sacredmusic.tjc.org.tw/api/hymn?page=44",
+      "label": "44",
+      "active": false
+    },
+    {
+      "url": "https://sacredmusic.tjc.org.tw/api/hymn?page=45",
+      "label": "45",
+      "active": false
+    },
+    {
+      "url": "https://sacredmusic.tjc.org.tw/api/hymn?page=46",
+      "label": "46",
+      "active": false
+    },
+    {
+      "url": "https://sacredmusic.tjc.org.tw/api/hymn?page=47",
+      "label": "47",
+      "active": false
+    },
+    {
+      "url": "https://sacredmusic.tjc.org.tw/api/hymn?page=48",
+      "label": "48",
+      "active": true
+    },
+    {
+      "url": null,
+      "label": "pagination.next",
+      "active": false
+    }
+  ],
+  "next_page_url": null,
+  "path": "https://sacredmusic.tjc.org.tw/api/hymn",
+  "per_page": 10,
+  "prev_page_url": "https://sacredmusic.tjc.org.tw/api/hymn?page=47",
+  "to": 474,
+  "total": 474
+}

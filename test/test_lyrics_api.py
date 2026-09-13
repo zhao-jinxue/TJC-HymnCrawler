@@ -17,7 +17,7 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))  # 项目根�
 sys.path.insert(0, ROOT)
 os.chdir(ROOT)
 
-from crawler_core import lyrics_api
+from crawler_core import api_client, lyrics_api
 from crawler_core.db import _create_table_v4, ensure_chorus_field
 from crawler_core.extractor import group_lyrics_boxes
 
@@ -80,36 +80,42 @@ class _FakeResp:
 class TestFetchHymnLyrics:
     def test_success(self, monkeypatch):
         payload = {"lyrics": [{"text": "第一節\r\n第二行"}, {"text": ""}], "lyrics_chorus": "副歌\r\n"}
-        monkeypatch.setattr(lyrics_api.requests, "get", lambda *a, **k: _FakeResp(200, payload))
+        monkeypatch.setattr(api_client.requests, "get", lambda *a, **k: _FakeResp(200, payload))
         r = lyrics_api.fetch_hymn_lyrics("12")
         assert r["verses"] == ["第一節\n第二行"]  # 空歌词项被过滤
         assert r["chorus"] == "副歌"
         assert r["error"] is None
 
     def test_http_error_retries(self, monkeypatch):
-        monkeypatch.setattr(lyrics_api.time, "sleep", lambda *_: None)
+        monkeypatch.setattr(api_client.time, "sleep", lambda *_: None)
         calls = {"n": 0}
 
         def fake_get(*a, **k):
             calls["n"] += 1
             return _FakeResp(500)
 
-        monkeypatch.setattr(lyrics_api.requests, "get", fake_get)
+        monkeypatch.setattr(api_client.requests, "get", fake_get)
         r = lyrics_api.fetch_hymn_lyrics("12", retries=2)
         assert r["verses"] == []
         assert "HTTP 500" in r["error"]
         assert calls["n"] == 2
 
     def test_exception_degrades(self, monkeypatch):
-        monkeypatch.setattr(lyrics_api.time, "sleep", lambda *_: None)
+        monkeypatch.setattr(api_client.time, "sleep", lambda *_: None)
 
         def boom(*a, **k):
             raise TimeoutError("boom")
 
-        monkeypatch.setattr(lyrics_api.requests, "get", boom)
+        monkeypatch.setattr(api_client.requests, "get", boom)
         r = lyrics_api.fetch_hymn_lyrics("12", retries=2)
         assert r["verses"] == [] and r["chorus"] == ""
         assert "TimeoutError" in r["error"]
+
+    def test_404_returns_error(self, monkeypatch):
+        monkeypatch.setattr(api_client.time, "sleep", lambda *_: None)
+        monkeypatch.setattr(api_client.requests, "get", lambda *a, **k: _FakeResp(404))
+        r = lyrics_api.fetch_hymn_lyrics("999")
+        assert r["verses"] == [] and "404" in r["error"]
 
 
 

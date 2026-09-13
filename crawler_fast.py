@@ -1,13 +1,25 @@
+#!/usr/bin/env python3
 # crawler_fast.py
-# 🚀 终极极速版 - 统一入口
-# 组装 crawler_core 各模块，提供菜单式交互
+# 🚀 统一入口（默认 API 引擎；Selenium 保底见 crawler_selenium.py）
+#
+# 用法：
+#   python crawler_fast.py                        # 交互菜单
+#   python crawler_fast.py --engine api --step 1  # 非交互：只跑 Step 1（API）
+#   python crawler_fast.py --engine selenium --step 7
+#   python crawler_fast.py --step check           # Step 1 三方一致性检查（不落盘）
+#   python crawler_fast.py --refresh-api-cache --step 2
+#
+# 引擎语义（§4.4）：api（默认，零浏览器依赖）/ selenium（旧 DOM 整链）/ auto（API 优先，逐首降级）
 
+import argparse
 import json
 import os
+import sys
 import time
 
+from crawler_core import api_client, naming, sync
 from crawler_core.checksums import run as run_step6
-from crawler_core.config import PROBE_REPORT
+from crawler_core.config import PROBE_REPORT, VALID_ENGINES
 from crawler_core.db import (
     count_failed,
     get_failed_songs,
@@ -19,24 +31,24 @@ from crawler_core.db import (
     update_png_paths as run_step7,
 )
 from crawler_core.downloader import run_download
-from crawler_core.driver import init_driver
 from crawler_core.extractor import Extractor, load_url_map
 from crawler_core.images import run as run_step5
 from crawler_core.lyrics_api import run as run_lyrics_backfill
 from crawler_core.probe import load_probe_report, run_probe, run_probe_missing
-from crawler_core.scanner import Scanner
+from crawler_core.scanner import Scanner, check_file
 from crawler_core.verify import main as run_step4
 
-# ================= 打印横线 =================
+# ================= 打印 =================
 
-def print_banner():
+def print_banner(engine):
     print("=" * 60)
     print("🚀 真耶穌教會聖樂网爬虫 - 终极极速版")
+    print(f"   引擎：{engine}（api=官网 JSON API / selenium=DOM 保底 / auto=API 优先逐首降级）")
     print("=" * 60)
 
 
 def print_probe_report_status():
-    """打印 probe_report.json 的状态和校验信息（过滤 _error 版本）"""
+    """打印 probe_report.json 的状态与校验信息（过滤下划线元信息键）"""
     if not os.path.exists(PROBE_REPORT):
         print("📋 资源探测报告（probe_report.json）：不存在")
         return
@@ -49,12 +61,12 @@ def print_probe_report_status():
     num = sum(1 for d in data if d.get("numbered_pdf"))
     audio = sum(1 for d in data if d.get("audio_versions"))
 
-    # 统计音频版本分布时，过滤掉 _error 键
     audio_key_count = {}
     audio_error_count = 0
     for d in data:
-        av = d.get("audio_versions", {})
-        for v in av:
+        for v in d.get("audio_versions", {}):
+            if v.startswith("_"):
+                continue
             if v == "_error":
                 audio_error_count += 1
             else:
@@ -64,31 +76,40 @@ def print_probe_report_status():
     no_num = [d["hymn_number"] for d in data if not d.get("numbered_pdf")]
     no_audio = [d["hymn_number"] for d in data if not d.get("audio_versions")]
 
-    # download_status 统计
     ds_counts = {}
     for d in data:
         s = d.get("download_status", "pending")
         ds_counts[s] = ds_counts.get(s, 0) + 1
 
-    # integrity_status 统计
     is_counts = {}
     for d in data:
         s = d.get("integrity_status", "unchecked")
         is_counts[s] = is_counts.get(s, 0) + 1
 
+    unavailable = api_client.count_unavailable(data)
+    site_removed = sum(1 for d in data
+                       for info in api_client.unavailable_items(d).values()
+                       if info.get("_site_removed"))
+    audio_available = sum(1 for d in data for v, info in (d.get("audio_versions") or {}).items()
+                          if naming.is_audio_version_key(v) and api_client.is_available(info))
+
     print(f"📋 资源探测报告（probe_report.json）：{total} 首")
-    print(f"   五线谱: {staff}/{total} ({100*staff//total}%)" +
+    print(f"   五线谱: {staff}/{total} ({100*staff//max(total,1)}%)" +
           (f" ⚠️ 缺: {no_staff}" if no_staff else " ✅"))
-    print(f"   简谱:   {num}/{total} ({100*num//total}%)" +
+    print(f"   简谱:   {num}/{total} ({100*num//max(total,1)}%)" +
           (f" ⚠️ 缺: {no_num}" if no_num else " ✅"))
-    print(f"   有音频: {audio}/{total} ({100*audio//total}%)" +
+    print(f"   有音频: {audio}/{total} ({100*audio//max(total,1)}%) | 可用音频条目 {audio_available}" +
           (f" ⚠️ 缺: {no_audio}" if no_audio else " ✅"))
     if audio_key_count:
         print("   音频版本分布:")
         for v, c in sorted(audio_key_count.items(), key=lambda x: -x[1]):
-            print(f"     {v}: {c} ({100*c//total}%)")
+            print(f"     {v}: {c} ({100*c//max(total,1)}%)")
     if audio_error_count > 0:
         print(f"   ⚠️ 探测异常（_error）: {audio_error_count} 首")
+    if unavailable:
+        print(f"   ℹ️ 源站不可用资源: {unavailable} 条（已摘出期望集合，不下载不重试）")
+    if site_removed:
+        print(f"   ℹ️ 官网已下架但本地留档（site_removed）: {site_removed} 条")
     if ds_counts:
         print("   下载状态分布:")
         for s, c in sorted(ds_counts.items(), key=lambda x: -x[1]):
@@ -99,20 +120,37 @@ def print_probe_report_status():
             print(f"     {s}: {c}")
 
 
-# ================= 探测模式选择 =================
+# ================= 交互辅助 =================
 
-def _ask_probe_mode():
+def _ask_yes_no(prompt, default="y"):
+    """交互式 yes/no（EOF/中断时取默认值），返回 bool"""
+    while True:
+        try:
+            ans = input(prompt).strip().lower()
+        except (EOFError, KeyboardInterrupt):
+            ans = ""
+            print()
+        if ans == "":
+            return default == "y"
+        if ans in ("y", "yes"):
+            return True
+        if ans in ("n", "no"):
+            return False
+        print("   请输入 Y 或 N")
+
+
+def _ask_probe_mode(engine):
     """资源探测方式选择：探测报告已有缺失音频时，让用户选全量重探或仅补缺失"""
     report = load_probe_report()
     if not report:
-        return run_probe()
+        return run_probe(engine=engine)
     missing = [e for e in report if not e.get("audio_versions")]
     if not missing:
         print("✅ probe_report.json 无缺失音频（全部条目都有 audio_versions）")
         return report
     if len(report) == len(missing):
         print("ℹ️ 所有条目都缺音频，直接全量重探。")
-        return run_probe(force=True)
+        return run_probe(force=True, engine=engine)
     print(f"  ⚠️ probe_report.json 有 {len(missing)} 首缺失音频: "
           f"{[e['hymn_number'] for e in missing]}")
     while True:
@@ -122,18 +160,119 @@ def _ask_probe_mode():
             ans = "2"
             print()
         if ans == "1":
-            return run_probe(force=True)
-        elif ans in ("", "2"):
-            return run_probe_missing()
+            return run_probe(force=True, engine=engine)
+        if ans in ("", "2"):
+            return run_probe_missing(engine=engine)
+
+
+# ================= 步骤执行（可被 CLI 复用） =================
+
+def run_step1(engine, use_cache=True):
+    """Step 1：扫描列表 + 建目录（API / selenium / auto）"""
+    scanner = Scanner(engine=engine)
+    try:
+        return scanner.scan(use_cache=use_cache)
+    finally:
+        scanner.close()
+
+
+def run_step2(engine):
+    """Step 2：详情提取（API 并发 / DOM 保底）"""
+    songs = load_url_map()
+    if not songs:
+        print("❌ url_map.txt 无数据，请先执行 Step 1")
+        return None
+    extractor = Extractor(engine=engine)
+    try:
+        result = extractor.extract_all(songs, engine=engine)
+        print(f"   ✅ 提取完成：成功 {result['success']}，失败 {result['failed']}，"
+              f"跳过 {result['skipped']}")
+        return result
+    finally:
+        extractor.close()
+
+
+def run_step3(engine):
+    """资源探测（API 清单 + URL 预检 / Selenium 保底）"""
+    if engine == "api" and os.path.exists(PROBE_REPORT):
+        return _ask_probe_mode(engine)
+    return run_probe(engine=engine)
+
+
+def run_step10_full(engine, use_cache=True):
+    """极速全量同步（纯 API）：Step1 → Step2 → 探测 → 下载 → 校验"""
+    print("\n⚡ 极速全量同步（API）：Step1 → Step2 → 资源探测 → 下载 → 校验")
+    run_step1(engine, use_cache=use_cache)
+    run_step2(engine)
+    report = run_probe(force=True, engine=engine)
+    if report:
+        run_download(report)
+    run_step4()
+
+
+def run_step10_incremental(engine, use_cache=True):
+    """增量同步（§5.7）：差异报表 → 确认落库 → 补探/补下载 → 校验"""
+    print("\n⚡ 增量同步（水位 = api_raw.updated_at）")
+    result = sync.run(apply=False, use_cache=use_cache)
+    if result["plan"]["new"] or result["plan"]["changed"]:
+        if _ask_yes_no("👉 是否按上述差异落库（更新 DB + 重建 hymn_category）？[y/N] ", default="n"):
+            result = sync.run(apply=True, use_cache=use_cache)
         else:
-            print("   请输入 1 或 2")
+            print("⏭️ 已跳过落库（仅报表）")
+    if result["pending"] and _ask_yes_no("👉 是否存在新增音频待下载？[y/N] ", default="y"):
+        run_probe_missing(engine=engine)
+        run_download()
+    run_step4()
 
 
 # ================= 主菜单 =================
 
-def main():
-    print_banner()
+def build_menu(engine, failed_count):
+    """菜单项（按引擎过滤：selenium 引擎下隐藏纯 API 的「10 极速同步」）"""
+    items = [
+        ("1", f"仅 Step 1：扫描列表页 + 创建目录（{engine}）"),
+        ("2", f"仅 Step 2：提取详情页文本（{engine}，从 url_map.txt 读）"),
+        ("3", f"仅 资源探测（{engine}：API 清单+URL 预检 / 音频点击）"),
+        ("4", "仅 下载多媒体资源（根据 probe_report.json）"),
+        ("5", "校验与报告（数据对账 + 资源核验 + final_report）"),
+        ("6", "仅 转图片：PDF→窄边距 PNG + 双页拼接 + 图片路径入库 + 哈希清单"),
+        ("7", "全流程：Step 1 → Step 2 → 资源探测 → 下载 → 校验 → 转图片入库"),
+    ]
+    if failed_count > 0:
+        items.append(("8", f"补全失败：重试提取 {failed_count} 首失败诗歌"))
+    items.append(("9", "歌词重抓：官网 API 全量刷新正歌 + 副歌 chorus（修复历史丢失）"))
+    if engine != "selenium":
+        items.append(("10", "极速全量同步（纯 API：全量 / 增量两模式）"))
+    items.append(("0", "退出"))
+    return items
+
+
+
+def main(argv=None, engine=None, step=None, use_cache=True):
+    """统一入口：交互菜单 + CLI（--engine / --step）"""
+    args = parse_args(argv)
+    engine = (engine or args.engine or "api").lower()
+    if engine not in VALID_ENGINES:
+        print(f"⚠️ 未知引擎 {engine!r}，回落 api（可选：{'/'.join(VALID_ENGINES)}）")
+        engine = "api"
+    step = step or args.step
+    use_cache = use_cache and not args.refresh_api_cache
+    if args.refresh_api_cache:
+        removed = api_client.cache_clear()
+        print(f"♻️ 已清理 api_cache/{removed} 个分页缓存（--refresh-api-cache）")
+
+    print_banner(engine)
     init_db()
+
+    # ---- 非交互：--step 直接执行后退出 ----
+    if step:
+        return _run_single_step(step, engine, use_cache)
+
+    # 无 TTY（cron/CI/管道）时不进入交互菜单，避免无限等待输入
+    if not sys.stdin.isatty():
+        print("⚠️ 非交互终端：请用 --step <1-10|check|incremental> 指定要执行的步骤。")
+        print("   示例：python crawler_fast.py --engine api --step 10")
+        return 2
 
     print("\n" + "=" * 40)
     print_db_status()
@@ -145,21 +284,9 @@ def main():
     print()
 
     failed_count = count_failed()
-
-    # 菜单项
-    items = [
-        ("1", "仅 Step 1：扫描列表页 + 创建目录"),
-        ("2", "仅 Step 2：提取详情页文本（从 url_map.txt 读）"),
-        ("3", "仅 资源探测（PDF HEAD + 音频页面点击）"),
-        ("4", "仅 下载多媒体资源（根据 probe_report.json）"),
-        ("5", "校验与报告（第四阶段：数据对账 + 资源核验 + final_report）"),
-        ("6", "仅 转图片：PDF→窄边距 PNG + 双页拼接 + 图片路径入库 + 哈希清单"),
-        ("7", "全流程：Step 1 → Step 2 → 资源探测 → 下载 → 校验 → 转图片入库"),
-    ]
-    if failed_count > 0:
-        items.append(("8", f"补全失败：重试提取 {failed_count} 首失败诗歌"))
-    items.append(("9", "歌词重抓：官网 API 全量刷新正歌 + 副歌 chorus（修复历史丢失）"))
-    items.append(("0", "退出"))
+    items = build_menu(engine, failed_count)
+    valid = {k for k, _ in items}
+    max_key = max(int(k) for k in valid)
 
     print("📋 请选择要执行的步骤：\n")
     for key, desc in items:
@@ -168,98 +295,65 @@ def main():
 
     while True:
         try:
-            choice = input("请输入选项 [0-9] (默认 5): ").strip()
+            choice = input(f"请输入选项 [0-{max_key}] (默认 5): ").strip()
         except (EOFError, KeyboardInterrupt):
             choice = "0"
             print()
         if choice == "":
             choice = "5"
             break
-        elif choice in ("0", "1", "2", "3", "4", "5", "6", "7", "8", "9"):
+        if choice in valid:
             break
-        else:
-            print("   无效选项，请输入 0-9")
+        print(f"   无效选项，请输入 {sorted(valid)}")
 
     print()
     total_start = time.time()
+    _dispatch(choice, engine, failed_count, use_cache)
 
+    elapsed = time.time() - total_start
+    print(f"\n{'='*60}")
+    print(f"🎉 程序执行完成！总耗时: {elapsed:.1f}秒")
+    print(f"{'='*60}")
+    return 0
+
+
+def _dispatch(choice, engine, failed_count, use_cache):
+    """按菜单选项执行对应步骤（与重构前步骤语义一致；failed_count 仅用于日志语境）"""
     # ---- Step 1 ----
     if choice in ("1", "7"):
-        scanner = Scanner()
-        try:
-            songs = scanner.scan()
-        finally:
-            scanner.close()
+        songs = run_step1(engine, use_cache=use_cache)
         if not songs:
             print("❌ 未获取到数据，退出。")
             return
 
     # ---- Step 2 ----
     if choice in ("2", "7"):
-        songs = load_url_map()
-        if not songs:
-            print("❌ url_map.txt 无数据，请先执行 Step 1。")
-            return
-        ext = Extractor()
-        driver = init_driver()
-        try:
-            result = ext.extract_all(songs, driver)
-            print(f"   ✅ Step 2：成功 {result['success']} 首，失败 {result['failed']} 首")
-        finally:
-            driver.quit()
+        run_step2(engine)
 
     # ---- 资源探测 ----
+    probe_report = None
     if choice in ("3", "7"):
-        if choice == "7":
-            while True:
-                try:
-                    ans = input("👉 是否执行资源探测（PDF + 音频）？[y/N] ").strip().lower()
-                except (EOFError, KeyboardInterrupt):
-                    ans = "n"
-                    print()
-                if ans in ("y", "yes"):
-                    probe_report = _ask_probe_mode()
-                    break
-                elif ans in ("", "n", "no"):
-                    print("⏭️ 跳过资源探测（使用现有 probe_report.json）")
-                    probe_report = load_probe_report()
-                    break
-                else:
-                    print("   请输入 Y 或 N")
+        if choice == "3":
+            probe_report = run_step3(engine)
         else:
-            if os.path.exists(PROBE_REPORT):
-                # 已有探测报告：提供增量补探选项（仅补缺失音频更省时）
-                probe_report = _ask_probe_mode()
-            else:
-                probe_report = run_probe()
+            probe_report = run_probe(engine=engine)
 
     # ---- 下载 ----
     if choice in ("4", "7"):
         if choice == "7":
-            while True:
-                try:
-                    ans = input("👉 是否下载多媒体资源？[Y/n] ").strip().lower()
-                except (EOFError, KeyboardInterrupt):
-                    ans = "n"
-                    print()
-                if ans in ("", "y", "yes"):
-                    run_download(probe_report if 'probe_report' in dir() else None)
-                    break
-                elif ans in ("n", "no"):
-                    print("⏭️ 跳过下载")
-                    break
-                else:
-                    print("   请输入 Y 或 N")
+            if _ask_yes_no("👉 是否下载多媒体资源？[Y/n] "):
+                report = probe_report if isinstance(probe_report, list) and probe_report else None
+                run_download(report)
+            else:
+                print("⏭️ 跳过下载")
         else:
             run_download()
 
     # ---- 校验与报告 ----
-    # 选项 5：独立执行校验；选项 7：全流程的中间一步（其后转图片入库）
     if choice in ("5", "7"):
         run_step4()
 
     # ---- 转图片入库（Step5 + Step7 + Step6）----
-    # 选项 6：独立执行；选项 7：全流程的最后一步
     if choice in ("6", "7"):
         print("\n🖼️  转图片入库：PDF → 窄边距 PNG → 图片路径入库 → 哈希清单...")
         print("----- Step 5: PDF → 窄边距 PNG（含双页拼接） -----")
@@ -269,7 +363,7 @@ def main():
         print("\n----- Step 6: 增量更新 checksums.json PNG 哈希（已有条目跳过） -----")
         run_step6(incremental=True)
 
-    # ---- 补全 ----
+    # ---- 补全失败 ----
     if choice == "8":
         failed_songs = get_failed_songs()
         if not failed_songs:
@@ -281,25 +375,13 @@ def main():
             if len(failed_songs) > 10:
                 print(f"     ... 共 {len(failed_songs)} 首")
             print()
-            while True:
+            if _ask_yes_no("👉 是否补全提取？[Y/n] "):
+                extractor = Extractor(engine=engine)
                 try:
-                    ans = input("👉 是否补全提取？[Y/n] ").strip().lower()
-                except (EOFError, KeyboardInterrupt):
-                    ans = "n"
-                    print()
-                if ans in ("", "y", "yes"):
-                    ext = Extractor()
-                    driver = init_driver()
-                    try:
-                        result = ext.extract_all(failed_songs, driver)
-                        print(f"   ✅ 补全完成：成功 {result['success']}，失败 {result['failed']}")
-                    finally:
-                        driver.quit()
-                    break
-                elif ans in ("n", "no"):
-                    break
-                else:
-                    print("   请输入 Y 或 N")
+                    result = extractor.extract_all(failed_songs, resume=False, engine=engine)
+                    print(f"   ✅ 补全完成：成功 {result['success']}，失败 {result['failed']}")
+                finally:
+                    extractor.close()
 
     # ---- 歌词重抓（官网 API：正歌 + 副歌 chorus）----
     if choice == "9":
@@ -307,16 +389,101 @@ def main():
         print("   说明：官网把副歌单独放在 lyrics_chorus，旧版仅抓正歌首个片段导致副歌丢失。")
         run_lyrics_backfill()
 
-    # ---- 完成 ----
-    elapsed = time.time() - total_start
-    print(f"\n{'='*60}")
-    print(f"🎉 程序执行完成！总耗时: {elapsed:.1f}秒")
-    print(f"{'='*60}")
+    # ---- 极速全量同步（纯 API）----
+    if choice == "10":
+        print("\n⚡ 极速全量同步：")
+        print("   [1] 全量（Step1+Step2+探测+下载+校验）  [2] 增量（差异报表+落库）")
+        while True:
+            try:
+                ans = input("   请选择 (默认 1): ").strip()
+            except (EOFError, KeyboardInterrupt):
+                ans = "1"
+                print()
+            if ans in ("", "1"):
+                run_step10_full("api", use_cache=use_cache)
+                break
+            if ans == "2":
+                run_step10_incremental("api", use_cache=use_cache)
+                break
+            print("   请输入 1 或 2")
+
+
+
+
+def _run_single_step(step, engine, use_cache):
+    """CLI `--step`：执行单步（非交互）后返回退出码"""
+    step = str(step).strip().lower()
+    print(f"▶️ 非交互执行：step={step} | engine={engine}")
+    total_start = time.time()
+
+    if step == "check":
+        return check_file()
+    if step == "1":
+        run_step1(engine, use_cache=use_cache)
+    elif step == "2":
+        run_step2(engine)
+    elif step == "3":
+        run_probe(force=True, engine=engine)
+    elif step == "4":
+        run_download()
+    elif step == "5":
+        run_step4()
+    elif step == "6":
+        run_step5()
+        run_step7()
+        run_step6(incremental=True)
+    elif step == "7":
+        run_step1(engine, use_cache=use_cache)
+        run_step2(engine)
+        report = run_probe(force=True, engine=engine)
+        if report:
+            run_download(report)
+        run_step4()
+        run_step5()
+        run_step7()
+        run_step6(incremental=True)
+    elif step == "8":
+        failed_songs = get_failed_songs()
+        if not failed_songs:
+            print("✅ 没有需要补全的诗歌。")
+        else:
+            print(f"🔍 补全提取 {len(failed_songs)} 首失败诗歌（引擎 {engine}）...")
+            extractor = Extractor(engine=engine)
+            try:
+                extractor.extract_all(failed_songs, resume=False, engine=engine)
+            finally:
+                extractor.close()
+    elif step == "9":
+        run_lyrics_backfill()
+    elif step == "10":
+        run_step10_full(engine, use_cache=use_cache)
+    elif step == "incremental":
+        run_step10_incremental(engine, use_cache=use_cache)
+    else:
+        print(f"❌ 未知步骤 {step!r}（可选：1-10 / check / incremental）")
+        return 2
+
+    print(f"\n🎉 step={step} 执行完成！耗时 {time.time()-total_start:.1f}s")
+    return 0
+
+
+def parse_args(argv=None):
+    """CLI 参数：--engine / --step / --refresh-api-cache"""
+    parser = argparse.ArgumentParser(
+        description="TJC 聖樂网爬虫统一入口（默认 API 引擎，Selenium 保底）")
+    parser.add_argument("--engine", choices=list(VALID_ENGINES), default="api",
+                        help="抓取引擎（默认 api；auto=API 优先、逐首降级 DOM）")
+    parser.add_argument("--step", default=None,
+                        help="非交互执行单步：1-10 / check（Step1 一致性检查）/ incremental")
+    parser.add_argument("--refresh-api-cache", action="store_true",
+                        help="忽略并重建 Hymn_Downloads/api_cache/ 分页缓存")
+    args, _unknown = parser.parse_known_args(argv)
+    return args
 
 
 if __name__ == "__main__":
     try:
-        main()
+        raise SystemExit(main())
     except KeyboardInterrupt:
         print("\n⚠️ 用户中断，已保存的部分进度可断点续跑。")
     except Exception as e:  # noqa: BLE001 - 顶层兜底, 保证从容退出且已持久化数据不丢失
