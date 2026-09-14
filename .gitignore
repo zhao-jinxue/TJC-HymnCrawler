@@ -37,3 +37,6 @@ __pycache__/
 # 带简谱歌词的复核渲染图（tool/show_jianpu.py 产物，可由 DB 随时重出）
 /data/jianpu_render/
 
+# 官方简谱 PDF 逐字对位复核图（tool/show_pdf_align.py 产物，可由 PDF 随时重出）
+/data/pdf_align/
+

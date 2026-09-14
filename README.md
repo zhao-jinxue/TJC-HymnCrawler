@@ -31,6 +31,7 @@ hymn_crawler/
 │   ├── images.py               # PDF → 窄边距 PNG + 双页拼接
 │   ├── checksums.py            # checksums.json 哈希维护
 │   ├── ppt_jianpu.py           # ★ 从《赞美诗》PPT 提取带简谱文字歌词（解析+5 项校验+报告）
+│   ├── pdf_jianpu.py           # ★ 官方简谱 PDF 侧：码位→记号自举学习 + 逐字几何对位（POC）
 │   ├── db.py                   # 数据库管理 + 迁移（v7 + 带简谱歌词 v8）+ UPSERT + hymn_category 重建
 │   └── selenium_legacy/        # 🛟 Selenium 保底引擎（旧实现原样保留，默认不参与主流程）
 │       ├── driver.py / scanner_selenium.py / extractor_dom.py / probe_audio.py
@@ -59,6 +60,7 @@ hymn_crawler/
 │   ├── show_lyrics.py          # 🔎 入库歌词复核（看某首的正歌+副歌，并与 api_raw 逐字比对）
 │   ├── extract_jianpu.py       # 🎼 PPT → 带简谱文字歌词提取入库（解析/校验/报告/写库）
 │   ├── show_jianpu.py          # 🎹 简谱歌词渲染复核（简谱字体+歌词字体出图，逐字对位索引）
+│   ├── show_pdf_align.py       # 📐 官谱 PDF ↔ PPT 歌词逐字对位复核（对位表 + 标注图，POC）
 │   ├── qwen_ocr.py             # 千问 Qwen-VL 图片 OCR 识别
 │   ├── ocr_merged_slices.py    # OCR 合并切片
 │   ├── merge_ocr_results.py    # OCR 结果合并
@@ -67,12 +69,13 @@ hymn_crawler/
 │   ├── verify_merged.py        # 合并数据校验
 │   └── ...                     # 其他数据比对 / 清理脚本
 │
-├── test/                       # 🧪 pytest 测试（114 项，离线可跑）
+├── test/                       # 🧪 pytest 测试（138 项，离线可跑）
 │   ├── test_api_client.py      # ★ API 客户端：分页/映射/目录名规则/重试/缓存/可用性状态机
 │   ├── test_db_v7.py           # ★ DB v7：api_raw/空值守卫/hymn_category/增量计划/引擎隔离
 │   ├── test_no_crash.py        # ★ 不崩断言（§5.9.6）：坏 URL/断网续跑/null 不下载/结构改版
 │   ├── test_lyrics_api.py      # 歌词 API + DOM box 归并 + chorus 字段
 │   ├── test_jianpu.py          # ★ PPT 带简谱歌词：字形语义/计数/解析/编号归属/DB v8 两表
+│   ├── test_pdf_jianpu.py      # ★ 官谱 PDF：字符分类/同构判定/自举学习/逐字对位（合成数据 + 真实 #1）
 │   └── test_smoke.py           # 纯函数冒烟
 │
 ├── hooks/
@@ -97,7 +100,7 @@ hymn_crawler/
 
 - **Python 3.10+**
 - 虚拟环境（推荐）：`/home/zjx/python_env/bin/python`
-- 主依赖（纯 API 路径）：`pip install -r config/requirements.txt`（`requests` / `urllib3` / `beautifulsoup4` / `Pillow`）
+- 主依赖（纯 API 路径）：`pip install -r config/requirements.txt`（`requests` / `urllib3` / `beautifulsoup4` / `Pillow` / `olefile` / `opencc` / `pymupdf` / `fontTools`）
 - 系统工具：`poppler`（`pdftoppm` / `pdfinfo` / `pdftotext`，仅转图阶段需要）
 - 保底引擎（可选）：`pip install -r config/requirements-selenium.txt` + Chrome/chromedriver（**默认路径不需要**）
 
@@ -158,6 +161,29 @@ hymn_crawler/
 > 说明：副歌字段 `chorus` 来自官网 API 的 `lyrics_chorus`。**该字段为空的诗歌（当前 204 首）官网本身就无副歌**
 > （列表接口与详情接口一致，且正歌文本已含「阿們，阿們，哈利路亞！」这类内置叠句），并非抓取遗漏；
 > 详见 `docs/sessions/2026-09-13_12-53-00.md` 的取证结论。
+
+### 官方简谱 PDF 逐字对位（POC）
+
+```bash
+# 用官方简谱 PDF（矢量文本、带精确坐标）给 PPT 记谱做「逐字几何对位」复核
+/home/zjx/python_env/bin/python tool/show_pdf_align.py 1          # #1：对位表 + 标注图（data/pdf_align/）
+/home/zjx/python_env/bin/python tool/show_pdf_align.py 1 13 334   # 多首：先跨首联合学码位映射，再逐首出表
+/home/zjx/python_env/bin/python tool/show_pdf_align.py 1 --map    # 附：学到的「码位 → 记号」映射（含票数）
+```
+
+> **原理**：官方 PDF 是 iTextSharp 生成的**矢量 PDF**——音符是嵌入字体 `MMP2005` 的**文本**（28pt）、
+> 歌词是中文文本（14pt），每个字符都带精确坐标（附点/减时线等小标记用字形**墨迹框**剔除）。
+> 把 DB 的 `hymn_jianpu_line.notes` 与 PDF 的「码位序列」做**结构同构 + 冲突投票**对齐，
+> 即可自动学出「码位 → 记号」映射（不需要人工建表）；再把歌词汉字的 x 与音符元素的 x 做最近邻，
+> 输出**逐字对位 + Δ 偏差 + 一字多音标记**，并渲染成标注图供人工终审。
+>
+> **#1 实测**：12 个码位票数 12/12 完全一致、4 个乐句组全命中、逐字对位 45/45 在容差内（多数 Δ≤1pt）、
+> 字数校验 4/4 通过；叠加坐标后红点落在官方简谱音符上。
+>
+> **已知边界（POC，未落库）**：474 份中 473 份含 MMP2005 与文本层（唯一例外 #349 疑似图片版）；
+> 抽样 40 首中「有对位」的诗逐字对位 308/308 可靠、字数校验 32/32 通过，但只有 9/40 首完成结构对齐——
+> 多数是 **PPT 用合成字形（1 字符/拍）而 PDF 把减时线/附点拆成独立字符**造成的粒度差异，
+> 另有 #334 这类 PPT 记谱本身「音符不足」的个案。全量落地前需先做**拍位聚合/粒度归一**。
 
 ### 测试
 
