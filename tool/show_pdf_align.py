@@ -51,11 +51,14 @@ def render_page(pdf_path, page_no=0):
         doc.close()
 
 
-def annotate(img, row, font, cells=None, block=None):
-    """标注一行谱：元素 = 红点 + 序号；若有歌词则字 = 蓝圈 + 序号 + 对位连线"""
+def annotate(img, row, font, cells=None, block=None, numbered=True):
+    """标注一行谱：对位行用红点 + 序号；其它声部用灰点（便于判读但不混淆编号）"""
     d = ImageDraw.Draw(img)
     for i, e in enumerate(row.elements):
         cx, cy = e.cx * K, e.cy * K
+        if not numbered:
+            d.ellipse([cx - 2, cy - 2, cx + 2, cy + 2], fill=(170, 170, 170))
+            continue
         d.ellipse([cx - 3, cy - 3, cx + 3, cy + 3], fill=(230, 30, 30))
         d.text((cx - 4, cy - 24), str(i + 1), font=font, fill=(200, 0, 0))
     if not block:
@@ -178,7 +181,7 @@ def main(argv=None):
                 annotate(img, pair["row"], font, pair["cells"], pair["block"])
             for row in res["rows"]:
                 if id(row) not in paired:
-                    annotate(img, row, font)
+                    annotate(img, row, font, numbered=False)
             full = os.path.join(OUT_DIR, f"{num}_align.png")
             img.save(full)
             for k, pair in enumerate(res["pairs"], 1):
