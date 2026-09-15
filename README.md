@@ -219,6 +219,7 @@ hymn_crawler/
 | **哈希清单** | `crawler_core/checksums.py` | 各目录 `checksums.json` 维护 PNG SHA-256 | ✅ 完成 |
 | **图片入库** | `crawler_core/db.py` (`update_png_paths`) | PNG 路径以新增字段 `*_png_path` 入库，不覆盖原 PDF 路径 | ✅ 完成 |
 | **带简谱歌词** | `crawler_core/ppt_jianpu.py` + `tool/extract_jianpu.py` | 474 份 PPT → 每节每行「简谱记号 + 歌词」；5 项校验（行配对/节号自洽/跨节曲调一致/歌词归属/音符-字数等长），写 `hymn_jianpu` + `hymn_jianpu_line` | ✅ 完成（404 首全项通过 / 70 首带复核标记） |
+| **官方简谱曲谱** | `crawler_core/pdf_score.py` + `tool/build_score.py` | 官方简谱 PDF（网站标准源）→ 逐乐句「曲谱串 + 歌词 + 拍位 + 逐字对应」；写 `hymn_score` / `hymn_score_line` / `hymn_score_lyric` / `hymn_score_char` / `hymn_codepoint_map` | ✅ 完成（473 首入库 / 7914 谱行 / 逐字对位可靠 99.0%；#349 无文本层待 OCR） |
 
 ---
 
@@ -285,6 +286,46 @@ hymn_crawler/
 
 ---
 
+## 🎼 官方简谱曲谱（`hymn_score*`，v9）
+
+`Hymn_Downloads/<序号>_<编号><标题>/<编号>_简谱.pdf`（网站 sacredmusic.tjc.org.tw 的**标准源**）是
+**矢量文本 PDF**：音符 = 嵌入字体 `MMP2005` 的文本（28pt）、歌词 = 中文文本（14pt），每个字符都带精确坐标。
+本层以它为准抽取「曲谱 + 歌词 + 拍位 + 逐字对应」；PPT 侧（v8）降为**旁证**（提供码位学习的样本）。
+
+> ⚠️ 目录名形如 `339_334耶穌沙崙玫瑰`：**首位是网站列表序号、第二位才是诗歌编号**
+> （第 52 首起两者不再相等，如 `052_51_b萬古靈磐乙`、`474_469靈恩大會`）。
+> 取文件必须按**文件名** `{编号}_简谱.pdf` —— 早期实现按目录前缀匹配，会把 #334「耶穌沙崙玫瑰」
+> 解析成 #329「天父我神」（40 首抽样错配 16 首、命中 0 处）。已修，见 `pdf_jianpu.pdf_path()`。
+
+版式（实测 #334 目视 + 坐标双证）：一首 = 若干「乐句」= 2~4 个**谱层**（各声部，y 相差 ≈24pt）
++ 下方一个「歌词块」（一谱多词，块内各行字数相同）；谱层元素 x 呈**拍位栅格**（≈21pt）。
+
+| 表 | 粒度 | 关键列 |
+| :--- | :--- | :--- |
+| `hymn_score` | 每首一行 | `pdf_path`/`page_count`/`phrase_count`/`line_count`/`lyric_count`/`beat_total`/`syllable_total`/`align_ok`/`review_reason`/`extractor` |
+| `hymn_score_line` | 每行谱一条 | `notes`（曲谱串，含延长线 `-`）、`notes_core`（去延长线 → 与字一一对应）、`code_seq`（无损码位）、`beat_count`、`note_count`/`hold_count`/`rest_count`、`syllable_count`、`count_delta`、`is_primary`（主旋律）|
+| `hymn_score_lyric` | 每节歌词一条 | `text`、`syllable_count`、`align_ok`（是否与曲谱等长）|
+| `hymn_score_char` | 每个字一条 | `syllable`、`note`、`beat`（拍位）、`delta`（几何偏差 pt）、`span`（2 = 一字多音）|
+| `hymn_codepoint_map` | 每码位一条 | `MMP2005` 码位 → 记号、`votes`/`total`（置信度）、`source`（learned/manual/geometry）|
+
+> ✅ **「节拍和歌词等长、对应得上」如何落地**：
+> 主旋律层「去延长线后的元素数」`note_count` 与每节歌词字数 `syllable_count` 比对，
+> `count_delta = note_count − syllable_count`：
+> **0 = 一字一音、等长**；`>0` = 一字多音（正常，`hymn_score_char.span=2` 标出）；`<0` = 音符数不足（必须复核）。
+> 逐字对应另有几何 Δ（pt），`Δ ≤ 8pt` 记为可靠、居中于两元素者判为一字多音。
+> 一条 SQL 查全部异常：`SELECT * FROM hymn_score_line WHERE is_primary=1 AND count_delta<>0;`
+
+> 🔍 **码位 → 记号**有两条来源：① 跨源学习（`tool/build_score.py --learn`：PDF 谱层 × PPT 记号行**整行同构**投票）；
+> ② 人工种子 `pdf_score.MANUAL_SEED`（按 #334 首行的「码位序列 ↔ 渲染谱面」逐位对齐，见该常量注释）。
+> 库里学到的映射优先级更高，种子只作兜底。未覆盖的码位在 `notes` 显示 `?`
+> ——**只影响记号可读性，不影响拍位/字数/逐字对位**（因此不计入 `align_ok`）。
+> ⚠️ 注意 PPT 一行 4 小节、官方谱一行 6 小节，**整行同构**匹配天然受限（这是覆盖率的瓶颈，
+> 后续靠拍位级投票提升，见会话日志 2026-09-15_21-09-00.md 任务 2）。
+> 另有极少数 PDF 无文本层（如 #349：网站单独上传的 `score/<hash>.pdf`，用 Type3 字形绘制），
+> 会记 `review_reason='未识别到谱层…'` 并跳过 —— 需 OCR 补（`tool/qwen_ocr.py`）。
+
+---
+
 ## 🛠 开发工具
 
 - **tool/qwen_ocr.py**：调用千问 Qwen-VL 视觉模型识别图片文字（OCR），API Key 从本地文件读取
@@ -296,6 +337,11 @@ hymn_crawler/
   - `python tool/extract_jianpu.py`：解析 + 写 `hymn_jianpu` / `hymn_jianpu_line`（幂等，可反复跑）
   - `python tool/show_jianpu.py 1 --map`：渲染 #1 的简谱+歌词（简谱字体出图、逐字对位索引），
     与 `Hymn_Downloads/001_1頌讚獨一真神/1_简谱.png` 官方简谱并排核对；`--review` 列被标记的行
+- **官方简谱曲谱**（`Hymn_Downloads/` 就位时）：
+  - `python tool/build_score.py --limit 20 --dry-run`：抽 20 首试跑（只统计，不写库）
+  - `python tool/build_score.py --learn`：先学「码位 → 记号」映射（写 `hymn_codepoint_map`），再全量抽取入库
+  - `python tool/build_score.py --stats`：覆盖统计（等长行 / 逐字可靠率）；`--show 334` 打印某首曲谱/歌词/逐字对应
+  - `python tool/build_score.py --only 334 349`：只处理指定编号（幂等，可反复跑）
 - **单文件转图**：`python -m crawler_core.images --force --pdf <PDF 相对路径>`（重画指定诗歌的简谱 / 五线谱 PNG，不触发全量扫描）
 - **测试**：`/home/zjx/python_env/bin/python -m pytest -c config/pytest.ini test/ -q`（纯单元，无需网络；`test_smoke.py` 冒烟 + `test_maintenance.py` 维护工具回归）
 - **pre-commit 钩子**：提交前自动重建 `checksums.json`

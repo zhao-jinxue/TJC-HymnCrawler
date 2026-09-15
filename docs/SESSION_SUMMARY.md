@@ -1,6 +1,6 @@
 # hymn_crawler 开发总结（SESSION_SUMMARY）
 
-> 用途：新会话续接开发的最小上下文入口。更新于 2026-09-13（API 重构 P0/P1/P2 完成 + 根目录重排）。
+> 用途：新会话续接开发的最小上下文入口。更新于 2026-09-15（官方简谱曲谱入库 v9 + PDF 编号映射修复）。
 
 ## 项目状态
 - TJC 赞美诗（hymn）数据爬虫 + 数据处理流水线，已完成：探测 → 下载 → 提取 → 转图 → 校验 → 入库全流程
@@ -11,7 +11,9 @@
 - 核心模块：`crawler_core/`（`api_client` / `naming` / `scanner` / `extractor` / `probe` / `sync` / `downloader` /
   `verify` / `db` + `selenium_legacy/`）、`tool/`（数据处理 + `data_audit/` 审计 + `show_lyrics.py` 歌词复核）、`test/`（81 项 pytest）
 - 数据文件：`tjc_hymn.db`（SQLite **v7** 主表 474 首，含副歌 `chorus` 与 API 原始记录 `api_raw`；
-  另含 **v8 两表** `hymn_jianpu` / `hymn_jianpu_line`——PPT 带简谱文字歌词 474 份 / 12136 行）、
+  另含 **v8 两表** `hymn_jianpu` / `hymn_jianpu_line`——PPT 带简谱文字歌词 474 份 / 12136 行；
+  以及 **v9 五表** `hymn_score` / `hymn_score_line` / `hymn_score_lyric` / `hymn_score_char` /
+  `hymn_codepoint_map`——官方简谱 PDF 的「曲谱 + 歌词 + 拍位 + 逐字对应」473 首 / 7914 谱行 / 5481 歌词行 / 27567 字）、
   `data/probe_report.json`、`data/final_report.txt`、`data/jianpu_report.txt`、`Hymn_Downloads/api_cache/`（48 页 API 缓存，已入 git）
 - 数据口径：三方对账 **474/474/474**；资源 **2067/2067 完整（100%）**；音频可用 **1119** 条 / 474 首；
   源站不可用 **10** 条（9 条空记录 + #62 404，已摘出期望集合）；`download_status` 全量 `completed`
@@ -45,6 +47,17 @@
    容纳甲/乙版本）+ `hymn_jianpu_line`（每行 `notes`/`lyric` + 音符数/字数/等长标志）。
    实测：474 份全部解析（0 失败）、映射 473 首（1 首 DB 无对应）、**404 首全项通过 / 70 首带复核标记**、
    12136 行中 7309 行严格等长 + 4807 行一字多音 + 20 行音符数不足；跨节曲调比对**检出 41 首作者记谱手误**
+10. **官方简谱曲谱入库（2026-09-15）**：以**网站标准源**（`Hymn_Downloads/*/N_简谱.pdf`，矢量文本）为准——
+    新增 `crawler_core/pdf_score.py`（PDF → 乐句 / 谱层 / 主旋律层 / 歌词块 / 拍位栅格 / 逐字对位 / 等长校验）、
+    `tool/build_score.py`（`--learn` / `--only` / `--limit` / `--dry-run` / `--stats` / `--show`）与
+    DB **v9 五表**（`hymn_score` / `hymn_score_line` / `hymn_score_lyric` / `hymn_score_char` /
+    `hymn_codepoint_map`，不改动 `tjc_hymn` 与 v8 两表）。实测：**473 首入库**（一轮 ≈18 秒、幂等）、
+    7914 谱行、5481 歌词行、27567 逐字，逐字几何对位可靠 **99.0%**；`count_delta = 音符数 − 字数`
+    让「节拍与歌词等长」可一条 SQL 校验（964 行严格等长 / 1035 行一字多音 / 21 行音符数不足）。
+    **同时修掉一个系统性错配 bug**：目录名首位是**网站列表序号**而非诗歌编号（`339_334耶穌沙崙玫瑰`），
+    旧 `pdf_path()` 按编号匹配目录前缀，会把 #334 解析成 #329「天父我神」（40 首抽样错配 16 首、命中 0 处），
+    改为按文件名匹配后同批样本命中 **58 处**。另确认 **#349 是站点上传的异版 PDF**（Type3 字形、无文本层、
+    尺寸 420×595），**非文件损坏、无需重下**，需 OCR 或从 v8 侧补齐（本轮以 `review_reason` 显式记录）
 
 ## 遗留任务（可选，未排期；详见 `docs/API_REFACTOR_PLAN.md` §7「P3 — 展望」）
 - ✅ 已执行（不再是待决策项）：删除 `#349` 的 `Hymn_Downloads/_archive/`（5 个旧资源 + README + md5），并由新 PDF 重出简谱/五线谱 PNG
@@ -53,6 +66,10 @@
   导出脚本（`tool/merge_to_json.py` / `json_to_db.py`）尚未纳入 `chorus` / `api_raw` 字段
 - 🧑‍⚖️ **待确认**：歌词「缺副歌」反馈 —— 已证库内与实时官网 1:1 一致（270 有 / 204 无），
   若要为 204 首补副歌需另开「PDF/OCR 提取」路线（现 OCR 工具在 `tool/`）
+- 🎼 **官方简谱曲谱（v9）后续**：① #349 走 OCR（`tool/qwen_ocr.py`）或从 v8 侧补齐；
+  ② 码位映射扩充（库学 27 个 + 人工种子 14 个，仍约四成行记号含 `?`；瓶颈是「PPT 一行 4 小节 vs
+  官方谱一行 6 小节」的整行同构匹配 → 下一步做**拍位级投票**，见 `docs/sessions/2026-09-15_21-09-00.md` 任务 2）；
+  ③ 无词乐句（约四成）与 v8 / 五线谱交叉校验，确认是间奏还是「第二段旋律」
 - 可能的 UI / 前端展示层（尚未开始）
 
 ## 环境与命令

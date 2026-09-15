@@ -254,6 +254,61 @@ def test_pdf_path_lookup(tmp_path):
     assert P.pdf_path(1, root=str(tmp_path / "nope")) is None
 
 
+def test_pdf_path_ignores_website_index_prefix(tmp_path):
+    """目录首位是**网站列表序号**、不是诗歌编号（334 号诗的目录叫 `339_334耶穌沙崙玫瑰`）
+
+    回归（2026-09-15）：旧实现拿编号做 `startswith("334_")` 会命中 `334_329天父我神`
+    → 把整首「耶穌沙崙玫瑰」解析成「天父我神」（40 首抽样里 16 首错配、命中 0 处）。
+    """
+    d1 = tmp_path / "334_329天父我神"
+    d1.mkdir()
+    (d1 / "329_简谱.pdf").write_bytes(b"%PDF-1.4\n")
+    d2 = tmp_path / "339_334耶穌沙崙玫瑰"
+    d2.mkdir()
+    (d2 / "334_简谱.pdf").write_bytes(b"%PDF-1.4\n")
+    assert P.pdf_path(334, root=str(tmp_path)).endswith("334_简谱.pdf")
+    assert P.pdf_path(329, root=str(tmp_path)).endswith("329_简谱.pdf")
+    assert P.pdf_path(999, root=str(tmp_path)) is None
+
+
+def test_pdf_path_accepts_letter_suffix(tmp_path):
+    """带字母的编号（`51_b`）文件名同名，不做数字补零（目录名里也是 `51_b`）"""
+    d = tmp_path / "052_51_b萬古靈磐乙"
+    d.mkdir()
+    (d / "51_b_简谱.pdf").write_bytes(b"%PDF-1.4\n")
+    assert P.pdf_path("51_b", root=str(tmp_path)).endswith("51_b_简谱.pdf")
+
+
+def test_full_width_line_is_dot():
+    """全宽横线（连音线/减时线，实测 0.93×0.111 / 1.44×0.134）不占时值
+
+    只按高度判（DOT_MAX_H=0.10）会漏掉它们（0.111 > 0.10）→ 混进拍位形成「幽灵拍」。
+    """
+    line = mk(0x5E61, 100.0, iw=0.930, ih=0.111)
+    wide = mk(0x5E63, 140.0, iw=1.443, ih=0.134)
+    note = mk(CP1, 120.0, iw=0.229, ih=0.374)
+    hold = mk(CP_EXT, 160.0, iw=0.206, ih=0.046)      # 延长线：占时值，必须保留
+    assert line.is_dot and wide.is_dot
+    assert not note.is_dot
+    assert not hold.is_dot, "延长线占时值，不能被当小标记剔除"
+    r = P.SheetRow(y=100.0, page=0, chars=[line, note, wide, hold])
+    assert [c.cp for c in r.elements] == [CP1, CP_EXT]
+
+
+def test_melody_rows_drops_line_layers():
+    """线类层不是谱行：小节线（ih≈1.13）/贴边双纵线（ih≈1.16）会自成 y 层且元素数够多
+
+    它们混进候选后与 DB 行同构匹配必然失败，还会把线类码位当音符投票、污染跨首学习。
+    判据是「层内超高元素占多数」——真实谱层偶尔夹带个别贴边记号仍要保留。
+    """
+    notes = row([CP1, CP2, CP3, CP4, CP5, CP6], y=100.0)
+    bars = [mk(0x602D, 100.0 + 21.0 * i, y=140.0, iw=0.034, ih=1.163) for i in range(6)]
+    mixed = row([CP1, CP2, CP3, CP4, CP5, CP6], y=180.0)
+    mixed.chars.append(mk(0x602D, 250.0, y=180.0, iw=0.229, ih=1.120))
+    ys = [r.y for r in P.melody_rows(notes.chars + bars + mixed.chars)]
+    assert ys == [100.0, 180.0]
+
+
 def test_font_name_strips_subset_prefix():
     """子集前缀是 6 字母 + `+`，各文件随机（实测 ABCDEE+ / BCDLEE+ / BCDMEE+ 都出现过）"""
     assert P._font_name("ABCDEE+MMP2005") == "MMP2005"

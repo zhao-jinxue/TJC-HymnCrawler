@@ -58,6 +58,12 @@ LYRIC_WINDOW = 80.0
 MARK_MAX_H = 0.03
 DOT_MAX_H = 0.10
 DOT_MAX_W = 0.15
+# 全宽横线（减时线/连音线）的墨迹宽度下限（em）：实测 `5e61`=0.93 / `5e63`=1.44，
+# 远超音符宽度（0.14~0.27）——它们不占时值，只按高度判（DOT_MAX_H）会漏掉
+WIDE_LINE_MIN_W = 0.5
+# 谱层元素的墨迹高度上限（em）：超过它的层是「线类层」（小节线 1.13 / 双纵线 1.15~1.16），
+# 真实谱层元素 ≤0.50（音符 0.34~0.50，延长线 0.046）→ 用于 melody_rows 剔除线类层
+ROW_MAX_IH = 1.0
 # PPT 记号里不参与对齐的字符：小节线/终止线/双纵线（PDF 侧不是文本）+ 括号
 PPT_SKIP_CHARS = set("\\|?[]()")
 # PPT 零宽叠加修饰（附点/八度点/升号/连音线/减时线碎片）——不下推光标，对齐时剔除
@@ -96,10 +102,17 @@ class PdfChar:
 
     @property
     def is_dot(self) -> bool:
-        """是否「不占时值的小标记」：极矮的横线（减时线）或又矮又窄的点（附点等）"""
+        """是否「不占时值的小标记」：极矮的横线（减时线/连音线）或又矮又窄的点（附点等）
+
+        全宽横线单独判：实测 `5e61`（0.93×0.111）/`5e63`（1.44×0.134）是**跨音连音线/减时线**，
+        高度 0.111 > DOT_MAX_H(0.10) 会漏网 → 被当成时值元素混进拍位（一个"幽灵拍"）。
+        宽度判据（> WIDE_LINE_MIN_W）比调高度阈值更稳：音符宽度上限仅 0.27。
+        """
         if self.ih <= 0.0:
             return False
         if self.ih < MARK_MAX_H:
+            return True
+        if self.iw > WIDE_LINE_MIN_W:
             return True
         return self.ih < DOT_MAX_H and self.iw < DOT_MAX_W
 
@@ -174,24 +187,56 @@ def _font_name(raw):
         return name
 
 
-def pdf_path(hymn_number, root=None):
-    """新版编号 → 官方简谱 PDF 路径（目录名形如 `001_1頌讚獨一真神`）
+# 简谱 PDF 文件名后缀（`{诗歌编号}_简谱.pdf`；目录名里的数字与它并不同源）
+PDF_SUFFIX = "_简谱.pdf"
+# 根目录扫描结果缓存：{根目录: {文件名词干: 绝对路径}}
+_PDF_INDEX: dict[str, dict[str, str]] = {}
 
-    返回 None 表示该编号没有对应目录/文件（如反查不到新版编号的旧版诗）。
-    """
+
+def _pdf_index(root=None):
+    """扫描一次根目录，建立 {`{编号}`: PDF 路径} 索引（474 个目录，重复调用走缓存）"""
     root = root or PDF_ROOT
-    if not os.path.isdir(root):
-        return None
-    prefix = f"{int(hymn_number):03d}_"
-    for name in sorted(os.listdir(root)):
-        if not name.startswith(prefix):
-            continue
-        d = os.path.join(root, name)
-        if not os.path.isdir(d):
-            continue
-        for fn in sorted(os.listdir(d)):
-            if fn.endswith("_简谱.pdf"):
-                return os.path.join(d, fn)
+    if root in _PDF_INDEX:
+        return _PDF_INDEX[root]
+    idx: dict[str, str] = {}
+    if os.path.isdir(root):
+        for name in sorted(os.listdir(root)):
+            d = os.path.join(root, name)
+            if not os.path.isdir(d):
+                continue
+            for fn in sorted(os.listdir(d)):
+                if fn.endswith(PDF_SUFFIX):
+                    idx.setdefault(fn[: -len(PDF_SUFFIX)], os.path.join(d, fn))
+    _PDF_INDEX[root] = idx
+    return idx
+
+
+def _name_stems(hymn_number):
+    """编号 → 候选文件名主干（原样 / 去前导零 / 三位补零；`51_b` 这类带字母的原样）"""
+    s = str(hymn_number).strip()
+    if not s:
+        return []
+    out = [s, f"{int(s):03d}"] if s.isdigit() else [s]
+    return list(dict.fromkeys(out))
+
+
+def pdf_path(hymn_number, root=None):
+    """诗歌编号 → 官方简谱 PDF 路径（**按目录内文件名匹配**，不是按目录名前缀）
+
+    为什么不能按目录前缀匹配（2026-09-15 修复）：
+      目录名形如 `339_334耶穌沙崙玫瑰`——**首位是网站列表序号，第二位才是诗歌编号**。
+      序号与编号从第 52 首起就不再相等（`052_51_b萬古靈磐乙`、`334_329天父我神`、
+      `474_469靈恩大會`），旧实现拿编号去 `startswith("334_")` 会命中 `334_329天父我神`
+      （→ 返回**天父我神**的 PDF），即把整首诗解析成另一首。
+    文件名 `{诗歌编号}_简谱.pdf` 才是同源标识，故改用它匹配。
+
+    返回 None 表示该编号没有对应文件（如资源未下载）。
+    """
+    idx = _pdf_index(root)
+    for stem in _name_stems(hymn_number):
+        p = idx.get(stem)
+        if p:
+            return p
     return None
 
 
@@ -269,9 +314,23 @@ def sheet_rows(chars, size_min=NOTE_SIZE_MIN, size_max=NOTE_SIZE_MAX):
     return rows
 
 
-def melody_rows(chars, min_elems=4):
-    """旋律行候选：元素（音符/延长线）数 ≥ min_elems 的谱行，按页内 y 升序"""
-    return [r for r in sheet_rows(chars) if len(r.elements) >= min_elems]
+def melody_rows(chars, min_elems=4, max_ih=ROW_MAX_IH):
+    """旋律行候选：元素（音符/延长线）数 ≥ min_elems 且**不是线类层**的谱行，按页内 y 升序
+
+    为什么要剔线类层：小节线（`602d`，ih≈1.13）与行首/行尾双纵线（ih≈1.15）会各自聚成一个
+    y 层，元素数也能凑够 min_elems（如一行 4 根小节线）→ 混进候选后与 DB 行做同构匹配必然失败，
+    还会把线类码位当音符投票、污染跨首码位学习（实测 #5 的 32 条候选里 8 条是线类层）。
+    判据取「层内超高元素占多数」而非「整层都超高」：真实谱层偶尔夹带贴边记号。
+    """
+    out: list[SheetRow] = []
+    for r in sheet_rows(chars):
+        elems = r.elements
+        if len(elems) < min_elems:
+            continue
+        if max_ih is not None and sum(1 for c in elems if c.ih > max_ih) * 2 > len(elems):
+            continue
+        out.append(r)
+    return out
 
 
 def lyric_rows(chars, size_min=LYRIC_SIZE_MIN, size_max=LYRIC_SIZE_MAX, cjk_only=True):

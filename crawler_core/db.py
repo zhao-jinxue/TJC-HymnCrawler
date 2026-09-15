@@ -1083,3 +1083,274 @@ def jianpu_stats(db_path=DB_PATH):
         return None
     finally:
         conn.close()
+
+
+# ================= 官方简谱曲谱表（v9） =================
+#
+# 来源：**官方简谱 PDF**（`Hymn_Downloads/<序号>_<编号><标题>/<编号>_简谱.pdf`，网站标准源），
+#       解析见 `crawler_core/pdf_score.py`；PPT 侧（v8 的 hymn_jianpu*）只作旁证。
+#
+# 设计取舍（为什么不是扩充 hymn_jianpu* 两表）：
+#   - 两者来源与粒度都不同：v8 = PPT 的「节 × 行」笔记谱（作者手工排版、字符级记号），
+#     v9 = 官方谱的「乐句 × 声部」曲谱（矢量坐标、拍位栅格、一谱多词）。混在一张表里会让
+#     `count_delta`/`align_ok` 的语义变模糊（到底校验谁？）。
+#   - v9 的目标是用户定的三条硬需求：**①简谱曲谱 ②文本歌词 ③节拍与歌词等长、可逐字对应**。
+#     拆四张表后每条都能用 SQL 直接查：
+#       曲谱   → hymn_score_line.notes / notes_core（+ code_seq 无损码位）
+#       歌词   → hymn_score_lyric.text（一谱多词 → 每节一行）
+#       等长   → hymn_score_line.note_count vs syllable_count（count_delta = 0 即等长）
+#       对应   → hymn_score_char（字 ↔ 记号/拍位/Δ）
+#   - `hymn_codepoint_map` 单独一表：MMP2005 是**固定字体**，码位→记号是全局常量，
+#     学一次可解码全部 474 首；映射与数据分离，重新解码无需重解析 PDF。
+SCORE_HYMN_DDL = """CREATE TABLE IF NOT EXISTS hymn_score (
+    hymn_number     TEXT PRIMARY KEY,
+    pdf_path        TEXT DEFAULT '',
+    pdf_md5         TEXT DEFAULT '',
+    page_count      INTEGER DEFAULT 0,
+    phrase_count    INTEGER DEFAULT 0,
+    line_count      INTEGER DEFAULT 0,
+    lyric_count     INTEGER DEFAULT 0,
+    beat_total      INTEGER DEFAULT 0,
+    syllable_total  INTEGER DEFAULT 0,
+    align_ok        INTEGER DEFAULT 0,
+    review_reason   TEXT DEFAULT '',
+    extractor       TEXT DEFAULT '',
+    updated_at      TIMESTAMP DEFAULT (datetime('now', 'localtime'))
+)"""
+
+SCORE_LINE_DDL = """CREATE TABLE IF NOT EXISTS hymn_score_line (
+    hymn_number     TEXT NOT NULL,
+    line_no         INTEGER NOT NULL,
+    page            INTEGER DEFAULT 0,
+    phrase_no       INTEGER DEFAULT 0,
+    part            TEXT DEFAULT '',
+    is_primary      INTEGER DEFAULT 0,
+    y               REAL DEFAULT 0,
+    x0              REAL DEFAULT 0,
+    beat_count      INTEGER DEFAULT 0,
+    notes           TEXT DEFAULT '',
+    notes_core      TEXT DEFAULT '',
+    code_seq        TEXT DEFAULT '',
+    note_count      INTEGER DEFAULT 0,
+    hold_count      INTEGER DEFAULT 0,
+    rest_count      INTEGER DEFAULT 0,
+    syllable_count  INTEGER DEFAULT 0,
+    count_delta     INTEGER DEFAULT 0,
+    align_ok        INTEGER DEFAULT 0,
+    PRIMARY KEY (hymn_number, line_no)
+)"""
+
+SCORE_LYRIC_DDL = """CREATE TABLE IF NOT EXISTS hymn_score_lyric (
+    hymn_number     TEXT NOT NULL,
+    line_no         INTEGER NOT NULL,
+    stanza_no       INTEGER NOT NULL,
+    text            TEXT NOT NULL,
+    syllable_count  INTEGER DEFAULT 0,
+    align_ok        INTEGER DEFAULT 0,
+    PRIMARY KEY (hymn_number, line_no, stanza_no)
+)"""
+
+SCORE_CHAR_DDL = """CREATE TABLE IF NOT EXISTS hymn_score_char (
+    hymn_number     TEXT NOT NULL,
+    line_no         INTEGER NOT NULL,
+    char_no         INTEGER NOT NULL,
+    syllable        TEXT NOT NULL,
+    note_index      INTEGER DEFAULT -1,
+    note            TEXT DEFAULT '',
+    beat            INTEGER DEFAULT 0,
+    delta           REAL DEFAULT 0,
+    span            INTEGER DEFAULT 1,
+    align_ok        INTEGER DEFAULT 0,
+    PRIMARY KEY (hymn_number, line_no, char_no)
+)"""
+
+CODE_MAP_DDL = """CREATE TABLE IF NOT EXISTS hymn_codepoint_map (
+    codepoint       TEXT PRIMARY KEY,
+    sym             TEXT NOT NULL,
+    font            TEXT DEFAULT 'MMP2005',
+    votes           INTEGER DEFAULT 0,
+    total           INTEGER DEFAULT 0,
+    source          TEXT DEFAULT '',
+    updated_at      TIMESTAMP DEFAULT (datetime('now', 'localtime'))
+)"""
+
+
+def ensure_score_tables(c):
+    """v9: 幂等创建「官方简谱曲谱」四表 + 码位映射表 + 索引（不改动 tjc_hymn / hymn_jianpu*）"""
+    for ddl in (SCORE_HYMN_DDL, SCORE_LINE_DDL, SCORE_LYRIC_DDL, SCORE_CHAR_DDL, CODE_MAP_DDL):
+        c.execute(ddl)
+    # 复核用索引：等长异常、未解码、逐字对位超差都能直接查
+    c.execute("CREATE INDEX IF NOT EXISTS idx_score_line_review "
+              "ON hymn_score_line(is_primary, count_delta, align_ok)")
+    c.execute("CREATE INDEX IF NOT EXISTS idx_score_line_phrase "
+              "ON hymn_score_line(hymn_number, phrase_no)")
+    c.execute("CREATE INDEX IF NOT EXISTS idx_score_lyric_hymn "
+              "ON hymn_score_lyric(hymn_number, line_no)")
+    c.execute("CREATE INDEX IF NOT EXISTS idx_score_char_review "
+              "ON hymn_score_char(align_ok, span)")
+    c.connection.commit()
+
+
+# 列清单（写库/读取共用；顺序即建表顺序，与 DDL 保持一致）
+SCORE_HYMN_COLS = ("hymn_number", "pdf_path", "pdf_md5", "page_count", "phrase_count",
+                   "line_count", "lyric_count", "beat_total", "syllable_total",
+                   "align_ok", "review_reason", "extractor")
+SCORE_LINE_COLS = ("hymn_number", "line_no", "page", "phrase_no", "part", "is_primary",
+                   "y", "x0", "beat_count", "notes", "notes_core", "code_seq",
+                   "note_count", "hold_count", "rest_count", "syllable_count",
+                   "count_delta", "align_ok")
+SCORE_LYRIC_COLS = ("hymn_number", "line_no", "stanza_no", "text",
+                    "syllable_count", "align_ok")
+SCORE_CHAR_COLS = ("hymn_number", "line_no", "char_no", "syllable", "note_index",
+                   "note", "beat", "delta", "span", "align_ok")
+
+
+def _score_rows(rec, cols):
+    """记录 dict → 参数列表（列名来自本模块常量白名单，值全部参数化）"""
+    return [rec.get(col) for col in cols]
+
+
+def save_score_records(records, db_path=DB_PATH):
+    """写入「官方简谱曲谱」（每首 UPSERT 主行 + 重写三张明细表；幂等，失败整体回滚）
+
+    记录来源：`pdf_score.build_score()` 的返回值（dict 或 ScoreRecord）。
+    返回 {"hymns": n, "lines": n, "lyrics": n, "chars": n, "skipped": [(编号, 原因), ...]}
+    """
+    stats = {"hymns": 0, "lines": 0, "lyrics": 0, "chars": 0, "skipped": []}
+    conn = sqlite3.connect(db_path)
+    try:
+        c = conn.cursor()
+        ensure_score_tables(c)
+        tables = (("hymn_score", SCORE_HYMN_COLS), ("hymn_score_line", SCORE_LINE_COLS),
+                  ("hymn_score_lyric", SCORE_LYRIC_COLS), ("hymn_score_char", SCORE_CHAR_COLS))
+        hcols, hph = ", ".join(SCORE_HYMN_COLS), ", ".join("?" * len(SCORE_HYMN_COLS))
+        hupd = ", ".join(f"{col} = excluded.{col}" for col in SCORE_HYMN_COLS[1:])
+        for rec in records:
+            if not isinstance(rec, dict):        # 兼容 pdf_score.ScoreRecord（dataclass）
+                rec = vars(rec)
+            num = str(rec.get("hymn_number", "") or "")
+            if not num or not rec.get("lines"):
+                stats["skipped"].append((num or "?", rec.get("review_reason") or "无曲谱行"))
+                continue
+            # 列名来自本模块常量白名单，值全部参数化
+            c.execute(f"INSERT INTO hymn_score ({hcols}) VALUES ({hph}) "      # nosec B608
+                      f"ON CONFLICT(hymn_number) DO UPDATE SET {hupd}",
+                      [rec.get(col) for col in SCORE_HYMN_COLS])
+            for tbl, cols in tables[1:]:
+                key = tbl.split("_")[-1] + "s"
+                c.execute(f"DELETE FROM {tbl} WHERE hymn_number = ?", (num,))  # nosec B608
+                c.executemany(                                                 # nosec B608
+                    f"INSERT INTO {tbl} ({', '.join(cols)}) "
+                    f"VALUES ({', '.join('?' * len(cols))})",
+                    [_score_rows({"hymn_number": num, **row}, cols)
+                     for row in rec.get(key, [])])
+                stats[key] += len(rec.get(key, []))
+            stats["hymns"] += 1
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        conn.close()
+    return stats
+
+
+def load_score(hymn_number, db_path=DB_PATH):
+    """按编号读「官方简谱曲谱」 → {"hymn": {...}, "lines": [...], "lyrics": [...], "chars": [...]}
+
+    一首一份（官方谱每首一个 PDF），故返回 dict；表不存在或该编号无记录 → None。
+    """
+    conn = sqlite3.connect(db_path)
+    try:
+        row = conn.execute(
+            f"SELECT {', '.join(SCORE_HYMN_COLS)} FROM hymn_score "      # nosec B608
+            "WHERE hymn_number = ?", (str(hymn_number),)).fetchone()
+        if not row:
+            return None
+        out = {"hymn": dict(zip(SCORE_HYMN_COLS, row))}
+        for key, tbl, cols, order in (
+                ("lines", "hymn_score_line", SCORE_LINE_COLS, "line_no"),
+                ("lyrics", "hymn_score_lyric", SCORE_LYRIC_COLS, "line_no, stanza_no"),
+                ("chars", "hymn_score_char", SCORE_CHAR_COLS, "line_no, char_no")):
+            rows = conn.execute(
+                f"SELECT {', '.join(cols)} FROM {tbl} WHERE hymn_number = ? "   # nosec B608
+                f"ORDER BY {order}", (str(hymn_number),)).fetchall()
+            out[key] = [dict(zip(cols, r)) for r in rows]
+        return out
+    except sqlite3.OperationalError:      # 未建表
+        return None
+    finally:
+        conn.close()
+
+
+def load_codepoint_map(db_path=DB_PATH):
+    """读「码位 → 记号」映射 → {码位(int): 记号}（表不存在返回 {}）"""
+    conn = sqlite3.connect(db_path)
+    try:
+        rows = conn.execute("SELECT codepoint, sym FROM hymn_codepoint_map").fetchall()
+    except sqlite3.OperationalError:
+        return {}
+    finally:
+        conn.close()
+    out = {}
+    for cp, sym in rows:
+        try:
+            out[int(cp, 16)] = sym
+        except (TypeError, ValueError):
+            continue
+    return out
+
+
+def save_codepoint_map(mapping, stats=None, source="learned", db_path=DB_PATH):
+    """写「码位 → 记号」映射（UPSERT；带票数便于判断置信度）
+
+    mapping：{码位(int): 记号}
+    stats：{码位(int): (记号, 票数, 总票数)}（`P.learn_across` 的产物，可空）
+    返回写入条数
+    """
+    conn = sqlite3.connect(db_path)
+    try:
+        c = conn.cursor()
+        ensure_score_tables(c)
+        for cp, sym in mapping.items():
+            _sym, votes, total = (stats or {}).get(cp, (sym, 0, 0))
+            c.execute(
+                "INSERT INTO hymn_codepoint_map (codepoint, sym, votes, total, source) "
+                "VALUES (?, ?, ?, ?, ?) ON CONFLICT(codepoint) DO UPDATE SET "
+                "sym = excluded.sym, votes = excluded.votes, total = excluded.total, "
+                "source = excluded.source, updated_at = datetime('now', 'localtime')",
+                (f"{cp:04x}", sym, votes, total, source))
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        conn.close()
+    return len(mapping)
+
+
+def score_stats(db_path=DB_PATH):
+    """官方简谱曲谱覆盖统计（表不存在返回 None）"""
+    conn = sqlite3.connect(db_path)
+    try:
+        hymns, ok, syll, beats = conn.execute(
+            "SELECT COUNT(*), SUM(align_ok = 1), SUM(syllable_total), SUM(beat_total) "
+            "FROM hymn_score").fetchone()
+        lines = conn.execute("SELECT COUNT(*) FROM hymn_score_line").fetchone()[0]
+        prim = conn.execute(
+            "SELECT COUNT(*) FROM hymn_score_line WHERE is_primary = 1").fetchone()[0]
+        eq = conn.execute("SELECT COUNT(*) FROM hymn_score_line "
+                          "WHERE is_primary = 1 AND count_delta = 0").fetchone()[0]
+        chars, cok = conn.execute(
+            "SELECT COUNT(*), SUM(align_ok = 1) FROM hymn_score_char").fetchone()
+        multi = conn.execute(
+            "SELECT COUNT(*) FROM hymn_score_char WHERE span = 2").fetchone()[0]
+        cmap = conn.execute("SELECT COUNT(*) FROM hymn_codepoint_map").fetchone()[0]
+        return {"hymns": hymns, "usable": ok or 0, "syllables": syll or 0,
+                "beats": beats or 0, "lines": lines, "primary_lines": prim,
+                "primary_equal": eq, "chars": chars, "chars_ok": cok or 0,
+                "chars_multi": multi, "codepoints": cmap}
+    except sqlite3.OperationalError:
+        return None
+    finally:
+        conn.close()
