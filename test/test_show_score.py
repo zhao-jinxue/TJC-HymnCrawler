@@ -10,6 +10,7 @@
   - 真实库自检（有 tjc_hymn.db 时）：notes 串 == 逐元素解码结果；每个字的 note_index 都在元素范围内
 
 运行: /home/zjx/python_env/bin/python -m pytest -c config/pytest.ini test/test_show_score.py -v
+      （`tool/` 由下方 sys.path.insert 注入 → `import show_score` 行带 pyright ignore 注释）
 """
 import os
 import sys
@@ -21,7 +22,7 @@ sys.path.insert(0, ROOT)
 sys.path.insert(0, os.path.join(ROOT, "tool"))
 os.chdir(ROOT)
 
-import show_score as T
+import show_score as T  # pyright: ignore[reportMissingImports]
 
 from crawler_core import db
 

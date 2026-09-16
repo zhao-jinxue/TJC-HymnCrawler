@@ -38,7 +38,9 @@ def _metrics():
     try:
         from fontTools.ttLib import TTFont
         f = TTFont(SMN_FONT, lazy=True)
-        upm, hmtx, cmap = f["head"].unitsPerEm, f["hmtx"], f.getBestCmap()
+        # fontTools 的类型 stub 未声明 head.unitsPerEm，且 getBestCmap() 声明为可选返回
+        upm = int(getattr(f["head"], "unitsPerEm", 1000))
+        hmtx, cmap = f["hmtx"], f.getBestCmap() or {}
         return {chr(cp): hmtx[g][0] / upm for cp, g in cmap.items()}, upm
     except ImportError:  # pragma: no cover - 无 fontTools 时的兜底
         full = set("1234567!#$@./EYQRTUW[]\\^?|eopqrtuwy\"%&")

@@ -8,6 +8,7 @@
 import json
 import os
 import sqlite3
+from typing import Any, TypedDict
 
 from .config import DB_PATH, PROBE_REPORT, SAVE_ROOT
 
@@ -1205,9 +1206,36 @@ SCORE_CHAR_COLS = ("hymn_number", "line_no", "char_no", "syllable", "note_index"
                    "note", "beat", "delta", "span", "align_ok")
 
 
+class ScoreRecord(TypedDict):
+    """`load_score()` 的返回：主行 + 三张明细表
+
+    每部分是「列名 → 值」的 dict（键见上面 SCORE_*_COLS）。
+    ⚠️ 必须显式声明：若让 pyright 从 `out = {"hymn": ...}` 字面量推断，返回类型会退化成
+    `dict[Literal["hymn"], dict[主行列, Any]]`，调用方 `rec["lines"]` 会被整体误报
+    （reportCallIssue / reportArgumentType，tool/build_score.py、tool/show_score.py 共 70 处）。
+    """
+
+    hymn: dict[str, Any]
+    lines: list[dict[str, Any]]
+    lyrics: list[dict[str, Any]]
+    chars: list[dict[str, Any]]
+
+
 def _score_rows(rec, cols):
     """记录 dict → 参数列表（列名来自本模块常量白名单，值全部参数化）"""
     return [rec.get(col) for col in cols]
+
+
+def _score_children(conn, tbl, cols, order, hymn_number) -> list[dict[str, Any]]:
+    """读一张曲谱明细表 → [dict]（表名/列名来自本模块常量白名单，值全部参数化）
+
+    返回类型显式注解，避免 `dict(zip(...))` 把键推成 `Literal[各列名]` 的窄类型
+    （那会让 `load_score` 的返回值无法收窄到 `ScoreRecord`）。
+    """
+    rows = conn.execute(
+        f"SELECT {', '.join(cols)} FROM {tbl} WHERE hymn_number = ? "     # nosec B608
+        f"ORDER BY {order}", (str(hymn_number),)).fetchall()
+    return [dict(zip(cols, r)) for r in rows]
 
 
 def save_score_records(records, db_path=DB_PATH):
@@ -1255,7 +1283,7 @@ def save_score_records(records, db_path=DB_PATH):
     return stats
 
 
-def load_score(hymn_number, db_path=DB_PATH):
+def load_score(hymn_number, db_path=DB_PATH) -> "ScoreRecord | None":
     """按编号读「官方简谱曲谱」 → {"hymn": {...}, "lines": [...], "lyrics": [...], "chars": [...]}
 
     一首一份（官方谱每首一个 PDF），故返回 dict；表不存在或该编号无记录 → None。
@@ -1267,15 +1295,15 @@ def load_score(hymn_number, db_path=DB_PATH):
             "WHERE hymn_number = ?", (str(hymn_number),)).fetchone()
         if not row:
             return None
-        out = {"hymn": dict(zip(SCORE_HYMN_COLS, row))}
-        for key, tbl, cols, order in (
-                ("lines", "hymn_score_line", SCORE_LINE_COLS, "line_no"),
-                ("lyrics", "hymn_score_lyric", SCORE_LYRIC_COLS, "line_no, stanza_no"),
-                ("chars", "hymn_score_char", SCORE_CHAR_COLS, "line_no, char_no")):
-            rows = conn.execute(
-                f"SELECT {', '.join(cols)} FROM {tbl} WHERE hymn_number = ? "   # nosec B608
-                f"ORDER BY {order}", (str(hymn_number),)).fetchall()
-            out[key] = [dict(zip(cols, r)) for r in rows]
+        out: ScoreRecord = {
+            "hymn": dict(zip(SCORE_HYMN_COLS, row)),
+            "lines": _score_children(conn, "hymn_score_line", SCORE_LINE_COLS,
+                                     "line_no", hymn_number),
+            "lyrics": _score_children(conn, "hymn_score_lyric", SCORE_LYRIC_COLS,
+                                      "line_no, stanza_no", hymn_number),
+            "chars": _score_children(conn, "hymn_score_char", SCORE_CHAR_COLS,
+                                     "line_no, char_no", hymn_number),
+        }
         return out
     except sqlite3.OperationalError:      # 未建表
         return None

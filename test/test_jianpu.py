@@ -204,7 +204,8 @@ def test_save_load_and_rewrite(tmp_path, monkeypatch):
     rec["lines"] = []                                # 重复导入且行数减少 → 行表重写、不留残行
     db.save_jianpu_records([rec], db_path=path)
     assert db.load_jianpu("1", path)[0]["lines"] == []
-    assert db.jianpu_stats(path)["hymns"] == 1
+    jstats = db.jianpu_stats(path)
+    assert jstats is not None and jstats["hymns"] == 1
 
 
 def test_dual_versions_same_number(tmp_path, monkeypatch):

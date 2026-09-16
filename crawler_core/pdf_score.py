@@ -60,8 +60,14 @@ _SYM_ALIASES: dict[str, str] = {
 }
 
 
-def normalize_sym(sym):
-    """PPT/PDF 记号 → 简谱记号（未收录者原样返回；`?` 仍表示该码位未解码）"""
+def normalize_sym(sym: str) -> str:
+    """PPT/PDF 记号 → 简谱记号（未收录者原样返回；`?` 仍表示该码位未解码）
+
+    ⚠️ 参数与返回**必须显式注解**：不注解时 pyright/Pylance 把 `sym` 推成 `Unknown`，
+    `dict.get` 会落到「无默认值」的重载、返回类型被推成 `str | None`，于是
+    `for ch in normalize_sym(sym)`（`grade_of`）与 `ScoreElement(sym=...)` 会被误报
+    reportOptionalIterable / reportArgumentType（VSCode 红线）。
+    """
     return _SYM_ALIASES.get(sym, sym)
 
 

@@ -249,7 +249,8 @@ def test_pdf_path_lookup(tmp_path):
     d = tmp_path / "001_1頌讚獨一真神"
     d.mkdir()
     (d / "1_简谱.pdf").write_bytes(b"%PDF-1.4\n")
-    assert P.pdf_path(1, root=str(tmp_path)).endswith("1_简谱.pdf")
+    got = P.pdf_path(1, root=str(tmp_path))
+    assert got is not None and got.endswith("1_简谱.pdf")
     assert P.pdf_path(999, root=str(tmp_path)) is None
     assert P.pdf_path(1, root=str(tmp_path / "nope")) is None
 
@@ -266,8 +267,10 @@ def test_pdf_path_ignores_website_index_prefix(tmp_path):
     d2 = tmp_path / "339_334耶穌沙崙玫瑰"
     d2.mkdir()
     (d2 / "334_简谱.pdf").write_bytes(b"%PDF-1.4\n")
-    assert P.pdf_path(334, root=str(tmp_path)).endswith("334_简谱.pdf")
-    assert P.pdf_path(329, root=str(tmp_path)).endswith("329_简谱.pdf")
+    got334 = P.pdf_path(334, root=str(tmp_path))
+    got329 = P.pdf_path(329, root=str(tmp_path))
+    assert got334 is not None and got334.endswith("334_简谱.pdf")
+    assert got329 is not None and got329.endswith("329_简谱.pdf")
     assert P.pdf_path(999, root=str(tmp_path)) is None
 
 
@@ -276,7 +279,8 @@ def test_pdf_path_accepts_letter_suffix(tmp_path):
     d = tmp_path / "052_51_b萬古靈磐乙"
     d.mkdir()
     (d / "51_b_简谱.pdf").write_bytes(b"%PDF-1.4\n")
-    assert P.pdf_path("51_b", root=str(tmp_path)).endswith("51_b_简谱.pdf")
+    got = P.pdf_path("51_b", root=str(tmp_path))
+    assert got is not None and got.endswith("51_b_简谱.pdf")
 
 
 def test_full_width_line_is_dot():

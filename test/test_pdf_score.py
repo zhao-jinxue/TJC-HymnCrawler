@@ -247,12 +247,14 @@ def test_save_and_load_score_roundtrip(tmp_path):
     stats = db.save_score_records([_rec()], dbp)
     assert stats == {"hymns": 1, "lines": 1, "lyrics": 1, "chars": 1, "skipped": []}
     got = db.load_score("334", dbp)
+    assert got is not None
     assert got["hymn"]["syllable_total"] == 4 and got["hymn"]["align_ok"] == 1
     assert got["lines"][0]["notes"] == "123-5" and got["lines"][0]["count_delta"] == 0
     assert got["lyrics"][0]["text"] == "甲乙丙丁"
     assert got["chars"][0]["note"] == "1" and got["chars"][0]["beat"] == 1
     db.save_score_records([_rec()], dbp)                    # 幂等：明细表先删后插
-    assert db.score_stats(dbp)["chars"] == 1
+    sstats = db.score_stats(dbp)
+    assert sstats is not None and sstats["chars"] == 1
     assert db.load_score("999", dbp) is None
 
 
@@ -285,7 +287,7 @@ skip_no_pdf = pytest.mark.skipif(not PDF334, reason="Hymn_Downloads 未就位（
 @skip_no_pdf
 def test_real_pdf_334_is_the_right_hymn():
     """#334：必须解析到「耶穌沙崙玫瑰」那份 PDF（回归：旧 pdf_path 错配到「天父我神」）"""
-    assert PDF334.endswith("334_简谱.pdf")
+    assert PDF334 is not None and PDF334.endswith("334_简谱.pdf")
     rec = S.build_score(334)
     texts = {ly["text"] for ly in rec.lyrics}
     assert texts, "应抽到歌词"

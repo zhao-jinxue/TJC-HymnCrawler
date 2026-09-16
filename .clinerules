@@ -25,9 +25,16 @@
 - 测试命令：`/home/zjx/python_env/bin/python -m pytest -c config/pytest.ini test/ -x -q`
 - 门禁命令：`ruff check --config config/ruff.toml .`｜`mypy crawler_core crawler_api.py legacy/crawler_selenium.py`｜
   `bandit -c config/bandit.yaml -r crawler_core crawler_api.py legacy/crawler_selenium.py`｜
-  VSCode/Pylance 对齐检查：`npx pyright --pythonpath /home/zjx/python_env/bin/python crawler_core`
+  VSCode/Pylance 对齐检查：`npx pyright --pythonpath /home/zjx/python_env/bin/python .`
   （**必须带 `--pythonpath`**：CLI 不会自动识别名为 `python_env` 的解释器，也不读 `.vscode/settings.json`，
-  否则 selenium/PIL/bs4 会被误报为 `reportMissingImports`——19 条假告警）
+  否则 selenium/PIL/bs4 会被误报为 `reportMissingImports`——19 条假告警。
+  **基线：全项目 0 errors**，2026-09-16 从 73 errors 清零）
+- **类型检查约定（2026-09-16 血泪）**：Pylance/pyright 的"推断过窄"会在别处炸出几十条假报错，两条硬规矩：
+  1. **公共函数的参数与返回必须显式注解**——未注解参数会被推成 `Unknown`，
+     `dict.get(k, k)` 这类会退化成 `str | None`（`normalize_sym` 曾因此让 `grade_of` 误报可迭代 None）
+  2. **返回"多形状 dict"必须用 `TypedDict` 声明**——如 `db.load_score()` 的 `{hymn, lines, lyrics, chars}`；
+     若从字面量推断会被收窄成 `dict[Literal["hymn"], dict[主行列, Any]]`，
+     于是调用方 `rec["lines"]` 全被误报（`tool/build_score.py` + `tool/show_score.py` 曾一次炸出 70 条）
 - 歌词/副歌复核：`python tool/show_lyrics.py <编号|区间>`（`--stats` 看覆盖率、`--no-chorus` 列无副歌编号）
 - 带简谱歌词复核：`python tool/extract_jianpu.py [--dry-run] [--only 1 5 349]`（PPT→两表+报告）、
   `python tool/show_jianpu.py <编号> [--map]`（简谱字体渲染出图 + 逐字对位索引）、`--review` 列被标记的行

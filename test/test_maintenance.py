@@ -9,6 +9,7 @@
   - `crawler_core.images.select_pdfs`：`--pdf` 指定清单校验（后缀 / 存在性 / 去重）
 
 运行: /home/zjx/python_env/bin/python -m pytest -c config/pytest.ini test/test_maintenance.py -v
+      （`tool/` 由下方 sys.path.insert 注入 → `import reorder_table_columns` 行带 pyright ignore 注释）
 """
 import json
 import os
@@ -22,7 +23,7 @@ sys.path.insert(0, ROOT)
 sys.path.insert(0, os.path.join(ROOT, "tool"))
 os.chdir(ROOT)
 
-import reorder_table_columns as roc
+import reorder_table_columns as roc  # pyright: ignore[reportMissingImports]
 
 from crawler_core.checksums import rebuild_all, sha256_file
 from crawler_core.images import select_pdfs
