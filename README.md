@@ -60,6 +60,7 @@ hymn_crawler/
 │   ├── show_lyrics.py          # 🔎 入库歌词复核（看某首的正歌+副歌，并与 api_raw 逐字比对）
 │   ├── extract_jianpu.py       # 🎼 PPT → 带简谱文字歌词提取入库（解析/校验/报告/写库）
 │   ├── show_jianpu.py          # 🎹 简谱歌词渲染复核（简谱字体+歌词字体出图，逐字对位索引）
+│   ├── show_score.py           # 🎼 官方简谱曲谱人读输出（v9：谱行 × 歌词行竖排对齐打印）
 │   ├── show_pdf_align.py       # 📐 官谱 PDF ↔ PPT 歌词逐字对位复核（对位表 + 标注图，POC）
 │   ├── qwen_ocr.py             # 千问 Qwen-VL 图片 OCR 识别
 │   ├── ocr_merged_slices.py    # OCR 合并切片
@@ -219,7 +220,7 @@ hymn_crawler/
 | **哈希清单** | `crawler_core/checksums.py` | 各目录 `checksums.json` 维护 PNG SHA-256 | ✅ 完成 |
 | **图片入库** | `crawler_core/db.py` (`update_png_paths`) | PNG 路径以新增字段 `*_png_path` 入库，不覆盖原 PDF 路径 | ✅ 完成 |
 | **带简谱歌词** | `crawler_core/ppt_jianpu.py` + `tool/extract_jianpu.py` | 474 份 PPT → 每节每行「简谱记号 + 歌词」；5 项校验（行配对/节号自洽/跨节曲调一致/歌词归属/音符-字数等长），写 `hymn_jianpu` + `hymn_jianpu_line` | ✅ 完成（404 首全项通过 / 70 首带复核标记） |
-| **官方简谱曲谱** | `crawler_core/pdf_score.py` + `tool/build_score.py` | 官方简谱 PDF（网站标准源）→ 逐乐句「曲谱串 + 歌词 + 拍位 + 逐字对应」；写 `hymn_score` / `hymn_score_line` / `hymn_score_lyric` / `hymn_score_char` / `hymn_codepoint_map` | ✅ 完成（473 首入库 / 7914 谱行 / 逐字对位可靠 99.0%；#349 无文本层待 OCR） |
+| **官方简谱曲谱** | `crawler_core/pdf_score.py` + `tool/build_score.py`（入库）/ `tool/show_score.py`（人读输出） | 官方简谱 PDF（网站标准源）→ 逐乐句「曲谱串 + 歌词 + 拍位 + 逐字对应」；写 `hymn_score` / `hymn_score_line` / `hymn_score_lyric` / `hymn_score_char` / `hymn_codepoint_map` | ✅ 完成（473 首入库 / 7914 谱行 / 逐字对位可靠 99.0%；#349 无文本层待 OCR） |
 
 ---
 
@@ -342,6 +343,10 @@ hymn_crawler/
   - `python tool/build_score.py --learn`：先学「码位 → 记号」映射（写 `hymn_codepoint_map`），再全量抽取入库
   - `python tool/build_score.py --stats`：覆盖统计（等长行 / 逐字可靠率）；`--show 334` 打印某首曲谱/歌词/逐字对应
   - `python tool/build_score.py --only 334 349`：只处理指定编号（幂等，可反复跑）
+  - `python tool/show_score.py 1 14`：**人读输出**——把 `hymn_score*` 里的曲谱行与对应歌词**按列对齐**打印
+    （谱在上、词在下，一眼看出「哪个字落在哪个音上」，可直接贴进文档）；支持区间 `1-14`
+  - `python tool/show_score.py 1 --chars`：追加逐字明细（字/记号/拍位/Δ）；`--all-parts` 连和声部；
+    `--list` 列出库内全部编号（含标题与校验状态）
 - **单文件转图**：`python -m crawler_core.images --force --pdf <PDF 相对路径>`（重画指定诗歌的简谱 / 五线谱 PNG，不触发全量扫描）
 - **测试**：`/home/zjx/python_env/bin/python -m pytest -c config/pytest.ini test/ -q`（纯单元，无需网络；`test_smoke.py` 冒烟 + `test_maintenance.py` 维护工具回归）
 - **pre-commit 钩子**：提交前自动重建 `checksums.json`
