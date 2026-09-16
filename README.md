@@ -356,6 +356,11 @@ hymn_crawler/
     （谱在上、词在下，一眼看出「哪个字落在哪个音上」，可直接贴进文档）；支持区间 `1-14`
   - `python tool/show_score.py 1 --chars`：追加逐字明细（字/记号/拍位/Δ）；`--all-parts` 连和声部；
     `--list` 列出库内全部编号（含标题与校验状态）
+  - `python tool/show_score.py 12 --by-stanza`：**按节分页**（唱诗/打印用）——每页 = 全部谱行 + 该节词行；
+    副歌（与官网 `chorus` 吻合、且只有第 1 节词的行）每页重复、标签 `词ⓒ`；
+    副歌在曲谱里没有词行时（如 #17），每页页尾附官网副歌文本
+  - `python tool/show_score.py 12 --by-stanza --out 12.txt --formfeed`：写文件 + 每页尾出换页符 `\f`，
+    可直接交给打印系统 / 文本编辑器分页打印
 - **单文件转图**：`python -m crawler_core.images --force --pdf <PDF 相对路径>`（重画指定诗歌的简谱 / 五线谱 PNG，不触发全量扫描）
 - **测试**：`/home/zjx/python_env/bin/python -m pytest -c config/pytest.ini test/ -q`（纯单元，无需网络；`test_smoke.py` 冒烟 + `test_maintenance.py` 维护工具回归）
 - **pre-commit 钩子**：提交前自动重建 `checksums.json`

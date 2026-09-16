@@ -25,13 +25,27 @@
 #   python tool/show_score.py 1 --all-parts  # 连和声声部一起打印（默认只打主旋律行）
 #   python tool/show_score.py --list         # 列出库内已有曲谱的编号（含标题与校验状态）
 #
+# 按节分页（唱诗/打印用）：
+#   python tool/show_score.py 12 --by-stanza              # 每页 = 全部谱行 + 该节词行
+#   python tool/show_score.py 12 --by-stanza --out 12.txt # 输出到文件（可 lp/编辑器直接打印）
+#   python tool/show_score.py 12 --by-stanza --formfeed   # 页尾追加换页符 \f（打印系统分页）
+#
 # 退出码：0 正常；1 有编号未找到（可作 CI 断言用）。
+#
+# 两个已修的渲染坑（2026-09-16）：
+#   - **尾部裁剪**：`spread` 曾 rstrip 掉行尾空列 → 谱行末尾是延长线（非空）而词行末尾常无字，
+#     两行宽度不等 → 右侧 `│` 错位（#1 乐句 2）。现在按元素数定宽输出，不裁剪。
+#   - **各节词行同文**：`hymn_score_char` 只存**第 1 节**的几何对位，旧实现把同一套 cells
+#     打印到每一节 → 词①/词②/词③ 三行完全一样。现在各节用自己的文本，
+#     按第 1 节的 `note_index` 序列作列位模板落字（一谱多词：各节字数相等）。
 
 import argparse
 import os
 import sqlite3
 import sys
 import unicodedata
+from collections.abc import Collection
+from typing import Any
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)
@@ -46,6 +60,13 @@ LBL = 9
 CIRCLED = "①②③④⑤⑥⑦⑧⑨⑩"
 # 未解码码位的占位记号（与 pdf_score.UNKNOWN_SYM 同值）
 UNKNOWN = "?"
+# 副歌行的标签（与 `词①` 同显示宽度：`ⓒ` 与 `①` 都是东亚"模糊宽度"字符）
+CHORUS_TAG = "词ⓒ"
+# 乐句内分隔线 / 首尾双线
+RULE = "─" * 78
+DOUBLE = "═" * 78
+# 换页符：`--formfeed` 时写进输出，打印系统（lp / 文本编辑器）据此分页
+PAGE_FEED = "\f"
 
 
 def display_width(text):
@@ -63,12 +84,113 @@ def spread(notes, cells, width):
     """(曲谱元素序列, {元素序号: 文本}, 列宽) → 单行对齐文本
 
     第 i 个元素占 `width` 列 + 1 列间隔；cells 里没有的列留空（如延长线下方无字）。
+
+    why **不 rstrip**（回归锚点）：谱行末尾是元素（多为延长线 `-`，非空），词行末尾常常"没有字"
+    （空列），若裁掉尾部空格，词行就比谱行短 → 右侧 `│` 错位（#1 乐句 2 曾出现）。
+    所有行按 `len(notes)` 个列定宽输出，右边界才对得齐。
     """
     parts = []
     for i in range(len(notes)):
         parts.append(pad(cells.get(i, ""), width))
         parts.append(" ")
-    return "".join(parts).rstrip()
+    return "".join(parts)
+
+
+def cell_width(elems: list[str], chars: list[dict[str, Any]], width: int | None = None) -> int:
+    """本行列宽：取「谱元素宽 / 字宽 / 下限（默认 2）」的最大值（东亚宽度按 2 列）"""
+    widths = [display_width(c) for c in elems] + [display_width(c["syllable"]) for c in chars]
+    return max([width or 2] + widths)
+
+
+def line_stats(ln: dict[str, Any]) -> tuple[str, str]:
+    """谱行 → (统计尾巴 `拍X 音符Y 延长Z 字W Δd`, 结论尾巴 `✔ 一字一音等长` / 无词说明)"""
+    d = ln["count_delta"]
+    dtxt = f"{d:+d}" if d else "0"
+    tail = (f"拍{ln['beat_count']} 音符{ln['note_count']} 延长{ln['hold_count']} "
+            f"字{ln['syllable_count']} Δ{dtxt}")
+    if not ln["syllable_count"]:
+        verdict = ("　（和声声部，本身无词）" if not ln["is_primary"]
+                   else "　（无词乐句：间奏或第二段旋律，不参与等长判定）")
+    else:
+        verdict = " " + delta_note(d)
+    return tail, verdict
+
+
+def stanza_tag(stanza_no: int) -> str:
+    """节号 → 行标签（`词①`；超过 10 节用普通数字）"""
+    return "词" + (CIRCLED[stanza_no - 1] if 1 <= stanza_no <= 10 else str(stanza_no))
+
+
+def stanza_numbers(rec: "db.ScoreRecord") -> list[int]:
+    """曲谱里出现的节号（升序）——即正歌有几节（副歌不算节）"""
+    return sorted({ly["stanza_no"] for ly in rec["lyrics"]})
+
+
+def stanza_cells(chars: list[dict[str, Any]], text: str, stanza_no: int) -> dict[int, str]:
+    """某节在某行的「列位 → 字」
+
+    - 第 1 节：直接用 `hymn_score_char`（PDF 几何对位的结果，即库内的真值）
+    - 第 k 节：**按字序**落到第 1 节的列位模板上
+
+    为什么第 k 节能用模板：`hymn_score_char` 只有第 1 节（全库 473 首均如此），
+    而一谱多词的标准唱法是各节字数相等（DB 侧各节的 `syllable_count` 一致），
+    故「第 i 个字 ↔ 第 1 节第 i 个字的 `note_index`」成立。旧实现把第 1 节的 cells
+    原样打印给每一节 → 词②词③显示的是第 1 节的词（肉眼像是"重复的假数据"）。
+    """
+    if stanza_no == 1:
+        return {c["note_index"]: c["syllable"] for c in chars if c["note_index"] >= 0}
+    slots = [c["note_index"] for c in sorted(chars, key=lambda c: c["char_no"])
+             if c["note_index"] >= 0]
+    syllables = [ch for ch in str(text or "") if not ch.isspace()]
+    return {slot: syllables[i] for i, slot in enumerate(slots) if i < len(syllables)}
+
+
+def norm_text(text: str) -> str:
+    """归一化歌词文本：只留字母 / 数字 / 汉字（去标点、空白）
+
+    用途：曲谱词行与官网 `chorus` 的**逐行比对**——同一句在两边的标点、断句不同，
+    去标点后逐字相等才算同一句。
+    """
+    return "".join(ch for ch in str(text) if ch.isalnum())
+
+
+def load_chorus(db_path=DB_PATH) -> dict[str, str]:
+    """读 `tjc_hymn` 的「编号 → 官网副歌文本」（表/字段缺失返回 {}）"""
+    conn = sqlite3.connect(db_path)
+    try:
+        return {str(r[0]): (r[1] or "") for r in conn.execute(
+            "SELECT hymn_number, chorus FROM tjc_hymn")}
+    except sqlite3.OperationalError:
+        return {}
+    finally:
+        conn.close()
+
+
+def chorus_line_nos(rec: "db.ScoreRecord", chorus: str) -> set[int]:
+    """曲谱里属于**副歌**的行号集合（判据：只有第 1 节 + 与官网副歌某行吻合）
+
+    why 双重判据：只凭"只有第 1 节"会把「第 2/3 节词缺失」的行也当成副歌
+    （反例 #17 L9/L13「愛我」并非副歌，官网副歌是「耶穌慈愛，我難計算…」），
+    故必须与 `tjc_hymn.chorus` 的某一行对得上：
+    整行相等，或（≥6 字）互相包含——短句如「愛我」「阿們」不参与宽松匹配，避免误判。
+
+    全库实测：271 首含"只有第 1 节"的行，其中 267 首的官网 chorus 非空且文本吻合。
+    """
+    if not chorus:
+        return set()
+    by_line: dict[int, set[int]] = {}
+    for ly in rec["lyrics"]:
+        by_line.setdefault(ly["line_no"], set()).add(ly["stanza_no"])
+    targets = {norm_text(ln) for ln in str(chorus).splitlines()}
+    targets.discard("")
+    out = set()
+    for ly in rec["lyrics"]:
+        if ly["stanza_no"] != 1 or len(by_line.get(ly["line_no"], ())) != 1:
+            continue
+        t = norm_text(ly["text"])
+        if t and any(t == c or (len(t) >= 6 and (t in c or c in t)) for c in targets):
+            out.add(ly["line_no"])
+    return out
 
 
 def load_mapping(db_path=DB_PATH):
@@ -130,73 +252,137 @@ def delta_note(delta):
     return f"❌ 音符数不足（少 {-delta} 个）"
 
 
-def show(num, db_path=DB_PATH, with_chars=False, all_parts=False, width=None,
-         titles=None, mapping=None):
-    """打印一首：按乐句分组，谱行 + 每节歌词竖排对齐（返回 False 表示库里没这首）"""
-    rec = db.load_score(num, db_path)
-    if not rec:
-        print(f"⚠️ #{num}：库里没有曲谱记录（先跑 python tool/build_score.py --only {num}）")
-        return False
-    mapping = mapping if mapping is not None else load_mapping(db_path)
-    h, lines = rec["hymn"], rec["lines"]
-    lyr_by_line, char_by_line = {}, {}
-    for ly in rec["lyrics"]:
-        lyr_by_line.setdefault(ly["line_no"], []).append(ly)
-    for ch in rec["chars"]:
-        char_by_line.setdefault(ch["line_no"], []).append(ch)
+def print_chorus_note(chorus_text: str, chorus_lines: Collection[int]) -> None:
+    """页尾副歌说明；曲谱里没对位到副歌行时把官网副歌文本附上（每页都能照唱）"""
+    if not chorus_text or chorus_lines:
+        return
+    print("📌 副歌（官网文本，曲谱里未对位到谱行）")
+    for part in str(chorus_text).splitlines():
+        if part.strip():
+            print(f"   {part.strip()}")
 
-    print("═" * 78)
-    print(f"🎼 #{num}  {(titles or {}).get(str(num), '')}".rstrip())
-    print(f"   PDF：{h['pdf_path']}")
-    print(f"   页 {h['page_count']} | 乐句 {h['phrase_count']} | 谱行 {h['line_count']} | "
-          f"歌词行 {h['lyric_count']} | 拍 {h['beat_total']} | 字 {h['syllable_total']} | "
-          f"校验{'通过' if h['align_ok'] else '待复核'}")
-    if h["review_reason"]:
-        print(f"   ⚠️ {h['review_reason']}")
 
+def render_body(lines: list[dict[str, Any]], mapping: dict[int, str],
+                lyr_by_line: dict[int, list[dict[str, Any]]],
+                char_by_line: dict[int, list[dict[str, Any]]], *,
+                all_parts: bool = False, width: int | None = None,
+                with_chars: bool = False, only_stanza: int | None = None,
+                chorus_lines: Collection[int] = ()) -> None:
+    """打印主体：按乐句分组，谱行 + 词行竖排对齐
+
+    - `only_stanza=None` → 每行打印**所有**节；= k → 只打第 k 节（分页模式）
+    - `chorus_lines`（副歌行号）：不论当前哪一节都用第 1 节的词、标签 `词ⓒ` —— 副歌每页重复
+    - `with_chars` 的逐字明细只对第 1 节打印：拍位 / Δ 来自 PDF 几何对位，只对第 1 节成立
+    """
     phrase = None
     for ln in lines:
         if not all_parts and not ln["is_primary"]:
             continue
         if ln["phrase_no"] != phrase:
             phrase = ln["phrase_no"]
-            print("─" * 78)
+            print(RULE)
             print(f"【乐句 {phrase}】")
         elems = decode_elements(ln, mapping)
         cells_chars = char_by_line.get(ln["line_no"], [])
-        widths = ([display_width(c) for c in elems] +
-                  [display_width(c["syllable"]) for c in cells_chars])
-        w = max([width or 2] + widths)
-        cells = {c["note_index"]: c["syllable"] for c in cells_chars if c["note_index"] >= 0}
-        stanzas = lyr_by_line.get(ln["line_no"], [])
+        w = cell_width(elems, cells_chars, width)
         head = f"{'谱' if ln['part'] == 'melody' else '和'} L{ln['line_no']}"
-        d = ln["count_delta"]
-        if not ln["syllable_count"]:
-            verdict = ("　（和声声部，本身无词）" if not ln["is_primary"]
-                       else "　（无词乐句：间奏或第二段旋律，不参与等长判定）")
-        else:
-            verdict = " " + delta_note(d)
-        dtxt = f"{d:+d}" if d else "0"
-        tail = (f"拍{ln['beat_count']} 音符{ln['note_count']} 延长{ln['hold_count']} "
-                f"字{ln['syllable_count']} Δ{dtxt}")
+        tail, verdict = line_stats(ln)
         print(f"{pad(head, LBL)}│"
               f"{spread(elems, {i: c for i, c in enumerate(elems)}, w)}│ {tail}{verdict}")
         if "".join(elems) != ln["notes"]:
             print(f"{pad('  ⚠️', LBL)}│ 记号串与入库时的 notes 不一致"
                   f"（映射来源不同？notes={ln['notes']}）")
-        for ly in stanzas:
-            tag = "词" + (CIRCLED[ly["stanza_no"] - 1] if 1 <= ly["stanza_no"] <= 10
-                          else str(ly["stanza_no"]))
-            print(f"{pad(tag, LBL)}│{spread(elems, cells, w)}│")
-        if with_chars and cells_chars:
-            print(f"{pad('逐字', LBL)}│" + " ".join(
-                f"{c['syllable']}#{c['char_no']}({c['note'] or '?'}@{c['beat']}"
-                f"Δ{c['delta']:.0f}{'*' if c['span'] == 2 else ''})" for c in cells_chars))
-        missing = [c for c in cells_chars if c["note_index"] < 0]
-        if missing:
-            print(f"{pad('  ⚠️', LBL)}│ 未对位的字："
-                  + "、".join(f"{c['syllable']}#{c['char_no']}" for c in missing))
-    print("═" * 78)
+        slots = [c["note_index"] for c in cells_chars if c["note_index"] >= 0]
+        is_chorus = ln["line_no"] in chorus_lines
+        for ly in lyr_by_line.get(ln["line_no"], []):
+            st = ly["stanza_no"]
+            if is_chorus:
+                if st != 1:
+                    continue                      # 副歌只有一份词（记在第 1 节）
+            elif only_stanza is not None and st != only_stanza:
+                continue
+            tag = CHORUS_TAG if is_chorus else stanza_tag(st)
+            print(f"{pad(tag, LBL)}│"
+                  f"{spread(elems, stanza_cells(cells_chars, ly['text'], st), w)}│")
+            if st != 1:
+                n_syl = sum(1 for ch in ly["text"] if not ch.isspace())
+                if n_syl != len(slots):
+                    print(f"{pad('  ⚠️', LBL)}│ {tag} 字数 {n_syl} ≠ 第 1 节 {len(slots)}"
+                          f"（未对位的字不显示）")
+            if st == 1 and cells_chars:
+                if with_chars:
+                    print(f"{pad('逐字', LBL)}│" + " ".join(
+                        f"{c['syllable']}#{c['char_no']}({c['note'] or '?'}@{c['beat']}"
+                        f"Δ{c['delta']:.0f}{'*' if c['span'] == 2 else ''})"
+                        for c in cells_chars))
+                missing = [c for c in cells_chars if c["note_index"] < 0]
+                if missing:
+                    print(f"{pad('  ⚠️', LBL)}│ 未对位的字："
+                          + "、".join(f"{c['syllable']}#{c['char_no']}" for c in missing))
+
+
+def show(num, db_path=DB_PATH, with_chars=False, all_parts=False, width=None,
+         titles=None, mapping=None, chorus=None, paged=False, formfeed=False):
+    """打印一首：`paged=False` 一页列全部节；`paged=True` 按节分页
+
+    `paged=True` 时每页 = 全部谱行（主旋律）+ 该节词行；副歌行每页重复（标签 `词ⓒ`），
+    若官网副歌在曲谱里没有对应词行，则每页页尾附官网副歌文本。返回 False 表示库里没这首。
+    """
+    rec = db.load_score(num, db_path)
+    if not rec:
+        print(f"⚠️ #{num}：库里没有曲谱记录（先跑 python tool/build_score.py --only {num}）")
+        return False
+    mapping = mapping if mapping is not None else load_mapping(db_path)
+    h, lines = rec["hymn"], rec["lines"]
+    lyr_by_line: dict[int, list[dict[str, Any]]] = {}
+    char_by_line: dict[int, list[dict[str, Any]]] = {}
+    for ly in rec["lyrics"]:
+        lyr_by_line.setdefault(ly["line_no"], []).append(ly)
+    for ch in rec["chars"]:
+        char_by_line.setdefault(ch["line_no"], []).append(ch)
+    title = (titles or {}).get(str(num), "")
+    chorus_text = (chorus or {}).get(str(num), "")
+    chorus_lines = chorus_line_nos(rec, chorus_text)
+    stats = (f"   页 {h['page_count']} | 乐句 {h['phrase_count']} | 谱行 {h['line_count']} | "
+             f"歌词行 {h['lyric_count']} | 拍 {h['beat_total']} | 字 {h['syllable_total']} | "
+             f"校验{'通过' if h['align_ok'] else '待复核'}")
+
+    if not paged:
+        print(DOUBLE)
+        print(f"🎼 #{num}  {title}".rstrip())
+        print(f"   PDF：{h['pdf_path']}")
+        print(stats)
+        if chorus_text and chorus_lines:
+            print(f"   🎵 副歌：曲谱行 {sorted(chorus_lines)}（标签 {CHORUS_TAG}）")
+        if h["review_reason"]:
+            print(f"   ⚠️ {h['review_reason']}")
+        render_body(lines, mapping, lyr_by_line, char_by_line, all_parts=all_parts, width=width,
+                    with_chars=with_chars, chorus_lines=chorus_lines)
+        print_chorus_note(chorus_text, chorus_lines)
+        print(DOUBLE)
+        return True
+
+    stanzas = stanza_numbers(rec) or [1]
+    total = len(stanzas)
+    for idx, st in enumerate(stanzas, 1):
+        print(DOUBLE)
+        print(f"🎼 #{num}  {title}　【第 {idx} 页 / 共 {total} 页】{stanza_tag(st)}")
+        if idx == 1:
+            print(f"   PDF：{h['pdf_path']}")
+            print(stats)
+            if h["review_reason"]:
+                print(f"   ⚠️ {h['review_reason']}")
+        if chorus_text:
+            print("   🎵 副歌：" + (f"每页重复（标签 {CHORUS_TAG}）" if chorus_lines
+                                   else "见本页页尾官网文本"))
+        render_body(lines, mapping, lyr_by_line, char_by_line, all_parts=all_parts, width=width,
+                    with_chars=with_chars, only_stanza=st, chorus_lines=chorus_lines)
+
+        print_chorus_note(chorus_text, chorus_lines)
+        print(RULE)
+        print(f"　（第 {idx} 页 / 共 {total} 页结束）")
+        if formfeed:
+            print(PAGE_FEED)
     return True
 
 
@@ -234,6 +420,12 @@ def main(argv=None):
     ap.add_argument("--all-parts", action="store_true", help="连和声声部一起打印")
     ap.add_argument("--width", type=int, default=None, help="列宽（默认按内容自适应，最小 2）")
     ap.add_argument("--list", action="store_true", help="列出库内已有曲谱的编号")
+    ap.add_argument("--by-stanza", action="store_true",
+                    help="按节分页打印（每页=全部谱行+该节词行；副歌行每页重复）")
+    ap.add_argument("--formfeed", action="store_true",
+                    help="分页模式：每页末尾写换页符 \\f（打印系统据此分页）")
+    ap.add_argument("--out", default=None, metavar="FILE",
+                    help="把输出写入文件（便于存档/打印；默认打到终端）")
     args = ap.parse_args(argv)
 
     if not os.path.exists(args.db):
@@ -247,12 +439,28 @@ def main(argv=None):
 
     titles = load_titles(args.db)
     mapping = load_mapping(args.db)
+    chorus = load_chorus(args.db)
     nums = parse_numbers(args.numbers)
-    found = sum(1 for n in nums
-                if show(n, args.db, args.chars, args.all_parts, args.width, titles, mapping))
-    missing = len(nums) - found
-    if missing:
-        print(f"⚠️ 有 {missing} 个编号库里没有曲谱记录")
+    if args.formfeed and not args.by_stanza:
+        print("⚠️ --formfeed 只在 --by-stanza 分页模式下生效（本次忽略）")
+    stream = open(args.out, "w", encoding="utf-8") if args.out else None
+    old_stdout = sys.stdout
+    if stream:
+        sys.stdout = stream
+    missing = 0
+    try:
+        found = sum(1 for n in nums
+                    if show(n, args.db, args.chars, args.all_parts, args.width, titles, mapping,
+                            chorus=chorus, paged=args.by_stanza, formfeed=args.formfeed))
+        missing = len(nums) - found
+        if missing:
+            print(f"⚠️ 有 {missing} 个编号库里没有曲谱记录")
+    finally:
+        if stream:
+            sys.stdout = old_stdout
+            stream.close()
+    if args.out:
+        print(f"✅ 已写入 {args.out}")
     return 0 if not missing else 1
 
 
