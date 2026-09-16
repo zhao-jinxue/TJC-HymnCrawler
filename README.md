@@ -307,7 +307,7 @@ hymn_crawler/
 | `hymn_score_line` | 每行谱一条 | `notes`（曲谱串，含延长线 `-`）、`notes_core`（去延长线 → 与字一一对应）、`code_seq`（无损码位）、`beat_count`、`note_count`/`hold_count`/`rest_count`、`syllable_count`、`count_delta`、`is_primary`（主旋律）|
 | `hymn_score_lyric` | 每节歌词一条 | `text`、`syllable_count`、`align_ok`（是否与曲谱等长）|
 | `hymn_score_char` | 每个字一条 | `syllable`、`note`、`beat`（拍位）、`delta`（几何偏差 pt）、`span`（2 = 一字多音）|
-| `hymn_codepoint_map` | 每码位一条 | `MMP2005` 码位 → 记号、`votes`/`total`（置信度）、`source`（learned/manual/geometry）|
+| `hymn_codepoint_map` | 每码位一条 | `MMP2005` 码位 → 记号、`votes`/`total`（置信度）、`source`（`anchored` = 拍位级锚点投票 / `learned` = 旧整行同构 / `manual` / `geometry`）|
 
 > ✅ **「节拍和歌词等长、对应得上」如何落地**：
 > 主旋律层「去延长线后的元素数」`note_count` 与每节歌词字数 `syllable_count` 比对，
@@ -316,14 +316,21 @@ hymn_crawler/
 > 逐字对应另有几何 Δ（pt），`Δ ≤ 8pt` 记为可靠、居中于两元素者判为一字多音。
 > 一条 SQL 查全部异常：`SELECT * FROM hymn_score_line WHERE is_primary=1 AND count_delta<>0;`
 
-> 🔍 **码位 → 记号**有两条来源：① 跨源学习（`tool/build_score.py --learn`：PDF 谱层 × PPT 记号行**整行同构**投票）；
-> ② 人工种子 `pdf_score.MANUAL_SEED`（按 #334 首行的「码位序列 ↔ 渲染谱面」逐位对齐，见该常量注释）。
-> 库里学到的映射优先级更高，种子只作兜底。未覆盖的码位在 `notes` 显示 `?`
+> 🔍 **码位 → 记号**有两条来源：① 跨源学习（`tool/build_score.py --learn`：PDF 谱层 × PPT 记号行
+> **拍位级锚点投票**）；② 人工种子 `pdf_score.MANUAL_SEED`（按 #334 首行的「码位序列 ↔ 渲染谱面」
+> 逐位对齐，见该常量注释）。库里学到的映射优先级更高，种子只作兜底。未覆盖的码位在 `notes` 显示 `?`
 > ——**只影响记号可读性，不影响拍位/字数/逐字对位**（因此不计入 `align_ok`）。
-> ⚠️ 注意 PPT 一行 4 小节、官方谱一行 6 小节，**整行同构**匹配天然受限（这是覆盖率的瓶颈，
-> 后续靠拍位级投票提升，见会话日志 2026-09-15_21-09-00.md 任务 2）。
-> 另有极少数 PDF 无文本层（如 #349：网站单独上传的 `score/<hash>.pdf`，用 Type3 字形绘制），
-> 会记 `review_reason='未识别到谱层…'` 并跳过 —— 需 OCR 补（`tool/qwen_ocr.py`）。
+>
+> **拍位级是怎么做的**（2026-09-16，取代旧的「整行同构」）：两侧都降为**音级序列**（`1`..`7`/`0`，
+> 同粒度归并变体字形），用 `difflib` 求最长公共连续段当**锚点**，只在「锚点 ↔ 相邻锚点」与
+> 「锚点 ↔ 该侧下一个已知音级」的**等长区间**里投票（后者自带**端点验证**：按 1:1 算出 PPT 侧
+> 对应位置，对得上才认这段，因此 PPT 漏记/多记一小节时会自动作废）。行对还要过**覆盖率闸门**
+> `cov_min=0.6`：实测真对应 ≈0.82~1.0、只是凑巧撞上几个音级的假对应 ≤0.6（多为 0）。
+> 学到的新音级下一轮就成了新锚点（`rounds`，默认 3），滚动自举。
+> 效果：含 `?` 的谱行 **92.5% → 11.4%**（未解码码位 44 → 14 种，其中 `4e5e` 一种就占剩余 96.9%）；
+> 旧算法仍可用 `--learn --learn-mode row` 复现对照。
+> 另有极少数 PDF 无文本层（如 #349：站点单独上传的 `score/<hash>.pdf`，谱面是图形、只留
+> CrimsonText/TimesNewRoman 排版标题），会记 `review_reason='未识别到谱层…'` 并跳过 —— 需 OCR 补。
 
 ---
 
@@ -340,7 +347,9 @@ hymn_crawler/
     与 `Hymn_Downloads/001_1頌讚獨一真神/1_简谱.png` 官方简谱并排核对；`--review` 列被标记的行
 - **官方简谱曲谱**（`Hymn_Downloads/` 就位时）：
   - `python tool/build_score.py --limit 20 --dry-run`：抽 20 首试跑（只统计，不写库）
-  - `python tool/build_score.py --learn`：先学「码位 → 记号」映射（写 `hymn_codepoint_map`），再全量抽取入库
+  - `python tool/build_score.py --learn`：先学「码位 → 记号」映射（**拍位级锚点投票**，写 `hymn_codepoint_map`；
+    幂等重跑：先清掉上一轮 `source=anchored` 再从头自举），再全量抽取入库
+  - `python tool/build_score.py --learn --learn-mode row`：旧的「整行同构」学习（对照/复现用）
   - `python tool/build_score.py --stats`：覆盖统计（等长行 / 逐字可靠率）；`--show 334` 打印某首曲谱/歌词/逐字对应
   - `python tool/build_score.py --only 334 349`：只处理指定编号（幂等，可反复跑）
   - `python tool/show_score.py 1 14`：**人读输出**——把 `hymn_score*` 里的曲谱行与对应歌词**按列对齐**打印

@@ -20,6 +20,7 @@
 #   2. 作者是按字形宽度手工排版的，逐字对位是**几何候选 + Δ 偏差**（Δ ≤ tol 视为可靠）。
 #   3. `count_delta = 音符数 − 字数` 有三种取值：`0` = 一字一音等长；`>0` = 一字多音（正常，
 #      `hymn_score_char.span=2` 标出）；`<0` = 音符数不足（硬异常，必须人工复核）。
+import difflib
 import os
 from dataclasses import dataclass, field
 
@@ -82,6 +83,17 @@ MANUAL_SEED: dict[int, str] = {
     0x4E5C: "6", 0x4E5D: "7", 0x4E4C: "0",
     0x4EE4: "1", 0x4EE5: "2", 0x4EE8: "3", 0x4EF0: "5",
     0x5D1F: "-", 0x5D26: "#",
+    # 2026-09-16 补充：把 MMP2005 子集字体（从 PDF 提取）里的字形放大到 170px 逐个目视确认。
+    # 这几位的字形虽是「数字 + 八度点/减时线」的变体，但数字本体清晰可辨；它们跨源学习
+    # 拿不到稳定的票（`5D4C` 更特殊：PPT 把休止符 `0` 当零宽叠加字符剔除，永远没有票），
+    # 故按目视入种子。**看不准的一律不加**（如 `4E5E` 字形像 `i`，来源不明 → 继续显示 `?`）。
+    0x4E3C: "5",      # 5 + 两个八度点
+    0x5D4C: "0",      # 休止符（PPT 侧 `0` 被 ppt_symbols 剔除 → 跨源无票）
+    0x5D42: "7",      # 7 + 低八度点
+    0x4E43: "6",      # 6 + 低八度点
+    0x4E42: "7",      # 7 + 低八度点 + 减时线
+    0x4ED9: "7",      # 7 + 低八度点
+    0x5D27: "b",      # 降号（字形 `b`；同族的 `5D26` 是升号 `#`）
 }
 
 
@@ -400,3 +412,288 @@ def build_score(hymn_number, pdf_file=None, mapping=None, tol=ALIGN_TOL, min_ele
     # ② 码位未解码（只影响记号列可读性，不影响拍位/字数/逐字对位）。
     rec.align_ok = int(not short_rows)
     return rec
+
+
+# ================= 五、拍位级跨源学习（突破「整行同构」的长度限制） =================
+# 背景（旧法为什么不够）：`pdf_jianpu.align_sequence` 要求「PDF 谱行 ↔ PPT 记号行」**整行 1:1**
+#   （尾部元素也只能跳过修饰），但两源行宽不同——PPT 一行 4 小节、官方谱一行 6 小节——
+#   实测 #334 第 1 行：PPT 11 记号 vs PDF 20 元素，**前 11 个音级完全一致**，整行却永远对不上。
+#
+# 做法（拍位级）：
+#   1. 两侧都降为**音级序列**（`1`..`7`/`0`）：PDF 侧未解码码位记 None、延长线与线类剔除；
+#      PPT 侧走 `ppt_symbols`（剔小节线/叠加修饰）后丢弃非音级记号。粒度与人工种子
+#      `MANUAL_SEED` 一致——同一数字的多个字形变体统一归到音级（可读性优先，变体信息
+#      仍无损保留在 `hymn_score_line.code_seq` 与字形墨迹尺寸里）。
+#   2. `difflib` 求最长公共连续段作**锚点**（PDF 的 None 用位置唯一哨兵占位，保证
+#      「未知」不与任何记号相等），再在锚点左右递归找下一个锚点。
+#   3. **只在「两个锚点夹出的区间」里投票**，且要求两侧区间**等长**、区间内**已知音级全等**：
+#      两个锚点把区间两端钉死，等长即一一对应——对应关系是唯一的，不靠猜。
+#      （早期版本让锚点向外「扩展」，实测会把码位投错：留一验证只有 24%，见会话日志。）
+#   4. 跨首累计投票，票数与占比双阈值过滤；争议码位（多解）只进 stats 不入库。
+ANCHOR_MIN_LEN = 3          # 可信锚点最短长度（音级个数）
+ANCHOR_MAX_BLOCKS = 6       # 每对（谱行 × 记号行）最多取几个锚点
+ANCHOR_PAIR_MIN = 4         # 一对行至少要有多少音级落在锚点上（否则不是同一句，不投票）
+PAIR_COV_MIN = 0.6          # 行对锚点覆盖率下限：真对应 ≈0.82~1.0，凑巧撞上的 ≤0.6
+ANCHOR_MIN_VOTES = 3        # 码位成为候选的最少票数
+ANCHOR_MIN_RATIO = 0.7      # 最高票占比下限（低于它判为争议，不入库）
+LEARN_MARK_MAX_H = 0.30     # 未解码元素「又矮又窄」判为修饰的墨迹高上限（em）
+LEARN_MARK_MAX_W = 0.16     # 同上的墨迹宽上限：升降号 ≈0.25×0.11、附点 ≈0.07×0.07，音符 ≥0.34 高
+LINE_MARK_MAX_W = 0.06      # 极窄字形（宽 < 0.06em）判为线类：细小节线 `601d` 实测 ≈0.04
+
+_GRADE_CHARS = "01234567"
+_SENTINEL = "\x00unknown"
+
+
+def grade_of(sym):
+    """记号 → 音级（`1`..`7`/`0`）；非音级（`?`、升号、延长线、线类）返回 None"""
+    if not sym or sym == UNKNOWN_SYM:
+        return None
+    for ch in normalize_sym(sym):
+        if ch in _GRADE_CHARS:
+            return ch
+    return None
+
+
+def grade_seq(symbols):
+    """[记号] → [音级 | None]"""
+    return [grade_of(s) for s in symbols]
+
+
+def ppt_grade_seq(notes):
+    """PPT `notes` → (参与比对的记号, 音级)（两侧都只保留能定音级的记号）"""
+    pairs = [(normalize_sym(s), grade_of(s)) for s in P.ppt_symbols(notes or "")]
+    pairs = [(s, g) for s, g in pairs if g is not None]
+    return [s for s, _ in pairs], [g for _, g in pairs]
+
+
+def anchor_blocks(pdf_grades, ppt_grades, min_len=ANCHOR_MIN_LEN, max_blocks=ANCHOR_MAX_BLOCKS):
+    """两侧音级序列的「最长公共连续段」锚点（递归取最长）→ [(pdf_i, ppt_j, n), ...] 保序
+
+    PDF 侧 None（未解码码位）替换为**位置唯一哨兵**：它参与长度占位，却不与任何 PPT 记号
+    相等，避免「未知 ↔ 未知」互相匹配把短巧合撑成锚点。
+    """
+    a = [g if g is not None else f"{_SENTINEL}{i}" for i, g in enumerate(pdf_grades)]
+    b = list(ppt_grades)
+    out: list[tuple[int, int, int]] = []
+
+    def rec(i0, i1, j0, j1):
+        if len(out) >= max_blocks or i1 - i0 < min_len or j1 - j0 < min_len:
+            return
+        matcher = difflib.SequenceMatcher(None, a[i0:i1], b[j0:j1], autojunk=False)
+        i, j, n = matcher.find_longest_match(0, i1 - i0, 0, j1 - j0)
+        if n < min_len:
+            return
+        out.append((i0 + i, j0 + j, n))
+        rec(i0, i0 + i, j0, j0 + j)
+        rec(i0 + i + n, i1, j0 + j + n, j1)
+
+    rec(0, len(a), 0, len(b))
+    return sorted(out)
+
+
+def learn_elements(row, mapping, min_gap=P.BEAT_MIN_GAP):
+    """学习用元素序列：只留「占拍位、可定音级」的元素
+
+    为什么要挑：PPT 侧的拍位序列只含时值记号，而 PDF 侧同一行还夹着**不占拍位**的东西，
+    留着会让两侧位置错开、把修饰投成音级（实测：种子里的升号 `5d26` 被投成 `4`）。
+    四类一律剔除：
+      ① 延长线（`is_hold`）：PPT 用合成字形/叠加字符表示（`5/`、`t`），不独立占位；
+      ② 线类（`ih > ROW_MAX_IH`，小节线/终止线）：PPT 侧本就剔除；
+      ③ **已知但非音级**的记号（`#`/`|`…）：PPT 侧是零宽叠加修饰，不占位；
+      ④ 与前一元素间距 < `min_gap` 的**未解码**码位：紧贴修饰（附点/升降号/减时线），
+         不是独立拍位（与 `pdf_jianpu.align_sequence` 的同款几何判据）；
+      ⑤ 又矮又窄的**未解码**字形（`ih < LEARN_MARK_MAX_H` 且 `iw < LEARN_MARK_MAX_W`）：
+         升降号/附点等不占时值的修饰——它们若离得远（间距 ≥ min_gap）就会漏过第 ④ 条，
+         实测把降号 `5d27` 投成了音级 `5`。
+    第 ④⑤ 条只针对「未解码」是必要的：已解码的紧贴元素（如 #14 的 `-` 组）是真实拍位，
+    不能因为几何近就丢掉。
+    """
+    out = []
+    prev_x = None
+    for e in _elements_of(row, mapping):
+        gap = None if prev_x is None else e.x - prev_x
+        prev_x = e.x
+        if e.is_hold or e.ih > P.ROW_MAX_IH:
+            continue
+        known = e.sym != UNKNOWN_SYM
+        grade = grade_of(e.sym)
+        if known and grade is None:
+            continue
+        if not known:
+            if gap is not None and gap < min_gap:
+                continue
+            if 0.0 < e.ih < LEARN_MARK_MAX_H and 0.0 < e.iw < LEARN_MARK_MAX_W:
+                continue
+        out.append(e)
+    return out
+
+
+def _gap_votes(pdf_elems, pdf_grades, ppt_grades, lo, hi, jlo, jhi):
+    """`pdf[lo:hi]` × `ppt[jlo:jhi]` 段的投票（要求等长、区间内已知音级逐一相等）
+
+    不满足即返回 []（该段不可信：说明中间还夹着别的东西——未解码的紧贴修饰、PPT 多写/
+    漏写的小节等，对应关系不再是 1:1）。
+    """
+    if hi - lo <= 0 or hi - lo != jhi - jlo:
+        return []
+    votes: list[tuple[int, str]] = []
+    for t in range(hi - lo):
+        grade = pdf_grades[lo + t]
+        if grade is None:
+            votes.append((pdf_elems[lo + t].cp, ppt_grades[jlo + t]))
+        elif grade != ppt_grades[jlo + t]:
+            return []
+    return votes
+
+
+def votes_from_pair(pdf_elems, pdf_grades, ppt_grades, min_len=ANCHOR_MIN_LEN,
+                    pair_min=ANCHOR_PAIR_MIN, cov_min=PAIR_COV_MIN):
+    """一对（PDF 谱行 × PPT 记号行）→ [(码位, 音级), ...]
+
+    闸门与投票规则（每条都是被实测踩出来的，见会话日志）：
+      ① **覆盖率闸门**：锚点覆盖的音级数 / min(两侧音级数) ≥ `cov_min`。实测真对应的行对
+         ≈0.82~1.0（如 #334 `32123565123` ↔ PDF `3212356512321234` 为 1.0），而只是凑巧撞上
+         几个音级的假对应 ≤0.6（多数是 0）——这条把「两个不同的句子」挡在门外，是准确率的关键。
+      ② 锚点内的位置是「已解码音级 == PPT 音级」，无需投票。
+      ③ 只在「锚点 ↔ 相邻锚点」之间、以及「锚点 ↔ 该侧下一个**已知**音级」之间的区间投票，
+         且必须**两侧等长**、区间内已知音级**逐一相等**。
+      ④ 第 ③ 条里用「下一个已知音级」当**端点验证**：先按 1:1 假设算出 PPT 侧的对应位置，
+         只有该位置上的记号确实相等才认这段——PPT 是手工谱，若它这行多写/漏写一个小节，
+         端点就对不上，这段自动作废（自带版本一致性校验）。
+    """
+    blocks = anchor_blocks(pdf_grades, ppt_grades, min_len)
+    anchor_len = sum(n for _i, _j, n in blocks)
+    known = sum(1 for g in pdf_grades if g)
+    coverage = anchor_len / max(1, min(known, len(ppt_grades)))
+    if anchor_len < pair_min or coverage < cov_min:
+        return []
+    votes: list[tuple[int, str]] = []
+    seen: set[tuple[int, str]] = set()
+
+    def collect(new: list[tuple[int, str]]) -> None:
+        """同一票只记一次：区间、两端点验证三条路径覆盖同一位置时会重叠"""
+        for cp, grade in new:
+            if (cp, grade) not in seen:
+                seen.add((cp, grade))
+                votes.append((cp, grade))
+
+    for k in range(len(blocks) - 1):                      # ③ 锚点之间的区间
+        i1, j1, n1 = blocks[k]
+        i2, j2, _n2 = blocks[k + 1]
+        collect(_gap_votes(pdf_elems, pdf_grades, ppt_grades, i1 + n1, i2, j1 + n1, j2))
+    for step in (1, -1):                                  # ③④ 锚点 ↔ 下一个已知音级
+        for i, j, n in blocks:
+            a0 = i + n if step > 0 else i - 1
+            b0 = j + n if step > 0 else j - 1
+            if not (0 <= a0 < len(pdf_grades) and 0 <= b0 < len(ppt_grades)):
+                continue
+            a1 = a0
+            while 0 <= a1 < len(pdf_grades) and pdf_grades[a1] is None:
+                a1 += step
+            if not (0 <= a1 < len(pdf_grades)):
+                continue                                  # 该侧没有已知音级可当端点
+            b1 = b0 + (a1 - a0)                           # 1:1 假设下的对应位置
+            if not (0 <= b1 < len(ppt_grades)) or pdf_grades[a1] != ppt_grades[b1]:
+                continue                                  # 端点验证失败 → 这段不可信
+            if step > 0:
+                collect(_gap_votes(pdf_elems, pdf_grades, ppt_grades, a0, a1, b0, b1))
+            else:
+                collect(_gap_votes(pdf_elems, pdf_grades, ppt_grades,
+                                   a1 + 1, a0 + 1, b1 + 1, b0 + 1))
+    return votes
+
+
+def _learn_once(samples, applied, min_len, min_votes, min_ratio, pair_min, cov_min):
+    """单轮学习：以 `applied` 为锚点来源，对**未解码**码位投票
+
+    返回 `(learned, stats, info)`；`learned` 只含本轮够票数、无争议的码位。
+    """
+    votes: dict[int, dict[str, int]] = {}
+    pairs = rows_seen = 0
+    for pdf_rows, ppt_lines in samples:
+        ppt_seqs = []
+        for ln in ppt_lines:
+            _syms, grades = ppt_grade_seq(ln.get("notes") or "")
+            if len(grades) >= min_len:
+                ppt_seqs.append(grades)
+        if not ppt_seqs:
+            continue
+        for row in pdf_rows:
+            elems = learn_elements(row, applied)
+            grades = grade_seq([e.sym for e in elems])
+            if sum(1 for g in grades if g) < min_len:
+                continue
+            rows_seen += 1
+            for pgrades in ppt_seqs:
+                pair_votes = votes_from_pair(elems, grades, pgrades, min_len, pair_min, cov_min)
+                if pair_votes:
+                    pairs += 1
+                for cp, grade in pair_votes:
+                    dist = votes.setdefault(cp, {})
+                    dist[grade] = dist.get(grade, 0) + 1
+    learned: dict[int, str] = {}
+    stats: dict[int, tuple[str, int, int]] = {}
+    for cp, dist in votes.items():
+        sym, n = max(dist.items(), key=lambda kv: kv[1])
+        total = sum(dist.values())
+        stats[cp] = (sym, n, total)
+        if n >= min_votes and n / total >= min_ratio:
+            learned[cp] = sym
+    info = {"pairs": pairs, "rows": rows_seen, "codepoints": len(votes)}
+    return learned, stats, info
+
+
+def geometry_marks(samples, applied=None):
+    """几何可直接判定的「线类」码位 → `{码位: '|'}`
+
+    小节线/终止线不占时值，PPT 侧本就不记（`ppt_symbols` 已剔除），所以跨源学习永远拿不到
+    它的票；但它在 PDF 里是独立字符、会出现在 `code_seq` 里，不标就永远是 `?`。两条几何判据：
+      ① 墨迹高 > `P.ROW_MAX_IH`：小节线 ih≈1.13、行首尾双纵线 1.15~1.16（音符 ≤0.50）；
+      ② 墨迹宽 < `LINE_MARK_MAX_W`：极窄的纵线（细小节线 `601d` ≈0.04）——高不一定超高，
+         但宽度远小于任何音符字形（最窄的音符 `1` ≈0.14）。
+    """
+    out: dict[int, str] = {}
+    skip = applied or {}
+    for pdf_rows, _lines in samples:
+        for row in pdf_rows:
+            for c in row.elements:
+                if c.cp in skip:
+                    continue
+                if c.ih > P.ROW_MAX_IH or 0.0 < c.iw < LINE_MARK_MAX_W:
+                    out[c.cp] = P.LINE_MARK
+    return out
+
+
+def learn_anchors(samples, mapping=None, rounds=3, min_len=ANCHOR_MIN_LEN,
+                  min_votes=ANCHOR_MIN_VOTES, min_ratio=ANCHOR_MIN_RATIO,
+                  pair_min=ANCHOR_PAIR_MIN, cov_min=PAIR_COV_MIN):
+    """跨源「拍位级」学习：`samples=[(PDF 谱行列表, PPT 行列表), ...]`
+
+    为什么多轮：映射是**自举**出来的——一轮学到的音级，下一轮就成了新锚点，能把更多
+    未解码码位夹进「锚点 ↔ 已验证端点」的区间里。实测单轮只有十几个码位有票，多轮才能
+    滚动覆盖（轮内只对未解码码位投票，所以不会重复学习、也不会跨轮冲突）。
+
+    返回 `(learned, stats, info)`：
+      learned `{码位: 音级}`；stats `{码位: (音级, 票数, 总票数)}`（`db.save_codepoint_map` 可直接用）；
+      info 含 `pairs/rows/codepoints/rounds`。`mapping` 提供首轮锚点（缺省只用 `MANUAL_SEED`）。
+    """
+    applied = {**MANUAL_SEED, **(mapping or {})}
+    learned: dict[int, str] = {}
+    stats: dict[int, tuple[str, int, int]] = {}
+    info: dict[str, int] = {"pairs": 0, "rows": 0, "codepoints": 0, "rounds": 0}
+    for r in range(1, max(1, rounds) + 1):
+        one, one_stats, one_info = _learn_once(samples, applied, min_len, min_votes,
+                                               min_ratio, pair_min, cov_min)
+        fresh = {cp: sym for cp, sym in one.items() if cp not in learned}
+        info = {**one_info, "rounds": r}
+        if not fresh:
+            break
+        learned.update(fresh)
+        stats.update(one_stats)
+        applied.update(fresh)
+    marks = geometry_marks(samples, applied)
+    for cp, sym in marks.items():
+        learned.setdefault(cp, sym)
+        stats.setdefault(cp, (sym, 1, 1))
+    info["marks"] = len(marks)
+    return learned, stats, info

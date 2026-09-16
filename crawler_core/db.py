@@ -1301,6 +1301,29 @@ def load_codepoint_map(db_path=DB_PATH):
     return out
 
 
+def clear_codepoint_map(source=None, db_path=DB_PATH):
+    """删除「码位 → 记号」映射（`source=None` 清空整表；否则只删该来源）；返回删除条数
+
+    为什么需要：学习是**幂等重跑**——上一轮学到的映射会成为下一轮的锚点，若旧轮次的
+    错误映射残留在库里，会被当成「已知音级」反复强化（实测 `5d27` 的错误映射会一直留着）。
+    """
+    conn = sqlite3.connect(db_path)
+    try:
+        c = conn.cursor()
+        try:
+            if source is None:
+                n = c.execute("DELETE FROM hymn_codepoint_map").rowcount
+            else:
+                n = c.execute("DELETE FROM hymn_codepoint_map WHERE source = ?",
+                              (source,)).rowcount
+        except sqlite3.OperationalError:
+            return 0                      # 表还不存在 = 无可清理
+        conn.commit()
+        return n
+    finally:
+        conn.close()
+
+
 def save_codepoint_map(mapping, stats=None, source="learned", db_path=DB_PATH):
     """写「码位 → 记号」映射（UPSERT；带票数便于判断置信度）
 

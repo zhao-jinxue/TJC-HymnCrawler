@@ -14,7 +14,8 @@
   `hymn_codepoint_map` 码位 → 记号（MMP2005 是固定字体，学一次即可解码全部）
 
 用法（项目根执行）：
-  python tool/build_score.py --learn                # 先学码位映射（PDF 谱层 × PPT 行），再全量抽取入库
+  python tool/build_score.py --learn                # 先学码位映射（拍位级锚点投票），再全量抽取入库
+  python tool/build_score.py --learn --learn-mode row   # 旧的整行同构学习（对照用）
   python tool/build_score.py --only 334 349 1       # 只处理指定编号
   python tool/build_score.py --limit 20 --dry-run   # 抽样试跑，不写库
   python tool/build_score.py --stats                # 库内覆盖统计
@@ -42,11 +43,15 @@ def all_numbers():
     return sorted(P._pdf_index().keys(), key=key)
 
 
-def learn_mapping(nums, limit=None, quiet=False):
-    """跨源学习「码位 → 记号」：PDF 谱层 × PPT 记号行联合自举
+def learn_mapping(nums, limit=None, quiet=False, mode="anchors"):
+    """跨源学习「码位 → 记号」
 
-    只在「PDF 与 hymn_jianpu 同时存在」的编号上学习（v8 表提供 PPT 侧的记号串）。
-    返回 (learned, stats)；无样本时 ({}, {})。
+    - `mode="anchors"`（默认）：**拍位级**锚点投票（`S.learn_anchors`）——允许 PPT 行与官方谱行
+      **长度不等**（PPT 一行 4 小节 vs 官方谱一行 6 小节）：两侧降为音级序列，用最长公共连续段
+      当锚点，向两侧扩展时把未解码码位与 PPT 记号 1:1 配对投票。库内已有映射作为锚点来源。
+    - `mode="row"`：旧的**整行同构**（`P.learn_across`，要求两侧从头 1:1、尾部也只能跳过修饰）。
+
+    两种都只在「PDF 与 hymn_jianpu 同时存在」的编号上学习；返回 `(learned, stats)`。
     """
     samples, used = [], 0
     for num in nums:
@@ -62,9 +67,16 @@ def learn_mapping(nums, limit=None, quiet=False):
         print("⚠️ 没有可用于学习的样本（需要 PDF 与 hymn_jianpu 同时存在）")
         return {}, {}
     t0 = time.time()
+    if mode == "anchors":
+        learned, stats, info = S.learn_anchors(samples, mapping=db.load_codepoint_map())
+        if not quiet:
+            print(f"🔤 拍位级学习：样本 {len(samples)} 首 / 命中行对 {info['pairs']} 处 / "
+                  f"有票码位 {info['codepoints']} 个 / 达标 {len(learned)} 个（含线类 "
+                  f"{info.get('marks', 0)}）/ 耗时 {time.time() - t0:.1f}s")
+        return learned, stats
     learned, stats, hits = P.learn_across(samples)
     if not quiet:
-        print(f"🔤 跨源学习：样本 {len(samples)} 首 / 同构命中 {hits} 处 / "
+        print(f"🔤 跨源学习（整行同构）：样本 {len(samples)} 首 / 同构命中 {hits} 处 / "
               f"学到 {len(learned)} 个码位 / 耗时 {time.time() - t0:.1f}s")
     return learned, stats
 
@@ -112,6 +124,8 @@ def main(argv=None):
     ap.add_argument("--limit", type=int, default=None, help="最多处理多少首")
     ap.add_argument("--db", default=db.DB_PATH, help=f"数据库（默认 {db.DB_PATH}）")
     ap.add_argument("--learn", action="store_true", help="先学码位映射并写 hymn_codepoint_map")
+    ap.add_argument("--learn-mode", choices=("anchors", "row"), default="anchors",
+                    help="学习算法：anchors=拍位级锚点投票（默认）/ row=整行同构（旧）")
     ap.add_argument("--learn-limit", type=int, default=120, help="学习用样本上限（默认 120 首）")
     ap.add_argument("--no-map", action="store_true", help="不使用库里的码位映射（记号列为 `?`）")
     ap.add_argument("--dry-run", action="store_true", help="只抽取与统计，不写库")
@@ -137,10 +151,19 @@ def main(argv=None):
     if mapping:
         print(f"🔤 已载入库内码位映射 {len(mapping)} 个")
     if args.learn:
-        learned, stats = learn_mapping(nums, args.learn_limit, quiet=args.quiet)
+        source = "anchored" if args.learn_mode == "anchors" else "learned"
+        # 幂等重学：**先清掉上一轮同学法的产物**再学。顺序不能反——若先学后清，学习时锚点
+        # 仍含上一轮的映射（于是"新学"≈0），清完却只剩这条，映射会被越跑越少（实测踩过）。
+        if not args.dry_run:
+            stale = db.clear_codepoint_map(source, args.db)
+            if stale:
+                print(f"🧹 清掉上一轮 source={source} 的映射 {stale} 条，从头自举")
+                mapping = {} if args.no_map else db.load_codepoint_map(args.db)
+        learned, stats = learn_mapping(nums, args.learn_limit, quiet=args.quiet,
+                                       mode=args.learn_mode)
         if learned and not args.dry_run:
-            n = db.save_codepoint_map(learned, stats, source="learned", db_path=args.db)
-            print(f"💾 码位映射已写入 hymn_codepoint_map：{n} 条")
+            n = db.save_codepoint_map(learned, stats, source=source, db_path=args.db)
+            print(f"💾 码位映射已写入 hymn_codepoint_map：{n} 条（source={source}）")
         mapping = {**mapping, **learned}
 
     records, t0 = [], time.time()
