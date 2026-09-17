@@ -4,7 +4,7 @@
 
 ## 项目状态
 - TJC 赞美诗（hymn）数据爬虫 + 数据处理流水线，已完成：探测 → 下载 → 提取 → 转图 → 校验 → 入库全流程
-- **目录约定（2026-09-13 重排）**：根目录只保留 `README.md` / `crawler_api.py` / `tjc_hymn.db`；
+- **目录约定（2026-09-13 重排）**：根目录只保留 `README.md` / `LICENSE` / `crawler_api.py` / `tjc_hymn.db`；
   `config/`（依赖 + 门禁/测试配置）、`data/`（`probe_report.json`、`final_report.txt`）、`legacy/`（Selenium 保底入口）
 - **默认引擎 = 官网 JSON API**（纯 `requests`，零浏览器依赖）：`crawler_api.py`（`--engine api|selenium|auto`，原 `crawler_fast.py`）
 - **Selenium 保底引擎**完整保留：`crawler_core/selenium_legacy/` + 独立整链入口 `legacy/crawler_selenium.py`

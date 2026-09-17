@@ -2,13 +2,17 @@
 
 一个系统化的 **TJC 赞美诗（Hymn）数据爬虫与数据处理流水线**，自动抓取真耶穌教會聖樂网（sacredmusic.tjc.org.tw）的诗歌资源，完成 **探测 → 下载 → 提取 → 转图 → 校验 → 入库** 全流程，最终沉淀为结构化的 SQLite 数据库与本地多媒体资源库。
 
-> **目录约定（2026-09-13 重排）**：项目根只保留 `README.md` / `crawler_api.py` / `tjc_hymn.db`；
+> **目录约定（2026-09-13 重排）**：项目根只保留 `README.md` / `LICENSE` / `crawler_api.py` / `tjc_hymn.db`；
 > 依赖与门禁配置 → `config/`，数据产物（`probe_report.json`、`final_report.txt`）→ `data/`，
 > Selenium 保底入口 → `legacy/`，下载资源与 API 缓存 → `Hymn_Downloads/`。
 >
 > **当前架构（2026-09-12 重构）**：默认走**官网 JSON API**（纯 `requests`，零浏览器依赖）——元数据 + 资源 URL 一次拿全，全量 474 首 **Step 1 ≈ 6 s / Step 2 ≈ 60 s**；重构前的 **Selenium/DOM 实现完整保留**为保底引擎（`crawler_core/selenium_legacy/`，独立入口 `legacy/crawler_selenium.py`），API 异常时可整体回退。
 >
 > **当前实测**：成功采集 **474 首**诗歌（含 `51_a`/`51_b` 等同名变体），数据库 `tjc_hymn.db` 完整落库（v7：+`api_raw`）。
+>
+> **许可（License）**：本项目**保留所有权利**（非开源）——仅授予个人学习、研究与技术参考用途，
+> **禁止商业使用与再分发**；诗歌文本、简谱/五线谱图片与音频等素材权利归其原始权利人所有。
+> 完整条款见 **[LICENSE](LICENSE)**（商业授权联系 <1363343773@qq.com>）。
 
 ---
 
@@ -39,6 +43,7 @@ hymn_crawler/
 │
 ├── crawler_api.py              # 🎮 统一主入口（API 主路径；--engine api|selenium|auto）
 ├── tjc_hymn.db                 # 🗄 SQLite 数据库（v7 主表 474 首 + v8 两表「带简谱文字歌词」）
+├── LICENSE                     # 📄 许可协议（保留所有权利：个人学习可用，禁止商业使用与再分发）
 │
 ├── config/                     # ⚙️ 依赖 + 门禁/测试配置（详见该目录 README）
 │   ├── requirements.txt        # 主依赖（纯 API，无 selenium）
@@ -376,6 +381,21 @@ hymn_crawler/
 1. **VPN 客户端**：本地 `tool/Clash.Verge_2.5.2_x64-setup.exe` 为当前最新版本安装包（因体积较大**不纳入版本库**，仅限本机使用）。
 2. **最新版本下载**：可从官方 GitHub Releases 获取 —— <https://github.com/clash-verge-rev/clash-verge-rev/releases>
 3. **注册与套餐**：VPN 服务需注册站点并充值。推荐实用站点 <https://vbzk.akkclo11.com/>，根据自身需求选择合适套餐。
+
+---
+
+## 📄 许可协议
+
+本项目为**保留所有权利**（非开源）的软件：著作权归 **赵金雪（Zhao Jinxue）** 所有，
+仅授予**个人学习、研究和技术参考**用途，**禁止任何商业使用与再分发**。
+诗歌文本、曲调、简谱/五线谱图片与音频录音等素材的著作权归其原始权利人（词曲作者 /
+录音制作者 / 教会出版机构等）所有，本软件不代为授权。
+
+完整条款见根目录 **[LICENSE](LICENSE)**：授权范围（个人学习与参考 / 禁止商业使用 /
+禁止的行为 / 用户数据与个人状态）、第三方组件与素材声明、数据来源与合规使用、
+商业授权、免责声明、权利保留与适用法律。
+
+商业授权 / 授权咨询：**1363343773@qq.com**
 
 ---
 

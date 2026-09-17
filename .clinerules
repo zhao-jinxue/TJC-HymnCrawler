@@ -16,7 +16,7 @@
 
 ## 项目关键信息
 - 项目类型：TJC 赞美诗（hymn）数据爬虫 + 数据处理流水线
-- **目录约定（2026-09-13 重排）**：项目根只保留 `README.md` / `crawler_api.py` / `tjc_hymn.db`；
+- **目录约定（2026-09-13 重排）**：项目根只保留 `README.md` / `LICENSE` / `crawler_api.py` / `tjc_hymn.db`；
   依赖与门禁配置在 `config/`，产物在 `data/`，保底入口在 `legacy/`，资源在 `Hymn_Downloads/`（详见 README 项目结构）
 - Python 环境：`/home/zjx/python_env/bin/python`（内含 opencc / rapidocr 等依赖）
 - 核心代码：`crawler_core/`（爬虫框架）、`tool/`（数据处理工具）、`test/`（测试）
