@@ -11,3 +11,4 @@ olefile>=0.47       # 解析二进制 .ppt（带简谱文字歌词提取，tool/
 opencc>=1.1         # 繁简转换：PPT（简体）↔ DB（繁体）的标题/歌词比对
 pymupdf>=1.24       # 官方简谱 PDF 解析：取字符级坐标/字体（crawler_core/pdf_jianpu.py、tool/show_pdf_align.py）
 fontTools>=4.40     # 读简谱字体字形（墨迹框判定「附点/减时线」，tool/show_jianpu.py、pdf_jianpu.py）
+mutagen>=1.47       # 读音频时长（m4a/mp3 → crawler_core/audio_duration.py、tool/build_audio_durations.py）

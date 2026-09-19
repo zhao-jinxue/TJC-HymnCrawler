@@ -33,7 +33,7 @@ EXPECTED_COLUMNS = (
     ["id", "hymn_number", "title", "lyricist", "composer", "source_info", "verse_count"]
     + [f"verse_{i}" for i in range(1, 11)]
     + ["chorus", "staff_img_path", "numbered_img_path", "staff_png_path", "numbered_png_path",
-       "audio_versions", "audio_version_list", "api_raw", "download_status",
+       "audio_versions", "audio_version_list", "audio_durations", "api_raw", "download_status",
        "integrity_status", "updated_at"]
 )
 
@@ -66,7 +66,8 @@ LEGACY_DDL = """CREATE TABLE tjc_hymn (
     download_status TEXT DEFAULT 'pending',
     integrity_status TEXT DEFAULT 'unchecked',
     chorus TEXT DEFAULT '',
-    api_raw TEXT DEFAULT ''
+    api_raw TEXT DEFAULT '',
+    audio_durations TEXT DEFAULT '{}'
 )"""
 
 

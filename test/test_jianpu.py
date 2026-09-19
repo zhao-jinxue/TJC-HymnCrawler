@@ -234,7 +234,7 @@ def test_jianpu_stats_none_when_absent(tmp_path):
 
 
 def test_init_db_creates_jianpu_tables(tmp_path, monkeypatch):
-    """init_db()（v8）应幂等建出两表，且不打乱 tjc_hymn 的 28 列结构"""
+    """init_db()（v8 + v10）应幂等建出两表，且不打乱 tjc_hymn 的 29 列结构"""
     path = str(tmp_path / "init.db")
     monkeypatch.setattr(db, "DB_PATH", path)
     monkeypatch.setattr(db, "PROBE_REPORT", str(tmp_path / "nope.json"))
@@ -244,7 +244,8 @@ def test_init_db_creates_jianpu_tables(tmp_path, monkeypatch):
     cols = [c[1] for c in conn.execute("PRAGMA table_info(tjc_hymn)")]
     conn.close()
     assert {"tjc_hymn", "hymn_jianpu", "hymn_jianpu_line"} <= names
-    assert cols[-1] == "updated_at" and len(cols) == 28
+    assert cols[-1] == "updated_at" and len(cols) == 29
+    assert cols[cols.index("audio_version_list") + 1] == "audio_durations"  # v10 列在版本列表之后
 
 
 # ===================== 真实 PPT（大字库资源就位时） =====================

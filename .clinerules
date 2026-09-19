@@ -21,7 +21,8 @@
 - Python 环境：`/home/zjx/python_env/bin/python`（内含 opencc / rapidocr 等依赖）
 - 核心代码：`crawler_core/`（爬虫框架）、`tool/`（数据处理工具）、`test/`（测试）
 - 主入口：`crawler_api.py`（原 `crawler_fast.py`）；保底入口：`legacy/crawler_selenium.py`
-- 数据文件：`tjc_hymn.db`（SQLite 数据库）、`data/probe_report.json`、`data/final_report.txt`
+- 数据文件：`tjc_hymn.db`（SQLite 数据库：v10 主表 29 列，含音频时长 `audio_durations`；另有 v8/v9 简谱七表）、
+  `data/probe_report.json`、`data/final_report.txt`
 - 测试命令：`/home/zjx/python_env/bin/python -m pytest -c config/pytest.ini test/ -x -q`
 - 门禁命令：`ruff check --config config/ruff.toml .`｜`mypy crawler_core crawler_api.py legacy/crawler_selenium.py`｜
   `bandit -c config/bandit.yaml -r crawler_core crawler_api.py legacy/crawler_selenium.py`｜
@@ -34,7 +35,8 @@
      `dict.get(k, k)` 这类会退化成 `str | None`（`normalize_sym` 曾因此让 `grade_of` 误报可迭代 None）
   2. **返回"多形状 dict"必须用 `TypedDict` 声明**——如 `db.load_score()` 的 `{hymn, lines, lyrics, chars}`；
      若从字面量推断会被收窄成 `dict[Literal["hymn"], dict[主行列, Any]]`，
-     于是调用方 `rec["lines"]` 全被误报（`tool/build_score.py` + `tool/show_score.py` 曾一次炸出 70 条）
+     于是调用方 `rec["lines"]` 全被误报（`tool/build_score.py` + `tool/show_score.py` 曾一次炸出 70 条）；
+     `db.audio_duration_stats()`（计数 / 秒数 / 分版本明细三种形状）用 `AudioDurationStats` 声明，同理
 - 歌词/副歌复核：`python tool/show_lyrics.py <编号|区间>`（`--stats` 看覆盖率、`--no-chorus` 列无副歌编号）
 - 带简谱歌词复核：`python tool/extract_jianpu.py [--dry-run] [--only 1 5 349]`（PPT→两表+报告）、
   `python tool/show_jianpu.py <编号> [--map]`（简谱字体渲染出图 + 逐字对位索引）、`--review` 列被标记的行
@@ -47,6 +49,12 @@
   按列对齐打印，可直接贴文档）；`--chars` 逐字明细、`--all-parts` 含和声部、`--list` 列库内编号；
   **按节分页打印**（唱诗用）：`--by-stanza`（每页 = 全部谱行 + 该节词行；副歌行每页重复、标签 `词ⓒ`；
   副歌在曲谱里没有词行时每页页尾附官网 `chorus` 文本）、`--out FILE` 写文件、`--formfeed` 出换页符 `\f`
+- 音频时长（v10 字段 `audio_durations`，JSON「版本名 → 秒」与 `audio_versions` / `audio_version_list`
+  **键集一一匹配**；读不出的版本值落 `null`）：`python tool/build_audio_durations.py`
+  （离线读本地 m4a/mp3 时长；幂等可重跑，重下/换音频后需重跑）、`--only 1 5 349` / `--limit N` 子集、
+  `--dry-run` 只统计不写库、`--stats` 覆盖统计、`--show 编号` 打印单首（`mm:ss` + 秒数 + 文件是否存在）；
+  读取实现 `crawler_core/audio_duration.py`（mutagen **按后缀显式分派** `MP3`/`MP4`，
+  因为 `mutagen.File()` 嗅探对无 ID3 标签的 MP3 会失败——本库 #138/#197/#296_b 即此例）
 - 构建/验证：参考 `docs/hymn_crawler_plan.md`（历史计划）与 `docs/CLINE_CONTEXT_MINIMIZE.md`
 
 ## 千问 API Key（图片解析/理解）

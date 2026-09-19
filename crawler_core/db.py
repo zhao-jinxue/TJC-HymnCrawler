@@ -4,6 +4,7 @@
 # v5: +staff_png_path +numbered_png_path（图片转 PNG 的保存路径）
 # v6: +chorus（副歌；官网 API lyrics_chorus，此前因采集缺陷整段丢失）
 # v8: +hymn_jianpu / hymn_jianpu_line（PPT 带简谱文字歌词，独立两表，不做 ALTER）
+# v10: +audio_durations（音频时长 JSON：版本名 → 秒，与 audio_versions 键集一一匹配）
 
 import json
 import os
@@ -11,10 +12,11 @@ import sqlite3
 from typing import Any, TypedDict
 
 from .config import DB_PATH, PROBE_REPORT, SAVE_ROOT
+from .naming import is_audio_version_key
 
 
 def init_db():
-    """初始化数据库，迁移到最新结构（v7: api_raw + chorus 副歌字段）"""
+    """初始化数据库，迁移到最新结构（v7: api_raw + chorus；v8 两表；v10: audio_durations）"""
     conn = sqlite3.connect(DB_PATH)
     try:
         c = conn.cursor()
@@ -38,10 +40,12 @@ def init_db():
             ensure_chorus_field(c)
             # 幂等补 API 原始记录字段（v7）
             ensure_v7_fields(c)
+            # 幂等补音频时长字段（v10）
+            ensure_audio_durations_field(c)
             # 幂等创建带简谱文字歌词两表（v8；独立于 tjc_hymn，不做 ALTER）
             ensure_jianpu_tables(c)
             _backfill_from_probe(c, conn)
-            print("📊 数据库结构已是最新版（v7 + 带简谱歌词表 v8）。")
+            print("📊 数据库结构已是最新版（v7 + 带简谱歌词表 v8 + 音频时长 v10）。")
         else:
             _create_table_v4(c)
             ensure_jianpu_tables(c)
@@ -199,6 +203,24 @@ def ensure_v7_fields(c):
     return False
 
 
+def ensure_audio_durations_field(c):
+    """v10: 幂等补添 `audio_durations`（音频时长 JSON：版本名 → 秒）
+
+    与 `audio_versions` / `audio_version_list` **键集一一匹配**（`{"鋼琴版": 144.118, ...}`），
+    由 `tool/build_audio_durations.py` 离线读取本地音频文件后写入。
+    写入侧（`save_to_db`、downloader 的路径回写）**不动这一列**——避免爬取流程把已算好的时长清空；
+    重下音频后重跑该工具即可（时长随文件变化）。
+    """
+    c.execute("PRAGMA table_info(tjc_hymn)")
+    columns = {col[1] for col in c.fetchall()}
+    if "audio_durations" not in columns:
+        c.execute("ALTER TABLE tjc_hymn ADD COLUMN audio_durations TEXT DEFAULT '{}'")
+        c.connection.commit()
+        print("📦 数据库新增 audio_durations 字段（v10，音频时长 JSON）。")
+        return True
+    return False
+
+
 def _backfill_from_probe(c, conn):
     """从 probe_report.json 回填 audio_versions / audio_version_list / download_status"""
     pr_path = PROBE_REPORT
@@ -257,7 +279,7 @@ def _backfill_from_probe(c, conn):
 # ================= 建表 =================
 
 def _create_table_v4(c):
-    """创建 v7 版 tjc_hymn 表（v4 字段 + PNG 图片路径 + chorus 副歌 + api_raw 原始记录）"""
+    """创建 v10 版 tjc_hymn 表（v4 字段 + PNG 路径 + chorus 副歌 + api_raw 原始记录 + 音频时长）"""
     c.execute('''CREATE TABLE IF NOT EXISTS tjc_hymn (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 hymn_number TEXT UNIQUE NOT NULL,
@@ -283,6 +305,7 @@ def _create_table_v4(c):
                 numbered_png_path TEXT,
                 audio_versions TEXT DEFAULT '{}',
                 audio_version_list TEXT DEFAULT '[]',
+                audio_durations TEXT DEFAULT '{}',
                 api_raw TEXT DEFAULT '',
                 download_status TEXT DEFAULT 'pending',
                 integrity_status TEXT DEFAULT 'unchecked',
@@ -298,12 +321,16 @@ def save_to_db(hymn_data):
     v7：新增 `api_raw`（API 原始记录 JSON）写入；title/作者/源考同样遵循
     「空值不覆盖旧值」——API 侧缺失（如 #25/#31/#66/#299 无 lyricists、#349 无 history）
     时保留库内既有值，避免文本回退成 Unknown/空串。
+
+    v10：**不触碰 `audio_durations`**（音频时长）——它由 `tool/build_audio_durations.py` 离线回填，
+    爬取/提取流程的重跑不得清空（见 `ensure_audio_durations_field`）。
     """
     conn = sqlite3.connect(DB_PATH)
     try:
         c = conn.cursor()
         ensure_chorus_field(c)  # 幂等确保 v6 字段存在
         ensure_v7_fields(c)     # 幂等确保 v7 字段存在
+        ensure_audio_durations_field(c)  # 幂等确保 v10 字段存在（不改动其值）
 
         av = hymn_data.get("audio_versions", {})
         audio_json = json.dumps(av, ensure_ascii=False)
@@ -629,6 +656,122 @@ def api_raw_stats():
         conn.close()
 
 
+def _json_obj(value):
+    """JSON 字符串 → dict（非 dict / 脏数据 → 空 dict）"""
+    try:
+        parsed = json.loads(value or "{}")
+    except (json.JSONDecodeError, TypeError):
+        return {}
+    return parsed if isinstance(parsed, dict) else {}
+
+
+def _json_list(value):
+    """JSON 字符串 → list（非 list / 脏数据 → 空 list）"""
+    try:
+        parsed = json.loads(value or "[]")
+    except (json.JSONDecodeError, TypeError):
+        return []
+    return parsed if isinstance(parsed, list) else []
+
+
+def _real_versions(audio_versions):
+    """`audio_versions` JSON → 真实版本键集合（`_` 前缀为元信息键，剔除）"""
+    return {k for k in _json_obj(audio_versions) if is_audio_version_key(k)}
+
+
+class AudioDurationStats(TypedDict):
+    """`audio_duration_stats()` 的返回：多形状（计数 / 秒数 / 分版本明细）
+
+    ⚠️ 必须显式声明：若让 pyright 从字面量推断，`by_version` 会被收窄成 `int`，
+    调用方 `st["by_version"].items()` / `st["seconds_total"]` 会被误报
+    （tool/build_audio_durations.py、db.print_db_status 共 11 处）。
+    """
+
+    rows: int
+    filled: int
+    entries: int
+    entries_filled: int
+    entries_null: int
+    mismatch: int
+    seconds_total: float
+    by_version: dict[str, list[float]]  # {版本名: [条目数, 总秒数]}
+
+
+def save_audio_durations(hymn_number, durations, db_path=None):
+    """写一首的 `audio_durations`（v10）→ 受影响行数
+
+    Args:
+        hymn_number: 诗歌编号
+        durations: {版本名: 秒(float) | None}；键集应与 `audio_versions` 一致，
+            读不出时长的版本落 `None`（键仍在，保证三列键集一一匹配）
+        db_path: 可选数据库路径（默认 `config.DB_PATH`）
+    """
+    conn = sqlite3.connect(db_path or DB_PATH)
+    try:
+        c = conn.cursor()
+        ensure_audio_durations_field(c)
+        cur = c.execute(
+            "UPDATE tjc_hymn SET audio_durations = ? WHERE hymn_number = ?",
+            (json.dumps(durations, ensure_ascii=False), hymn_number),
+        )
+        conn.commit()
+        return cur.rowcount
+    finally:
+        conn.close()
+
+
+def _empty_duration_stats() -> AudioDurationStats:
+    """空的时长统计（未迁移 v10 时返回，调用方无需处理异常）"""
+    return {"rows": 0, "filled": 0, "entries": 0, "entries_filled": 0,
+            "entries_null": 0, "mismatch": 0, "seconds_total": 0.0, "by_version": {}}
+
+
+def audio_duration_stats(db_path=None) -> AudioDurationStats:
+    """`audio_durations`（v10）覆盖统计（返回 `AudioDurationStats`）
+
+    统计 `rows` 总行数 / `filled` 已有时长行数 / `entries` 音频条目数 /
+    `entries_filled` 有秒数的条目 / `entries_null` 读不出时长的条目 /
+    `mismatch` 键集与 `audio_versions`+`audio_version_list` 不一致的行数 /
+    `seconds_total` 有秒数条目的总时长 / `by_version` {版本名: [条目数, 总秒数]}
+    """
+    conn = sqlite3.connect(db_path or DB_PATH)
+    try:
+        c = conn.cursor()
+        c.execute("PRAGMA table_info(tjc_hymn)")
+        if "audio_durations" not in {row[1] for row in c.fetchall()}:
+            return _empty_duration_stats()  # 未迁移 v10：返回空统计而非报错
+        rows = c.execute(
+            "SELECT audio_versions, audio_version_list, audio_durations FROM tjc_hymn"
+        ).fetchall()
+    except sqlite3.OperationalError:
+        return _empty_duration_stats()
+    finally:
+        conn.close()
+
+    result: AudioDurationStats = {"rows": len(rows), "filled": 0, "entries": 0,
+                                  "entries_filled": 0, "entries_null": 0, "mismatch": 0,
+                                  "seconds_total": 0.0, "by_version": {}}
+    for av_json, vl_json, dur_json in rows:
+        versions = _real_versions(av_json)
+        listed = {k for k in _json_list(vl_json) if is_audio_version_key(k)}
+        durations = _json_obj(dur_json)
+        if durations:
+            result["filled"] += 1
+        result["entries"] += len(versions)
+        if set(durations) != versions or listed != versions:
+            result["mismatch"] += 1
+        for ver, seconds in durations.items():
+            if isinstance(seconds, (int, float)) and not isinstance(seconds, bool) and seconds > 0:
+                slot = result["by_version"].setdefault(ver, [0, 0.0])
+                slot[0] += 1
+                slot[1] += float(seconds)
+                result["entries_filled"] += 1
+                result["seconds_total"] += float(seconds)
+            else:
+                result["entries_null"] += 1
+    return result
+
+
 def print_db_status():
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
@@ -649,6 +792,14 @@ def print_db_status():
         has_numbered_png = c.fetchone()[0]
         c.execute("SELECT COUNT(*) FROM tjc_hymn WHERE audio_version_list != '[]' AND audio_version_list != ''")
         has_audio = c.fetchone()[0]
+
+        # 音频时长覆盖（v10；未迁移时静默跳过）
+        try:
+            c.execute("SELECT COUNT(*) FROM tjc_hymn WHERE audio_durations != '{}' "
+                      "AND audio_durations != '' AND audio_durations IS NOT NULL")
+            has_durations = c.fetchone()[0]
+        except sqlite3.OperationalError:
+            has_durations = -1
 
         # ---- DB 路径 vs 磁盘文件交叉校验（v5 增强）----
         # 检查"数据库有记录，但记录指向的文件是否真实存在"（防悬挂引用）
@@ -702,6 +853,15 @@ def print_db_status():
         print(f"   五线谱图片: {has_staff_png}/{total} {'✅' if has_staff_png > 0 else '❌'}")
         print(f"   简谱图片:   {has_numbered_png}/{total} {'✅' if has_numbered_png > 0 else '❌'}")
         print(f"   有音频: {has_audio}/{total} {'✅' if has_audio > 0 else '❌'}")
+        if has_durations >= 0:
+            dur_stats = audio_duration_stats()
+            h, rem = divmod(int(dur_stats["seconds_total"]), 3600)
+            m = rem // 60
+            print(f"   有音频时长: {has_durations}/{total}"
+                  f"{' ✅' if has_durations >= has_audio else '（执行 python tool/build_audio_durations.py 补齐）'}"
+                  f" | 条数 {dur_stats['entries_filled']}/{dur_stats['entries']}"
+                  f" | 总时长 {h}h{m:02d}m"
+                  + (f" | ⚠️ 键集不一致 {dur_stats['mismatch']} 行" if dur_stats["mismatch"] else ""))
         if version_counts:
             print("   音频版本分布:")
             for v, cnt in sorted(version_counts.items(), key=lambda x: -x[1]):

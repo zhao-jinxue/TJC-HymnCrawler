@@ -1,6 +1,6 @@
 # hymn_crawler 开发总结（SESSION_SUMMARY）
 
-> 用途：新会话续接开发的最小上下文入口。更新于 2026-09-15（官方简谱曲谱入库 v9 + PDF 编号映射修复）。
+> 用途：新会话续接开发的最小上下文入口。更新于 2026-09-19（音频时长入库 v10）。
 
 ## 项目状态
 - TJC 赞美诗（hymn）数据爬虫 + 数据处理流水线，已完成：探测 → 下载 → 提取 → 转图 → 校验 → 入库全流程
@@ -10,12 +10,14 @@
 - **Selenium 保底引擎**完整保留：`crawler_core/selenium_legacy/` + 独立整链入口 `legacy/crawler_selenium.py`
 - 核心模块：`crawler_core/`（`api_client` / `naming` / `scanner` / `extractor` / `probe` / `sync` / `downloader` /
   `verify` / `db` + `selenium_legacy/`）、`tool/`（数据处理 + `data_audit/` 审计 + `show_lyrics.py` 歌词复核）、`test/`（81 项 pytest）
-- 数据文件：`tjc_hymn.db`（SQLite **v7** 主表 474 首，含副歌 `chorus` 与 API 原始记录 `api_raw`；
+- 数据文件：`tjc_hymn.db`（SQLite **v10** 主表 474 首 29 列，含副歌 `chorus`、API 原始记录 `api_raw`、
+  **音频时长 `audio_durations`（版本名 → 秒，与 `audio_versions` / `audio_version_list` 键集一一匹配）**；
   另含 **v8 两表** `hymn_jianpu` / `hymn_jianpu_line`——PPT 带简谱文字歌词 474 份 / 12136 行；
   以及 **v9 五表** `hymn_score` / `hymn_score_line` / `hymn_score_lyric` / `hymn_score_char` /
   `hymn_codepoint_map`——官方简谱 PDF 的「曲谱 + 歌词 + 拍位 + 逐字对应」473 首 / 7914 谱行 / 5481 歌词行 / 27567 字）、
   `data/probe_report.json`、`data/final_report.txt`、`data/jianpu_report.txt`、`Hymn_Downloads/api_cache/`（48 页 API 缓存，已入 git）
 - 数据口径：三方对账 **474/474/474**；资源 **2067/2067 完整（100%）**；音频可用 **1119** 条 / 474 首；
+  **音频时长全量读出 1119/1119 条（合计 47h59m）**；
   源站不可用 **10** 条（9 条空记录 + #62 404，已摘出期望集合）；`download_status` 全量 `completed`
 - 副歌口径（2026-09-13 实测复核）：库内 **270 首有副歌 / 204 首无**，与**实时**官网 API（绕过 `api_cache`）逐字一致；
   无副歌的 204 首在官网列表接口与详情接口中 `lyrics_chorus` 均为空（站点本身无副歌），非抓取丢失
@@ -58,6 +60,13 @@
     旧 `pdf_path()` 按编号匹配目录前缀，会把 #334 解析成 #329「天父我神」（40 首抽样错配 16 首、命中 0 处），
     改为按文件名匹配后同批样本命中 **58 处**。另确认 **#349 是站点上传的异版 PDF**（Type3 字形、无文本层、
     尺寸 420×595），**非文件损坏、无需重下**，需 OCR 或从 v8 侧补齐（本轮以 `review_reason` 显式记录）
+11. **音频时长入库（2026-09-19，DB v10）**：新增 `tjc_hymn.audio_durations`（JSON：版本名 → 秒），
+    与 `audio_versions` / `audio_version_list` **键集一一匹配**（读不出的版本值落 `null`，键保留）。
+    新增 `crawler_core/audio_duration.py`（mutagen **按后缀显式分派** `MP3`/`MP4`——`mutagen.File()` 的类型
+    嗅探对无 ID3 标签的 MP3 返回 None，本库 #138/#197/#296_b 人聲版即此例）+ `tool/build_audio_durations.py`
+    （`--only/--limit/--dry-run/--stats/--show`，幂等可重跑）。实测 **474 首 / 1119 条全部读出（0 失败）**、
+    合计 **47h59m**（27.2–389.2 秒，中位 154.5）、键集不一致 **0 行**；列序由 `tool/reorder_table_columns.py`
+    重建对齐（29 列，`audio_durations` 紧跟 `audio_version_list`）。
 
 ## 遗留任务（可选，未排期；详见 `docs/API_REFACTOR_PLAN.md` §7「P3 — 展望」）
 - ✅ 已执行（不再是待决策项）：删除 `#349` 的 `Hymn_Downloads/_archive/`（5 个旧资源 + README + md5），并由新 PDF 重出简谱/五线谱 PNG
@@ -80,6 +89,8 @@
 - 歌词复核：`python tool/show_lyrics.py 12` / `--stats` / `--no-chorus`（看正歌+副歌并与 `api_raw` 逐字比对）
 - 带简谱歌词（`data/赞美诗PPT/` 就位时）：`python tool/extract_jianpu.py --dry-run`（只出报告）/
   `python tool/extract_jianpu.py`（写 `hymn_jianpu` + `hymn_jianpu_line`）/ `python tool/show_jianpu.py 1 --map`（渲染复核）
+- 音频时长（v10 `audio_durations`）：`python tool/build_audio_durations.py`（全量统计写库，幂等）/
+  `--only 1 5 349` / `--limit 20 --dry-run` / `--stats` / `--show 1`；重下或替换音频后需重跑
 - 测试与门禁：`python -m pytest -c config/pytest.ini test/ -q`、`ruff check --config config/ruff.toml .`、
   `mypy crawler_core crawler_api.py legacy/crawler_selenium.py`、`bandit -c config/bandit.yaml -r crawler_core crawler_api.py legacy/crawler_selenium.py`
 - 详细方案：`docs/API_REFACTOR_PLAN.md`；上下文最小化：`docs/CLINE_CONTEXT_MINIMIZE.md`；会话日志：`docs/sessions/`

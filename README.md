@@ -36,13 +36,14 @@ hymn_crawler/
 │   ├── checksums.py            # checksums.json 哈希维护
 │   ├── ppt_jianpu.py           # ★ 从《赞美诗》PPT 提取带简谱文字歌词（解析+5 项校验+报告）
 │   ├── pdf_jianpu.py           # ★ 官方简谱 PDF 侧：码位→记号自举学习 + 逐字几何对位（POC）
-│   ├── db.py                   # 数据库管理 + 迁移（v7 + 带简谱歌词 v8）+ UPSERT + hymn_category 重建
+│   ├── audio_duration.py       # ★ 音频时长读取（mutagen 按后缀分派：m4a/mp3 → audio_durations）
+│   ├── db.py                   # 数据库管理 + 迁移（v7 + 带简谱歌词 v8 + 音频时长 v10）+ UPSERT + hymn_category 重建
 │   └── selenium_legacy/        # 🛟 Selenium 保底引擎（旧实现原样保留，默认不参与主流程）
 │       ├── driver.py / scanner_selenium.py / extractor_dom.py / probe_audio.py
 │       └── README.md           # 用途 / 启停方法 / 何时该用
 │
 ├── crawler_api.py              # 🎮 统一主入口（API 主路径；--engine api|selenium|auto）
-├── tjc_hymn.db                 # 🗄 SQLite 数据库（v7 主表 474 首 + v8 两表「带简谱文字歌词」）
+├── tjc_hymn.db                 # 🗄 SQLite 数据库（v10 主表 474 首 + v8/v9 简谱歌词与曲谱五表）
 ├── LICENSE                     # 📄 许可协议（保留所有权利：个人学习可用，禁止商业使用与再分发）
 │
 ├── config/                     # ⚙️ 依赖 + 门禁/测试配置（详见该目录 README）
@@ -65,6 +66,7 @@ hymn_crawler/
 │   ├── show_lyrics.py          # 🔎 入库歌词复核（看某首的正歌+副歌，并与 api_raw 逐字比对）
 │   ├── extract_jianpu.py       # 🎼 PPT → 带简谱文字歌词提取入库（解析/校验/报告/写库）
 │   ├── show_jianpu.py          # 🎹 简谱歌词渲染复核（简谱字体+歌词字体出图，逐字对位索引）
+│   ├── build_audio_durations.py # 🔊 音频时长统计入库（写 v10 `audio_durations`，与版本列表一一匹配）
 │   ├── show_score.py           # 🎼 官方简谱曲谱人读输出（v9：谱行 × 歌词行竖排对齐打印）
 │   ├── show_pdf_align.py       # 📐 官谱 PDF ↔ PPT 歌词逐字对位复核（对位表 + 标注图，POC）
 │   ├── qwen_ocr.py             # 千问 Qwen-VL 图片 OCR 识别
@@ -75,9 +77,10 @@ hymn_crawler/
 │   ├── verify_merged.py        # 合并数据校验
 │   └── ...                     # 其他数据比对 / 清理脚本
 │
-├── test/                       # 🧪 pytest 测试（138 项，离线可跑）
+├── test/                       # 🧪 pytest 测试（211 项，离线可跑）
 │   ├── test_api_client.py      # ★ API 客户端：分页/映射/目录名规则/重试/缓存/可用性状态机
 │   ├── test_db_v7.py           # ★ DB v7：api_raw/空值守卫/hymn_category/增量计划/引擎隔离
+│   ├── test_audio_duration.py  # ★ 音频时长 v10：合成 mp3/mp4 读时长、键集一一匹配、写库幂等
 │   ├── test_no_crash.py        # ★ 不崩断言（§5.9.6）：坏 URL/断网续跑/null 不下载/结构改版
 │   ├── test_lyrics_api.py      # 歌词 API + DOM box 归并 + chorus 字段
 │   ├── test_jianpu.py          # ★ PPT 带简谱歌词：字形语义/计数/解析/编号归属/DB v8 两表
@@ -226,6 +229,7 @@ hymn_crawler/
 | **图片入库** | `crawler_core/db.py` (`update_png_paths`) | PNG 路径以新增字段 `*_png_path` 入库，不覆盖原 PDF 路径 | ✅ 完成 |
 | **带简谱歌词** | `crawler_core/ppt_jianpu.py` + `tool/extract_jianpu.py` | 474 份 PPT → 每节每行「简谱记号 + 歌词」；5 项校验（行配对/节号自洽/跨节曲调一致/歌词归属/音符-字数等长），写 `hymn_jianpu` + `hymn_jianpu_line` | ✅ 完成（404 首全项通过 / 70 首带复核标记） |
 | **官方简谱曲谱** | `crawler_core/pdf_score.py` + `tool/build_score.py`（入库）/ `tool/show_score.py`（人读输出） | 官方简谱 PDF（网站标准源）→ 逐乐句「曲谱串 + 歌词 + 拍位 + 逐字对应」；写 `hymn_score` / `hymn_score_line` / `hymn_score_lyric` / `hymn_score_char` / `hymn_codepoint_map` | ✅ 完成（473 首入库 / 7914 谱行 / 逐字对位可靠 99.0%；#349 无文本层待 OCR） |
+| **音频时长** | `crawler_core/audio_duration.py` + `tool/build_audio_durations.py` | 离线读本地音频（m4a/mp3）→ 时长写 v10 字段 `audio_durations`（JSON：版本名 → 秒），与 `audio_versions` / `audio_version_list` **键集一一匹配** | ✅ 完成（474 首 / 1119 条全部读出 / 合计 47h59m / 键集 0 不一致） |
 
 ---
 
@@ -246,16 +250,19 @@ hymn_crawler/
 | `staff_png_path` / `numbered_png_path` | TEXT | **五线谱 / 简谱 PNG** 相对路径（v5 新增；由 `crawler_core.images` 从 PDF 转出） |
 | `audio_versions` | TEXT | JSON：**版本名 → 相对路径**（如 `{"鋼琴版": "..."}`） |
 | `audio_version_list` | TEXT | JSON：纯版本名列表 |
+| `audio_durations` | TEXT | JSON：**版本名 → 时长（秒）**（v10 新增；`{"鋼琴版": 144.171, "人聲版": 167.163}`，读不出的版本值 `null`）。键集与上两列**一一匹配**，由 `tool/build_audio_durations.py` 离线统计 |
 | `api_raw` | TEXT | **API 原始记录 JSON**（v7 新增）：`category` / `tags` / `youtube_urls` / `updated_at` / `prev_no` / `next_no` / `history` HTML 等；读取用 `api_client.api_field(raw, "category.name")` 等助手 |
 | `download_status` | TEXT | `completed` / `partial(x/y)` / `failed` / `pending` / `dir_missing` / `no_files` |
 | `integrity_status` | TEXT | `passed` / `failed` / `unchecked` |
 | `updated_at` | TIMESTAMP | 更新时间（本地时间 CST） |
 
-> 🔄 **自动迁移**：`crawler_core/db.py` 的 `init_db()` 支持从任意旧版本自动升级（v1 → v7），无需手动干预。
-> 🧱 **列顺序**：库内**物理列顺序**与 `_create_table_v4` 的建表顺序一致（28 列）；旧库因 v5/v6/v7 走 `ALTER TABLE` 追加曾出现顺序错位，
+> 🔄 **自动迁移**：`crawler_core/db.py` 的 `init_db()` 支持从任意旧版本自动升级（v1 → v10），无需手动干预。
+> 🧱 **列顺序**：库内**物理列顺序**与 `_create_table_v4` 的建表顺序一致（29 列，`audio_durations` 紧跟 `audio_version_list`）；
+> 旧库因 v5/v6/v7/v10 走 `ALTER TABLE` 追加曾出现顺序错位，
 > 已由 `tool/reorder_table_columns.py` 重建对齐（幂等，可随时 `--dry-run` 复核）。
 > 📚 `hymn_category` 表由 `db.rebuild_hymn_category(records)` **用 API 重建**（`id / name / slug / hymn_count / updated_at`，先建临时表再原子替换，失败回滚、可重复执行）。
 > 🔁 **UPSERT 原则（v6 起）**：`title` / 作者 / 源考 / 副歌 / 路径 / 状态 / `api_raw` 等字段**空值不覆盖旧值**——API 侧缺失时保留库内既有成果（如 #25/#31/#66/#299 官网无 lyricists、#349 无 history）。
+> 🎵 **`audio_durations` 归统计工具独有**：`save_to_db` / downloader 的路径回写**不动这一列**（避免爬取重跑清空已算好的时长）；重下/换音频后重跑 `python tool/build_audio_durations.py`。
 
 ---
 
@@ -366,6 +373,13 @@ hymn_crawler/
     副歌在曲谱里没有词行时（如 #17），每页页尾附官网副歌文本
   - `python tool/show_score.py 12 --by-stanza --out 12.txt --formfeed`：写文件 + 每页尾出换页符 `\f`，
     可直接交给打印系统 / 文本编辑器分页打印
+- **音频时长**（`Hymn_Downloads/` 就位时）：
+  - `python tool/build_audio_durations.py`：全量统计各版本音频时长 → 写 `tjc_hymn.audio_durations`
+    （幂等可重跑：时长未变则只报告“未变”；键集与 `audio_versions` / `audio_version_list` 一一匹配）
+  - `python tool/build_audio_durations.py --limit 20 --dry-run`：抽样试跑（只统计不写库）；
+    `--only 1 5 349` 只处理指定编号
+  - `python tool/build_audio_durations.py --stats`：覆盖统计（总时长 / 各版本平均时长 / 键集一致性）；
+    `--show 1` 打印某首各版本时长（`mm:ss` + 秒数 + 文件是否存在）
 - **单文件转图**：`python -m crawler_core.images --force --pdf <PDF 相对路径>`（重画指定诗歌的简谱 / 五线谱 PNG，不触发全量扫描）
 - **测试**：`/home/zjx/python_env/bin/python -m pytest -c config/pytest.ini test/ -q`（纯单元，无需网络；`test_smoke.py` 冒烟 + `test_maintenance.py` 维护工具回归）
 - **pre-commit 钩子**：提交前自动重建 `checksums.json`
