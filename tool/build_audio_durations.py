@@ -25,7 +25,6 @@
 import argparse
 import json
 import os
-import sqlite3
 import sys
 import time
 
@@ -45,50 +44,21 @@ def fmt_seconds(seconds):
 
 
 def load_rows(db_path):
-    """读 `tjc_hymn` 的音频相关四列（先幂等补 v10 列，兼容未迁移的旧库）"""
-    conn = sqlite3.connect(db_path)
-    try:
-        c = conn.cursor()
-        db.ensure_audio_durations_field(c)
-        return c.execute(
-            "SELECT hymn_number, audio_versions, audio_version_list, audio_durations "
-            "FROM tjc_hymn ORDER BY id"
-        ).fetchall()
-    finally:
-        conn.close()
+    """读 `tjc_hymn` 的音频相关四列（复用 `audio_duration.load_version_rows`）"""
+    return ad.load_version_rows(db_path)
 
 
 def durations_of(audio_versions_json, root=None):
-    """`audio_versions` JSON → `({版本名: 秒或 None}, {版本名: 失败原因})`（秒保留 3 位小数）
+    """`audio_versions` JSON → `({版本名: 秒或 None}, {版本名: 失败原因})`
 
-    只取**真实版本键**（`_` 前缀为元信息键，由 `naming.is_audio_version_key` 在
-    `audio_duration.durations_for` 内剔除），键集与 `audio_versions` 一致
-    → 写库后与 `audio_version_list` 一一匹配。
+    复用 `audio_duration.durations_of`：只取**真实版本键**（`_` 前缀元信息键剔除），
+    键集与 `audio_versions` 一致 → 写库后与 `audio_version_list` 一一匹配。
     """
-    try:
-        av = json.loads(audio_versions_json or "{}")
-    except (json.JSONDecodeError, TypeError):  # 历史脏数据：视为无音频
-        av = {}
-    raw, issues = ad.durations_for(av if isinstance(av, dict) else {}, root)
-    durations: dict[str, float | None] = {
-        ver: (round(sec, 3) if sec is not None else None) for ver, sec in raw.items()
-    }
-    return durations, issues
-
-
-def _parse_list(value):
-    """`audio_version_list` JSON → 真实版本名集合（元信息键与脏数据剔除）"""
-    try:
-        parsed = json.loads(value or "[]")
-    except (json.JSONDecodeError, TypeError):
-        return set()
-    if not isinstance(parsed, list):
-        return set()
-    return {k for k in parsed if isinstance(k, str) and is_audio_version_key(k)}
+    return ad.durations_of(audio_versions_json, root)
 
 
 def run(numbers=None, limit=None, dry_run=False, db_path=None, root=None, quiet=False):
-    """批量统计并写库 → 汇总 dict
+    """批量统计并写库 → 汇总 dict（实际工作复用 `audio_duration.fill_durations`）
 
     Args:
         numbers: 只处理这些编号（None / 空 = 全部）
@@ -99,43 +69,25 @@ def run(numbers=None, limit=None, dry_run=False, db_path=None, root=None, quiet=
         quiet: 不打印逐首明细
     """
     db_path = db_path or db.DB_PATH
-    rows = load_rows(db_path)
+    rows = ad.load_version_rows(db_path)
     total = len(rows)
     if numbers:
         wanted = {str(n) for n in numbers}
-        rows = [r for r in rows if r[0] in wanted]
+        selected = [r for r in rows if r[0] in wanted]
+    else:
+        selected = rows
     if limit:
-        rows = rows[:limit]
+        selected = selected[:limit]
 
-    summary = {"hymns": 0, "entries": 0, "read": 0, "null": 0,
-               "written": 0, "unchanged": 0, "mismatch": [], "issues": []}
-    print(f"🎵 待统计 {len(rows)} 首（库内共 {total} 首）…")
+    def _on_row(i, count, no, durations):
+        detail = " | ".join(f"{ver} {fmt_seconds(sec)}" for ver, sec in durations.items())
+        print(f"  [{i:>4}/{count}] #{no}  {len(durations)} 版本 | {detail}")
+
+    print(f"🎵 待统计 {len(selected)} 首（库内共 {total} 首）…")
     t0 = time.time()
-    for i, (no, av_json, vl_json, old_json) in enumerate(rows, 1):
-        durations, issues = durations_of(av_json, root)
-        if not durations:
-            continue  # 无音频的记录（源站空白条目）直接跳过
-        keys = set(durations)
-        listed = _parse_list(vl_json)
-        if keys != listed:
-            summary["mismatch"].append((no, sorted(keys), sorted(listed)))
-        summary["hymns"] += 1
-        summary["entries"] += len(durations)
-        summary["read"] += sum(1 for s in durations.values() if s is not None)
-        summary["null"] += sum(1 for s in durations.values() if s is None)
-        for ver, reason in issues.items():
-            summary["issues"].append((no, ver, reason))
-        if not quiet:
-            detail = " | ".join(f"{ver} {fmt_seconds(sec)}" for ver, sec in durations.items())
-            print(f"  [{i:>4}/{len(rows)}] #{no}  {len(durations)} 版本 | {detail}")
-
-        payload = json.dumps(durations, ensure_ascii=False)
-        if payload == (old_json or ""):
-            summary["unchanged"] += 1
-            continue
-        summary["written"] += 1
-        if not dry_run:
-            db.save_audio_durations(no, durations, db_path)
+    summary = ad.fill_durations(db_path=db_path, numbers=numbers, limit=limit,
+                                dry_run=dry_run, root=root,
+                                on_row=None if quiet else _on_row)
 
     print(f"✅ 统计完成：{summary['hymns']} 首 / {summary['entries']} 个音频"
           f"（读出 {summary['read']} | 读不出 {summary['null']}）/ 耗时 {time.time() - t0:.1f}s")

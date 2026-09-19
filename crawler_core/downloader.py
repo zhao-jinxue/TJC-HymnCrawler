@@ -384,13 +384,15 @@ def _find_hymn_dir(hymn_number):
 
 def _backfill_paths_to_db(probe_report):
     """将 probe_report.json 中的 PDF 路径和音频信息回写到数据库
-       路径存储为相对于项目根目录（SCRIPT_DIR）的相对路径"""
+       路径存储为相对于项目根目录（SCRIPT_DIR）的相对路径
+
+    v10 起**同一批音频路径 + 时长一起写库**：下载完新音频时顺手读时长写 `audio_durations`，
+    与本条 UPDATE 里的 `audio_versions` / `audio_version_list` 天然键集一致（无需再跑单独统计）。
+    """
     import sqlite3
 
-    from .config import DB_PATH, MAP_FILE
-
-    # 计算项目根目录
-    SCRIPT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    from .audio_duration import durations_for
+    from .config import DB_PATH, MAP_FILE, SCRIPT_DIR
 
     # 构建 dir_map
     dir_map = {}
@@ -408,6 +410,8 @@ def _backfill_paths_to_db(probe_report):
     updated_staff = 0
     updated_num = 0
     updated_audio = 0
+    dur_read = 0
+    dur_null = 0
 
     for m in probe_report:
         h = m["hymn_number"]
@@ -438,15 +442,22 @@ def _backfill_paths_to_db(probe_report):
         audio_json = json.dumps(clean_av, ensure_ascii=False) if clean_av else "{}"
         vl_json = json.dumps(list(clean_av.keys()), ensure_ascii=False)
 
+        # 音频时长（v10）：键集与 clean_av 完全一致 → 与 audio_versions / audio_version_list 一一匹配
+        durations, _dur_issues = durations_for(clean_av)
+        durations_json = json.dumps(durations, ensure_ascii=False) if durations else "{}"
+        dur_read += sum(1 for s in durations.values() if s is not None)
+        dur_null += sum(1 for s in durations.values() if s is None)
+
         c.execute(
             """UPDATE tjc_hymn SET
                staff_img_path = ?,
                numbered_img_path = ?,
                audio_versions = ?,
                audio_version_list = ?,
+               audio_durations = ?,
                updated_at = datetime('now', 'localtime')
                WHERE hymn_number = ?""",
-            (staff_rel, num_rel, audio_json, vl_json, h)
+            (staff_rel, num_rel, audio_json, vl_json, durations_json, h)
         )
         if staff_rel:
             updated_staff += 1
@@ -460,3 +471,6 @@ def _backfill_paths_to_db(probe_report):
 
     if updated_staff > 0 or updated_num > 0 or updated_audio > 0:
         print(f"📌 数据库已更新：五线谱 {updated_staff} 首 | 简谱 {updated_num} 首 | 音频 {updated_audio} 首")
+    if dur_read or dur_null:
+        print(f"🔊 音频时长已随音频一起入库（audio_durations）：读出 {dur_read} 条"
+              + (f" | 读不出 {dur_null} 条（值记 null，见日志）" if dur_null else ""))

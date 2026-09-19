@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+#   python crawler_api.py --step 11             # 只做音频时长统计（v10 audio_durations）
 # crawler_api.py（原 crawler_fast.py，2026-09-13 重命名）
 # 🚀 统一主入口（默认 API 引擎；Selenium 保底见 legacy/crawler_selenium.py）
 #
@@ -23,6 +24,7 @@ import sys
 import time
 
 from crawler_core import api_client, naming, sync
+from crawler_core.audio_duration import fill_durations
 from crawler_core.checksums import run as run_step6
 from crawler_core.config import PROBE_REPORT, VALID_ENGINES
 from crawler_core.db import (
@@ -204,15 +206,44 @@ def run_step3(engine):
     return run_probe(engine=engine)
 
 
+def print_audio_duration_summary(summary):
+    """打印音频时长统计摘要（`audio_duration.fill_durations` 的汇总结构）"""
+    print(f"   🔊 {summary['hymns']} 首 / {summary['entries']} 条音频"
+          f"（读出 {summary['read']}，读不出 {summary['null']}）| "
+          f"写入 {summary['written']} 行 / 未变 {summary['unchanged']} 行"
+          f"（库内共 {summary['rows']} 首，本次处理 {summary['selected']} 首）")
+    if summary["mismatch"]:
+        print(f"   ⚠️ 键集不一致 {len(summary['mismatch'])} 行（audio_versions ≠ audio_version_list）："
+              f"{summary['mismatch'][:3]}")
+    if summary["issues"]:
+        print(f"   ⚠️ 读不出时长的条目 {len(summary['issues'])} 个（值记 null）：")
+        for no, ver, reason in summary["issues"][:5]:
+            print(f"      #{no} {ver}: {reason}")
+
+
+def run_step_audio(db_path=None):
+    """音频时长统计入库（v10 `audio_durations`，与 `audio_version_list` 键集一一匹配）
+
+    - **下载即入库**：`downloader._backfill_paths_to_db` 回写音频路径时已顺手写时长；
+    - 本步骤是全流程末尾的**幂等兜底/补算**：覆盖「路径来自 probe 回填/历史数据/手工放入目录」
+      等未走下载回写的场景，以及音频被替换后需要重算的情况（未变行只报告不写库）。
+    """
+    print("\n🔊 音频时长统计（写 tjc_hymn.audio_durations，键集与 audio_version_list 一一匹配）...")
+    summary = fill_durations(db_path=db_path)
+    print_audio_duration_summary(summary)
+    return summary
+
+
 def run_step10_full(engine, use_cache=True):
-    """极速全量同步（纯 API）：Step1 → Step2 → 探测 → 下载 → 校验"""
-    print("\n⚡ 极速全量同步（API）：Step1 → Step2 → 资源探测 → 下载 → 校验")
+    """极速全量同步（纯 API）：Step1 → Step2 → 探测 → 下载 → 校验 → 音频时长"""
+    print("\n⚡ 极速全量同步（API）：Step1 → Step2 → 资源探测 → 下载 → 校验 → 音频时长")
     run_step1(engine, use_cache=use_cache)
     run_step2(engine)
     report = run_probe(force=True, engine=engine)
     if report:
         run_download(report)
     run_step4()
+    run_step_audio()
 
 
 def run_step10_incremental(engine, use_cache=True):
@@ -228,6 +259,7 @@ def run_step10_incremental(engine, use_cache=True):
         run_probe_missing(engine=engine)
         run_download()
     run_step4()
+    run_step_audio()  # 新增音频的时长补算（下载回写里已算过，这里兜底确保全覆盖）
 
 
 # ================= 主菜单 =================
@@ -248,6 +280,7 @@ def build_menu(engine, failed_count):
     items.append(("9", "歌词重抓：官网 API 全量刷新正歌 + 副歌 chorus（修复历史丢失）"))
     if engine != "selenium":
         items.append(("10", "极速全量同步（纯 API：全量 / 增量两模式）"))
+    items.append(("11", "音频时长统计入库（v10 audio_durations，与版本列表一一匹配）"))
     items.append(("0", "退出"))
     return items
 
@@ -275,7 +308,7 @@ def main(argv=None, engine=None, step=None, use_cache=True):
 
     # 无 TTY（cron/CI/管道）时不进入交互菜单，避免无限等待输入
     if not sys.stdin.isatty():
-        print("⚠️ 非交互终端：请用 --step <1-10|check|incremental> 指定要执行的步骤。")
+        print("⚠️ 非交互终端：请用 --step <1-11|check|incremental|audio> 指定要执行的步骤。")
         print("   示例：python crawler_api.py --engine api --step 10")
         return 2
 
@@ -367,6 +400,10 @@ def _dispatch(choice, engine, failed_count, use_cache):
         run_step7()
         print("\n----- Step 6: 增量更新 checksums.json PNG 哈希（已有条目跳过） -----")
         run_step6(incremental=True)
+
+    # ---- 音频时长统计入库（v10；下载回写已算，这里兜底/补算）----
+    if choice in ("7", "11"):
+        run_step_audio()
 
     # ---- 补全失败 ----
     if choice == "8":
@@ -462,10 +499,12 @@ def _run_single_step(step, engine, use_cache):
         run_lyrics_backfill()
     elif step == "10":
         run_step10_full(engine, use_cache=use_cache)
+    elif step in ("11", "audio"):
+        run_step_audio()
     elif step == "incremental":
         run_step10_incremental(engine, use_cache=use_cache)
     else:
-        print(f"❌ 未知步骤 {step!r}（可选：1-10 / check / incremental）")
+        print(f"❌ 未知步骤 {step!r}（可选：1-11 / check / incremental / audio）")
         return 2
 
     print(f"\n🎉 step={step} 执行完成！耗时 {time.time()-total_start:.1f}s")
@@ -479,7 +518,7 @@ def parse_args(argv=None):
     parser.add_argument("--engine", choices=list(VALID_ENGINES), default="api",
                         help="抓取引擎（默认 api；auto=API 优先、逐首降级 DOM）")
     parser.add_argument("--step", default=None,
-                        help="非交互执行单步：1-10 / check（Step1 一致性检查）/ incremental")
+                        help="非交互执行单步：1-11 / check（Step1 一致性检查）/ incremental / audio（音频时长）")
     parser.add_argument("--refresh-api-cache", action="store_true",
                         help="忽略并重建 Hymn_Downloads/api_cache/ 分页缓存")
     args, _unknown = parser.parse_known_args(argv)

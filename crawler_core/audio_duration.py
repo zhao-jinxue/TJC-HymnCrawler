@@ -14,8 +14,10 @@
 #
 # 依赖：mutagen（见 `config/requirements.txt`）；缺失时抛 RuntimeError 并给出安装命令。
 
+import json
 import os
-from typing import Any
+import sqlite3
+from typing import Any, TypedDict
 
 from .config import SCRIPT_DIR
 from .naming import is_audio_version_key
@@ -93,6 +95,8 @@ def durations_for(versions: dict[str, str], root: str | None = None
     键集 = 入参中的**真实版本键**（`_` 前缀的元信息键 `_error`/`_url`/`_http_status` 等按
     `naming.is_audio_version_key` 剔除）——这正是「与 `audio_versions` / `audio_version_list`
     一一匹配」的落实点：个别文件读不出时**键仍保留、值落 `None`**，键集不随之塌缩。
+
+    秒保留 **3 位小数**（与写库格式一致，避免 JSON 里出现 144.11754166666665 这种长尾）。
     """
     durations: dict[str, float | None] = {}
     issues: dict[str, str] = {}
@@ -105,5 +109,126 @@ def durations_for(versions: dict[str, str], root: str | None = None
             durations[ver] = None
             issues[ver] = reason
         else:
-            durations[ver] = seconds
+            durations[ver] = round(seconds, 3)
     return durations, issues
+
+
+# ================= 批量统计与入库（全链路与 tool 共用） =================
+#
+# 为什么做成共用函数（2026-09-19）：时长既要**随下载一起入库**（`downloader._backfill_paths_to_db`
+# 回写路径时顺手算），又要能**独立重算/补算**（`crawler_api.py --step 11`、`tool/build_audio_durations.py`），
+# 三处必须是同一套键集规则，否则「一一匹配」会在某个入口破功。
+
+class DurationFillSummary(TypedDict):
+    """`fill_durations()` 的汇总（多形状：计数 + 不一致明细 + 问题明细）
+
+    ⚠️ 必须显式声明（项目规则）：从字面量推断会收窄成 `dict[str, int | list[...]]`，
+    调用方 `summary["written"]` / `summary["issues"]` 会被误报。
+    """
+
+    hymns: int                                    # 处理后（有时长键）的诗歌数
+    entries: int                                  # 音频条目数（= 时长键数）
+    read: int                                     # 读出秒数的条目
+    null: int                                     # 读不出（值 None）的条目
+    written: int                                  # 实际写入/更新的行数
+    unchanged: int                                # JSON 未变、跳过的行数
+    rows: int                                     # 库内总行数
+    selected: int                                 # 本次处理的行数（--only/--limit 后）
+    mismatch: list[tuple[str, list[str], list[str]]]  # [(编号, 时长键, audio_version_list)]
+    issues: list[tuple[str, str, str]]            # [(编号, 版本, 失败原因)]
+
+
+def load_version_rows(db_path: str | None = None) -> list[tuple]:
+    """读 `tjc_hymn` 音频四列 → `[(编号, audio_versions, audio_version_list, audio_durations)]`
+
+    先幂等补 v10 列（兼容未迁移的旧库）；按 `id` 排序（编号含 `296_b` 等，不能按编号排）。
+    """
+    from . import db  # 惰性导入：本模块只读文件，避免与 db 的常规导入顺序耦合
+
+    conn = sqlite3.connect(db_path or db.DB_PATH)
+    try:
+        c = conn.cursor()
+        db.ensure_audio_durations_field(c)
+        return c.execute(
+            "SELECT hymn_number, audio_versions, audio_version_list, audio_durations "
+            "FROM tjc_hymn ORDER BY id"
+        ).fetchall()
+    finally:
+        conn.close()
+
+
+def durations_of(audio_versions_json: str | None, root: str | None = None
+                 ) -> tuple[dict[str, float | None], dict[str, str]]:
+    """`audio_versions` JSON → `({版本名: 秒或 None}, {版本名: 失败原因})`（脏数据 → 空）"""
+    try:
+        av = json.loads(audio_versions_json or "{}")
+    except (json.JSONDecodeError, TypeError):  # 历史脏数据：视为无音频
+        av = {}
+    return durations_for(av if isinstance(av, dict) else {}, root)
+
+
+def _version_set(value: str | None) -> set[str]:
+    """`audio_version_list` JSON → 真实版本名集合（元信息键 / 脏数据剔除）"""
+    try:
+        parsed = json.loads(value or "[]")
+    except (json.JSONDecodeError, TypeError):
+        return set()
+    if not isinstance(parsed, list):
+        return set()
+    return {k for k in parsed if isinstance(k, str) and is_audio_version_key(k)}
+
+
+def fill_durations(db_path: str | None = None, numbers=None, limit: int | None = None,
+                   dry_run: bool = False, root: str | None = None, on_row=None
+                   ) -> DurationFillSummary:
+    """批量统计各版本时长并写 `tjc_hymn.audio_durations`（v10）→ 汇总
+
+    Args:
+        db_path: 数据库路径（默认 `config.DB_PATH`）
+        numbers: 只处理这些编号（None / 空 = 全部）
+        limit: 最多处理多少首
+        dry_run: 只统计不写库
+        root: 相对路径解析根（默认项目根；测试可注入临时目录）
+        on_row: 逐首回调 `(i, total, 编号, {版本: 秒或 None})`（用于 CLI 明细输出）
+
+    幂等：JSON 未变的行只计入 `unchanged`、不发起 UPDATE。
+    """
+    from . import db  # 惰性导入（见 load_version_rows 注释）
+
+    rows = load_version_rows(db_path)
+    total = len(rows)
+    if numbers:
+        wanted = {str(n) for n in numbers}
+        rows = [r for r in rows if r[0] in wanted]
+    if limit:
+        rows = rows[:limit]
+
+    summary: DurationFillSummary = {"hymns": 0, "entries": 0, "read": 0, "null": 0,
+                                    "written": 0, "unchanged": 0,
+                                    "rows": total, "selected": len(rows),
+                                    "mismatch": [], "issues": []}
+    for i, (no, av_json, vl_json, old_json) in enumerate(rows, 1):
+        durations, issues = durations_of(av_json, root)
+        if not durations:
+            continue  # 无音频的记录（源站空白条目）直接跳过
+        keys = set(durations)
+        listed = _version_set(vl_json)
+        if keys != listed:
+            summary["mismatch"].append((no, sorted(keys), sorted(listed)))
+        summary["hymns"] += 1
+        summary["entries"] += len(durations)
+        summary["read"] += sum(1 for s in durations.values() if s is not None)
+        summary["null"] += sum(1 for s in durations.values() if s is None)
+        summary["issues"] += [(no, ver, reason) for ver, reason in issues.items()]
+        if on_row is not None:
+            on_row(i, len(rows), no, durations)
+
+        payload = json.dumps(durations, ensure_ascii=False)
+        if payload == (old_json or ""):
+            summary["unchanged"] += 1
+            continue
+        summary["written"] += 1
+        if not dry_run:
+            db.save_audio_durations(no, durations, db_path)
+    return summary
+

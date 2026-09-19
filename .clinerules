@@ -53,6 +53,9 @@
   **键集一一匹配**；读不出的版本值落 `null`）：`python tool/build_audio_durations.py`
   （离线读本地 m4a/mp3 时长；幂等可重跑，重下/换音频后需重跑）、`--only 1 5 349` / `--limit N` 子集、
   `--dry-run` 只统计不写库、`--stats` 覆盖统计、`--show 编号` 打印单首（`mm:ss` + 秒数 + 文件是否存在）；
+  **已接入全链路**：下载回写（`downloader._backfill_paths_to_db`）与音频路径**同一条 UPDATE 写入**，
+  全流程（菜单 7）/ Step 10 末尾兜底，独立重算用 `python crawler_api.py --step 11`（或菜单 `11`）；
+  批量实现 `audio_duration.fill_durations`（core 与 tool 共用，键集规则只有一处）；
   读取实现 `crawler_core/audio_duration.py`（mutagen **按后缀显式分派** `MP3`/`MP4`，
   因为 `mutagen.File()` 嗅探对无 ID3 标签的 MP3 会失败——本库 #138/#197/#296_b 即此例）
 - 构建/验证：参考 `docs/hymn_crawler_plan.md`（历史计划）与 `docs/CLINE_CONTEXT_MINIMIZE.md`

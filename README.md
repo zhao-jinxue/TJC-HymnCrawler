@@ -125,6 +125,7 @@ hymn_crawler/
 /home/zjx/python_env/bin/python crawler_api.py --engine api --step 3        # 资源探测
 /home/zjx/python_env/bin/python crawler_api.py --step 5                     # 校验与报告
 /home/zjx/python_env/bin/python crawler_api.py --step 10                    # 全量/增量极速同步
+/home/zjx/python_env/bin/python crawler_api.py --step 11                    # 音频时长统计入库（v10）
 /home/zjx/python_env/bin/python crawler_api.py --step check                 # 三方一致性检查（不落盘）
 /home/zjx/python_env/bin/python crawler_api.py --refresh-api-cache --step 1 # 忽略分页缓存重抓
 
@@ -135,7 +136,7 @@ hymn_crawler/
 | 参数 | 说明 |
 | --- | --- |
 | `--engine api\|selenium\|auto` | `api`（默认，零浏览器依赖）/ `selenium`（DOM 保底）/ `auto`（API 优先，逐首失败才降级 DOM） |
-| `--step 1`…`10` / `check` / `incremental` | 非交互执行单步（`check` = 扫描一致性检查，`incremental` = 增量同步） |
+| `--step 1`…`11` / `check` / `incremental` / `audio` | 非交互执行单步（`check` = 扫描一致性检查，`incremental` = 增量同步，`11`/`audio` = 音频时长统计入库） |
 | `--refresh-api-cache` | 忽略并重建 `Hymn_Downloads/api_cache/`（默认命中缓存不请求） |
 
 程序启动后显示当前数据库 / 探测报告状态，并提供菜单式交互：
@@ -148,11 +149,16 @@ hymn_crawler/
 | `4` | 仅 下载多媒体资源（瞬时错误自动退避重试） |
 | `5` | 校验与报告（数据对账 + 资源核验 + `_unavailable` 归档） |
 | `6` | 仅 转图片入库（PDF→PNG + 双页拼接 + 路径入库 + 哈希清单） |
-| `7` | **全流程**（Step 1 → 2 → 探测 → 下载 → 校验 → 转图入库） |
+| `7` | **全流程**（Step 1 → 2 → 探测 → 下载 → 校验 → 转图入库 → **音频时长**） |
 | `8` | 补全提取失败诗歌（菜单动态出现） |
 | `9` | 歌词重抓（官网 API 全量刷新正歌 `verse_*` + 副歌 `chorus`） |
-| `10` | ⚡ 极速全量同步（纯 API）：全量 / 增量（水位 = `api_raw.updated_at`） |
+| `10` | ⚡ 极速全量同步（纯 API）：全量 / 增量（水位 = `api_raw.updated_at`；末尾自动带音频时长） |
+| `11` | 🔊 音频时长统计入库（v10 `audio_durations`，与版本列表一一匹配；幂等兜底/重算） |
 | `0` | 退出 |
+
+> 🔊 **音频时长是全链路内建的**：`Step 4 下载` 完成后的路径回写（`downloader._backfill_paths_to_db`）
+> 会把 `audio_versions` / `audio_version_list` / `audio_durations` **同一条 UPDATE 写全**——即「下载完新音频 → 时长随音频一起入库」；
+> 全流程（菜单 7）与 Step 10 末尾再跑一次幂等兜底，覆盖 probe 回填/手工放入目录等未走下载回写的场景。
 
 > ✅ 所有阶段**支持幂等重跑**：已存在的内容自动跳过，断点进度文件（`step2/5/7_progress.json`、`lyrics_progress.json`）可续跑。
 > 进阶用法：`python -c "from crawler_core.lyrics_api import run; run(force=True, reset=True)"` 全量重抓歌词。
@@ -229,7 +235,7 @@ hymn_crawler/
 | **图片入库** | `crawler_core/db.py` (`update_png_paths`) | PNG 路径以新增字段 `*_png_path` 入库，不覆盖原 PDF 路径 | ✅ 完成 |
 | **带简谱歌词** | `crawler_core/ppt_jianpu.py` + `tool/extract_jianpu.py` | 474 份 PPT → 每节每行「简谱记号 + 歌词」；5 项校验（行配对/节号自洽/跨节曲调一致/歌词归属/音符-字数等长），写 `hymn_jianpu` + `hymn_jianpu_line` | ✅ 完成（404 首全项通过 / 70 首带复核标记） |
 | **官方简谱曲谱** | `crawler_core/pdf_score.py` + `tool/build_score.py`（入库）/ `tool/show_score.py`（人读输出） | 官方简谱 PDF（网站标准源）→ 逐乐句「曲谱串 + 歌词 + 拍位 + 逐字对应」；写 `hymn_score` / `hymn_score_line` / `hymn_score_lyric` / `hymn_score_char` / `hymn_codepoint_map` | ✅ 完成（473 首入库 / 7914 谱行 / 逐字对位可靠 99.0%；#349 无文本层待 OCR） |
-| **音频时长** | `crawler_core/audio_duration.py` + `tool/build_audio_durations.py` | 离线读本地音频（m4a/mp3）→ 时长写 v10 字段 `audio_durations`（JSON：版本名 → 秒），与 `audio_versions` / `audio_version_list` **键集一一匹配** | ✅ 完成（474 首 / 1119 条全部读出 / 合计 47h59m / 键集 0 不一致） |
+| **音频时长** | `crawler_core/audio_duration.py` + `tool/build_audio_durations.py` | 离线读本地音频（m4a/mp3）→ 时长写 v10 字段 `audio_durations`（JSON：版本名 → 秒），与 `audio_versions` / `audio_version_list` **键集一一匹配**；**下载回写即同批入库**，全流程/Step 10 末尾兜底，`--step 11` 可单独重算 | ✅ 完成（474 首 / 1119 条全部读出 / 合计 47h59m / 键集 0 不一致） |
 
 ---
 
@@ -373,9 +379,9 @@ hymn_crawler/
     副歌在曲谱里没有词行时（如 #17），每页页尾附官网副歌文本
   - `python tool/show_score.py 12 --by-stanza --out 12.txt --formfeed`：写文件 + 每页尾出换页符 `\f`，
     可直接交给打印系统 / 文本编辑器分页打印
-- **音频时长**（`Hymn_Downloads/` 就位时）：
-  - `python tool/build_audio_durations.py`：全量统计各版本音频时长 → 写 `tjc_hymn.audio_durations`
-    （幂等可重跑：时长未变则只报告“未变”；键集与 `audio_versions` / `audio_version_list` 一一匹配）
+- **音频时长**（`Hymn_Downloads/` 就位时；**已接入全链路**——下载后随音频一起入库，此处用于重算/补算）：
+  - `python crawler_api.py --step 11`（或菜单 `11`）：全量重算并入库（幂等；未变行只报告）
+  - `python tool/build_audio_durations.py`：等价独立入口（不启动爬虫流程）
   - `python tool/build_audio_durations.py --limit 20 --dry-run`：抽样试跑（只统计不写库）；
     `--only 1 5 349` 只处理指定编号
   - `python tool/build_audio_durations.py --stats`：覆盖统计（总时长 / 各版本平均时长 / 键集一致性）；

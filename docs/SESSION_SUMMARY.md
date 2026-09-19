@@ -67,6 +67,10 @@
     （`--only/--limit/--dry-run/--stats/--show`，幂等可重跑）。实测 **474 首 / 1119 条全部读出（0 失败）**、
     合计 **47h59m**（27.2–389.2 秒，中位 154.5）、键集不一致 **0 行**；列序由 `tool/reorder_table_columns.py`
     重建对齐（29 列，`audio_durations` 紧跟 `audio_version_list`）。
+    **已接入全链路（同日补齐）**：`downloader._backfill_paths_to_db` 把音频路径与时长写在**同一条 UPDATE**
+    （下载完即入库）；`crawler_api.py` 新增 `run_step_audio()`，接入菜单 `11` / `--step 11|audio`、
+    全流程（菜单 7）与 Step 10 全量/增量同步末尾兜底；批量逻辑统一到 `audio_duration.fill_durations`
+    （core 与 tool 共用，键集规则只有一处）。真库实测回写幂等（三列快照逐行一致）。
 
 ## 遗留任务（可选，未排期；详见 `docs/API_REFACTOR_PLAN.md` §7「P3 — 展望」）
 - ✅ 已执行（不再是待决策项）：删除 `#349` 的 `Hymn_Downloads/_archive/`（5 个旧资源 + README + md5），并由新 PDF 重出简谱/五线谱 PNG
@@ -90,7 +94,8 @@
 - 带简谱歌词（`data/赞美诗PPT/` 就位时）：`python tool/extract_jianpu.py --dry-run`（只出报告）/
   `python tool/extract_jianpu.py`（写 `hymn_jianpu` + `hymn_jianpu_line`）/ `python tool/show_jianpu.py 1 --map`（渲染复核）
 - 音频时长（v10 `audio_durations`）：`python tool/build_audio_durations.py`（全量统计写库，幂等）/
-  `--only 1 5 349` / `--limit 20 --dry-run` / `--stats` / `--show 1`；重下或替换音频后需重跑
+  `--only 1 5 349` / `--limit 20 --dry-run` / `--stats` / `--show 1`；
+  全链路入口 `python crawler_api.py --step 11`（或菜单 `11`）；重下或替换音频后需重跑
 - 测试与门禁：`python -m pytest -c config/pytest.ini test/ -q`、`ruff check --config config/ruff.toml .`、
   `mypy crawler_core crawler_api.py legacy/crawler_selenium.py`、`bandit -c config/bandit.yaml -r crawler_core crawler_api.py legacy/crawler_selenium.py`
 - 详细方案：`docs/API_REFACTOR_PLAN.md`；上下文最小化：`docs/CLINE_CONTEXT_MINIMIZE.md`；会话日志：`docs/sessions/`

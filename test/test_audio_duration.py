@@ -3,10 +3,13 @@
 
 覆盖:
   - `crawler_core.audio_duration`：后缀分派读取（**合成** MP3 / 最小 MP4 真文件，无需外部素材）、
-    缺文件 / 非音频 / 未知后缀的失败语义、`resolve_audio_path` 相对与绝对路径
+    缺文件 / 非音频 / 未知后缀的失败语义、`resolve_audio_path` 相对与绝对路径、
+    `fill_durations` 批量写库
   - `tool/build_audio_durations.py`：时长键集与 `audio_versions` 一一匹配、写库 / 幂等 /
     `--dry-run` 不动库、读不出的条目落 `null` 并进报告、键集不一致报警
   - `crawler_core.db`：`ensure_audio_durations_field` 幂等补列、`audio_duration_stats` 统计
+  - **全链路接入**：`downloader._backfill_paths_to_db` 下载回写即写时长；
+    `crawler_api` 的 `--step 11 / audio`、全流程（菜单 7）与 Step 10 全量同步末尾自动兜底
 
 运行: /home/zjx/python_env/bin/python -m pytest -c config/pytest.ini test/test_audio_duration.py -v
       （`tool/` 由下方 sys.path.insert 注入 → `import build_audio_durations` 行带 pyright ignore 注释）
@@ -301,3 +304,125 @@ class TestBuildAudioDurations:
         assert _durations(path, "11")["鋼琴版"] == pytest.approx(MP3_SECONDS, abs=0.05)
         assert bad.main(["--stats", "--db", path]) == 0
         assert bad.main(["--show", "11", "--db", path]) == 0
+
+
+# ================= crawler_core.audio_duration.fill_durations（全链路共用） =================
+
+class TestFillDurations:
+    def test_fill_returns_summary_and_writes(self, tmp_path):
+        piano = _write_mp3(tmp_path / "12_鋼琴版.mp3")
+        path = _make_db(tmp_path, [("12", {"鋼琴版": str(piano)})])
+        seen = []
+        summary = AD.fill_durations(db_path=path, root=str(tmp_path),
+                                    on_row=lambda i, total, no, durs: seen.append((i, total, no)))
+        assert seen == [(1, 1, "12")]
+        assert (summary["hymns"], summary["entries"], summary["written"]) == (1, 1, 1)
+        assert summary["mismatch"] == [] and summary["issues"] == []
+        assert _durations(path, "12")["鋼琴版"] == pytest.approx(MP3_SECONDS, abs=0.05)
+        again = AD.fill_durations(db_path=path, root=str(tmp_path))
+        assert (again["written"], again["unchanged"]) == (0, 1)      # 幂等
+
+    def test_fill_dry_run_and_subset(self, tmp_path):
+        rows = [(str(i), {"鋼琴版": str(_write_mp3(tmp_path / f"{i}_鋼琴版.mp3"))})
+                for i in (13, 14)]
+        path = _make_db(tmp_path, rows)
+        summary = AD.fill_durations(db_path=path, numbers=["14"], dry_run=True, root=str(tmp_path))
+        assert summary["written"] == 1
+        assert _durations(path, "13") == {} and _durations(path, "14") == {}   # dry-run 不写库
+        AD.fill_durations(db_path=path, limit=1, root=str(tmp_path))
+        assert _durations(path, "13")["鋼琴版"] > 0 and _durations(path, "14") == {}
+
+
+# ================= 全链路接入：下载回写 / crawler_api 步骤 =================
+
+class TestDownloaderIntegration:
+    def test_backfill_writes_paths_and_durations_together(self, tmp_path, monkeypatch):
+        """下载后的路径回写**同时**写入 audio_versions / audio_version_list / audio_durations
+
+        回归点：三列键集必须一次写全并一一匹配（曾在 v10 之前只写前两列）。
+        """
+        from crawler_core import audio_duration, config, downloader
+
+        save_root = tmp_path / "Hymn_Downloads"
+        hymn_dir = save_root / "001_1頌讚獨一真神"
+        hymn_dir.mkdir(parents=True)
+        _write_mp3(hymn_dir / "1_鋼琴版.mp3")
+        db_path = _make_db(tmp_path, [("1", {})])                     # 行已存在、音频先为空
+        map_file = save_root / "url_map.txt"
+        map_file.write_text("x|001_1頌讚獨一真神|https://e.org/hymn/1\n", encoding="utf-8")
+
+        monkeypatch.setattr(downloader, "SAVE_ROOT", str(save_root))
+        monkeypatch.setattr(config, "SCRIPT_DIR", str(tmp_path))       # 相对路径按项目根存
+        monkeypatch.setattr(config, "MAP_FILE", str(map_file))
+        monkeypatch.setattr(config, "DB_PATH", db_path)
+        monkeypatch.setattr(audio_duration, "SCRIPT_DIR", str(tmp_path))
+
+        downloader._backfill_paths_to_db([{
+            "hymn_number": "1", "staff_pdf": None, "numbered_pdf": None,
+            "audio_versions": {"鋼琴版": {"url": "https://e.org/a/1.mp3", "ext": "mp3"},
+                               "_error": None},
+        }])
+
+        conn = sqlite3.connect(db_path)
+        av, vl, dur = conn.execute(
+            "SELECT audio_versions, audio_version_list, audio_durations FROM tjc_hymn "
+            "WHERE hymn_number = '1'").fetchone()
+        conn.close()
+        versions = json.loads(av)
+        assert set(versions) == {"鋼琴版"}
+        assert versions["鋼琴版"] == "Hymn_Downloads/001_1頌讚獨一真神/1_鋼琴版.mp3"
+        assert set(json.loads(vl)) == set(json.loads(dur)) == set(versions)
+        assert json.loads(dur)["鋼琴版"] == pytest.approx(MP3_SECONDS, abs=0.05)
+
+
+class TestCrawlerApiWiring:
+    def _summary(self, **over):
+        base = {"hymns": 0, "entries": 0, "read": 0, "null": 0, "written": 0,
+                "unchanged": 0, "rows": 0, "selected": 0, "mismatch": [], "issues": []}
+        base.update(over)
+        return base
+
+    def test_step_audio_delegates_to_fill_durations(self, monkeypatch):
+        import crawler_api
+
+        seen = []
+
+        def fake_fill(db_path=None, **kw):
+            seen.append(db_path)
+            return self._summary(hymns=474, entries=1119, read=1119, unchanged=474)
+
+        monkeypatch.setattr(crawler_api, "fill_durations", fake_fill)
+        assert crawler_api.run_step_audio(db_path="/tmp/x.db")["entries"] == 1119
+        assert seen == ["/tmp/x.db"]
+
+    def test_cli_step_11_and_audio_alias(self, monkeypatch):
+        import crawler_api
+
+        monkeypatch.setattr(crawler_api, "run_step_audio", lambda *a, **kw: self._summary())
+        assert crawler_api._run_single_step("11", "api", True) == 0
+        assert crawler_api._run_single_step("audio", "api", True) == 0
+
+    def test_full_pipeline_and_menu_7_end_with_audio_step(self, monkeypatch):
+        import crawler_api
+
+        called = []
+
+        def record(name, ret=None):
+            def _fn(*a, **kw):
+                called.append(name)
+                return ret
+            return _fn
+
+        for name, ret in (("run_step1", [{"x": 1}]), ("run_step2", None), ("run_probe", []),
+                          ("run_download", None), ("run_step4", None), ("run_step5", None),
+                          ("run_step7", None), ("run_step6", None), ("run_step_audio", None)):
+            monkeypatch.setattr(crawler_api, name, record(name, ret))
+        monkeypatch.setattr(crawler_api, "_ask_yes_no", lambda *a, **kw: True)
+
+        crawler_api.run_step10_full("api")
+        assert called[-1] == "run_step_audio"
+
+        called.clear()
+        crawler_api._dispatch("7", "api", 0, True)
+        assert called[-1] == "run_step_audio"
+        assert "run_download" in called
