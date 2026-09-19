@@ -71,6 +71,13 @@
     （下载完即入库）；`crawler_api.py` 新增 `run_step_audio()`，接入菜单 `11` / `--step 11|audio`、
     全流程（菜单 7）与 Step 10 全量/增量同步末尾兜底；批量逻辑统一到 `audio_duration.fill_durations`
     （core 与 tool 共用，键集规则只有一处）。真库实测回写幂等（三列快照逐行一致）。
+12. **简谱数据接入全链路（2026-09-19）**：新增 `crawler_core/jianpu_sync.py`（v9 曲谱 `sync_scores` +
+    v8 PPT 歌词 `sync_ppt_jianpu`，各自带增量判据与 `TypedDict` 汇总）；`crawler_api.py` 新增
+    `run_step_scores()` / `run_step_jianpu()`，接入菜单 `12`/`13`、`--step 12|score`（`--force` 全量重算）/
+    `--step 13|jianpu`，并在全流程（菜单 7）与 Step 10 全量/增量同步末尾自动做 **v9 增量补齐**。
+    `tool/build_score.py` 改为复用 `sync_scores`（默认增量、`--force` 全量、`--dry-run` 仍全量试跑），
+    `tool/extract_jianpu.py` 保持全量出报告。真库实测：v9 待处理 **1 首（#349 站点异版 PDF，无可用谱层）**、
+    v8 待处理 **0 份**（474 份 `src_md5` 全一致）→ 均幂等。
 
 ## 遗留任务（可选，未排期；详见 `docs/API_REFACTOR_PLAN.md` §7「P3 — 展望」）
 - ✅ 已执行（不再是待决策项）：删除 `#349` 的 `Hymn_Downloads/_archive/`（5 个旧资源 + README + md5），并由新 PDF 重出简谱/五线谱 PNG
@@ -92,7 +99,12 @@
 - 校验：`python crawler_api.py --step check`（三方一致）、`python -m crawler_core.verify`（全量对账 + `data/final_report.txt`）
 - 歌词复核：`python tool/show_lyrics.py 12` / `--stats` / `--no-chorus`（看正歌+副歌并与 `api_raw` 逐字比对）
 - 带简谱歌词（`data/赞美诗PPT/` 就位时）：`python tool/extract_jianpu.py --dry-run`（只出报告）/
-  `python tool/extract_jianpu.py`（写 `hymn_jianpu` + `hymn_jianpu_line`）/ `python tool/show_jianpu.py 1 --map`（渲染复核）
+  `python tool/extract_jianpu.py`（全量解析 + 写 `hymn_jianpu` + `hymn_jianpu_line` + 出报告）/
+  `python tool/show_jianpu.py 1 --map`（渲染复核）；**增量入口（全链路）**：
+  `python crawler_api.py --step 13`（菜单 13；按 `src_md5` 跳过未变 PPT）
+- 官方简谱曲谱（v9 五表）：`python tool/build_score.py`（**默认增量**；`--force` 全量重算；
+  `--learn` 学码位映射 / `--only` / `--limit` / `--dry-run` / `--stats` / `--show`）；
+  **全链路入口**：`python crawler_api.py --step 12 [--force]`（菜单 12；菜单 7 与 Step 10 末尾自动增量）
 - 音频时长（v10 `audio_durations`）：`python tool/build_audio_durations.py`（全量统计写库，幂等）/
   `--only 1 5 349` / `--limit 20 --dry-run` / `--stats` / `--show 1`；
   全链路入口 `python crawler_api.py --step 11`（或菜单 `11`）；重下或替换音频后需重跑

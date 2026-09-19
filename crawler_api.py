@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 #   python crawler_api.py --step 11             # 只做音频时长统计（v10 audio_durations）
+#   python crawler_api.py --step 12             # 只做官方简谱曲谱入库（v9 五表，增量）
+#   python crawler_api.py --step 13             # 只做 PPT 带简谱歌词入库（v8，增量）
 # crawler_api.py（原 crawler_fast.py，2026-09-13 重命名）
 # 🚀 统一主入口（默认 API 引擎；Selenium 保底见 legacy/crawler_selenium.py）
 #
@@ -40,6 +42,7 @@ from crawler_core.db import (
 from crawler_core.downloader import run_download
 from crawler_core.extractor import Extractor, load_url_map
 from crawler_core.images import run as run_step5
+from crawler_core.jianpu_sync import sync_ppt_jianpu, sync_scores
 from crawler_core.lyrics_api import run as run_lyrics_backfill
 from crawler_core.probe import load_probe_report, run_probe, run_probe_missing
 from crawler_core.scanner import Scanner, check_file
@@ -234,9 +237,52 @@ def run_step_audio(db_path=None):
     return summary
 
 
+def print_score_sync_summary(summary):
+    """打印 v9 官方简谱曲谱入库摘要（`jianpu_sync.ScoreSyncSummary`）"""
+    print(f"   🎼 待处理 {summary['pending']} 首 → 抽取 {summary['processed']} 首 | "
+          f"入库 {summary['hymns']} 首 / 谱行 {summary['lines']} / 词行 {summary['lyrics']} / "
+          f"逐字 {summary['chars']} | 等长通过 {summary['align_ok']} | 耗时 {summary['seconds']:.1f}s")
+    if summary["skipped"]:
+        print(f"   ⚠️ 跳过 {len(summary['skipped'])} 首（如 #349 站点异版 PDF；原因见下）：")
+        for num, reason in summary["skipped"][:5]:
+            print(f"      #{num} {reason}")
+
+
+def run_step_scores(db_path=None, force=False):
+    """官方简谱曲谱入库（v9，**增量**）：把下载到的 `{编号}_简谱.pdf` 解析成
+    「曲谱 + 歌词 + 拍位 + 逐字对应」写 `hymn_score*` 五表
+
+    判据：有 PDF 但 `hymn_score` 未入库（或 `pdf_path` 变化）的编号才处理 →
+    新增/换版的诗歌在下载后跑一次即补齐，已入库的自动跳过（幂等）。
+    """
+    print("\n🎼 官方简谱曲谱入库（v9 增量：下载到的新简谱 PDF → hymn_score* 五表）...")
+    summary = sync_scores(db_path=db_path, force=force)
+    print_score_sync_summary(summary)
+    return summary
+
+
+def run_step_jianpu(db_path=None, ppt_dir=None):
+    """PPT 带简谱文字歌词入库（v8，**增量**；源为外部整理素材，缺目录时整体跳过）
+
+    判据：`data/赞美诗PPT/*.ppt` 的 `src_md5` 与 `hymn_jianpu` 不同（或未入库）才处理。
+    注意：PPT **不来自爬虫下载链路**（是人工整理的素材），故 v8 不参与全流程，
+    需在素材更新后单独跑本步骤（菜单 13 / `--step 13`）。
+    """
+    print("\n🎼 PPT 带简谱歌词入库（v8 增量：src_md5 未变自动跳过）...")
+    summary = sync_ppt_jianpu(ppt_dir=ppt_dir, db_path=db_path)
+    if not summary["total"]:
+        print("   ⏭️ 未找到 PPT 素材目录（data/赞美诗PPT/），跳过 v8（不影响 v9 曲谱）")
+        return summary
+    print(f"   🎼 PPT {summary['total']} 份 / 待处理 {summary['pending']} 份 → "
+          f"入库 {summary['hymns']} 首 / 行 {summary['lines']} | 耗时 {summary['seconds']:.1f}s")
+    for name, reason in summary["skipped"][:5]:
+        print(f"      跳过 {name}：{reason}")
+    return summary
+
+
 def run_step10_full(engine, use_cache=True):
-    """极速全量同步（纯 API）：Step1 → Step2 → 探测 → 下载 → 校验 → 音频时长"""
-    print("\n⚡ 极速全量同步（API）：Step1 → Step2 → 资源探测 → 下载 → 校验 → 音频时长")
+    """极速全量同步（纯 API）：Step1 → Step2 → 探测 → 下载 → 校验 → 音频时长 → 简谱曲谱"""
+    print("\n⚡ 极速全量同步（API）：Step1 → Step2 → 资源探测 → 下载 → 校验 → 音频时长 → 简谱曲谱")
     run_step1(engine, use_cache=use_cache)
     run_step2(engine)
     report = run_probe(force=True, engine=engine)
@@ -244,6 +290,7 @@ def run_step10_full(engine, use_cache=True):
         run_download(report)
     run_step4()
     run_step_audio()
+    run_step_scores()  # 新下载的官方简谱 PDF → v9 五表（增量）
 
 
 def run_step10_incremental(engine, use_cache=True):
@@ -260,6 +307,7 @@ def run_step10_incremental(engine, use_cache=True):
         run_download()
     run_step4()
     run_step_audio()  # 新增音频的时长补算（下载回写里已算过，这里兜底确保全覆盖）
+    run_step_scores()  # 新增/换版简谱 PDF → v9 五表（增量）
 
 
 # ================= 主菜单 =================
@@ -281,6 +329,8 @@ def build_menu(engine, failed_count):
     if engine != "selenium":
         items.append(("10", "极速全量同步（纯 API：全量 / 增量两模式）"))
     items.append(("11", "音频时长统计入库（v10 audio_durations，与版本列表一一匹配）"))
+    items.append(("12", "官方简谱曲谱入库（v9 增量：新简谱 PDF → hymn_score* 五表）"))
+    items.append(("13", "PPT 带简谱歌词入库（v8 增量：需 data/赞美诗PPT/ 素材）"))
     items.append(("0", "退出"))
     return items
 
@@ -304,11 +354,11 @@ def main(argv=None, engine=None, step=None, use_cache=True):
 
     # ---- 非交互：--step 直接执行后退出 ----
     if step:
-        return _run_single_step(step, engine, use_cache)
+        return _run_single_step(step, engine, use_cache, force=args.force)
 
     # 无 TTY（cron/CI/管道）时不进入交互菜单，避免无限等待输入
     if not sys.stdin.isatty():
-        print("⚠️ 非交互终端：请用 --step <1-11|check|incremental|audio> 指定要执行的步骤。")
+        print("⚠️ 非交互终端：请用 --step <1-13|check|incremental|audio|score|jianpu> 指定要执行的步骤。")
         print("   示例：python crawler_api.py --engine api --step 10")
         return 2
 
@@ -405,6 +455,14 @@ def _dispatch(choice, engine, failed_count, use_cache):
     if choice in ("7", "11"):
         run_step_audio()
 
+    # ---- 官方简谱曲谱入库（v9 增量；源为下载的简谱 PDF）----
+    if choice in ("7", "12"):
+        run_step_scores()
+
+    # ---- PPT 带简谱歌词入库（v8 增量；源为外部 PPT 素材）----
+    if choice == "13":
+        run_step_jianpu()
+
     # ---- 补全失败 ----
     if choice == "8":
         failed_songs = get_failed_songs()
@@ -452,8 +510,8 @@ def _dispatch(choice, engine, failed_count, use_cache):
 
 
 
-def _run_single_step(step, engine, use_cache):
-    """CLI `--step`：执行单步（非交互）后返回退出码"""
+def _run_single_step(step, engine, use_cache, force=False):
+    """CLI `--step`：执行单步（非交互）后返回退出码（`force` 仅对 Step 12 曲谱全量重算生效）"""
     step = str(step).strip().lower()
     print(f"▶️ 非交互执行：step={step} | engine={engine}")
     total_start = time.time()
@@ -501,10 +559,14 @@ def _run_single_step(step, engine, use_cache):
         run_step10_full(engine, use_cache=use_cache)
     elif step in ("11", "audio"):
         run_step_audio()
+    elif step in ("12", "score", "scores"):
+        run_step_scores(force=force)
+    elif step in ("13", "jianpu"):
+        run_step_jianpu()
     elif step == "incremental":
         run_step10_incremental(engine, use_cache=use_cache)
     else:
-        print(f"❌ 未知步骤 {step!r}（可选：1-11 / check / incremental / audio）")
+        print(f"❌ 未知步骤 {step!r}（可选：1-13 / check / incremental / audio / score / jianpu）")
         return 2
 
     print(f"\n🎉 step={step} 执行完成！耗时 {time.time()-total_start:.1f}s")
@@ -518,9 +580,12 @@ def parse_args(argv=None):
     parser.add_argument("--engine", choices=list(VALID_ENGINES), default="api",
                         help="抓取引擎（默认 api；auto=API 优先、逐首降级 DOM）")
     parser.add_argument("--step", default=None,
-                        help="非交互执行单步：1-11 / check（Step1 一致性检查）/ incremental / audio（音频时长）")
+                        help="非交互执行单步：1-13 / check（Step1 一致性检查）/ incremental / "
+                             "audio（音频时长）/ score（v9 曲谱）/ jianpu（v8 PPT 歌词）")
     parser.add_argument("--refresh-api-cache", action="store_true",
                         help="忽略并重建 Hymn_Downloads/api_cache/ 分页缓存")
+    parser.add_argument("--force", action="store_true",
+                        help="忽略已入库状态、全量重算（配合 --step 12 / score 使用）")
     args, _unknown = parser.parse_known_args(argv)
     return args
 

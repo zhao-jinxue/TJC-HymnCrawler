@@ -39,12 +39,18 @@
      `db.audio_duration_stats()`（计数 / 秒数 / 分版本明细三种形状）用 `AudioDurationStats` 声明，同理
 - 歌词/副歌复核：`python tool/show_lyrics.py <编号|区间>`（`--stats` 看覆盖率、`--no-chorus` 列无副歌编号）
 - 带简谱歌词复核：`python tool/extract_jianpu.py [--dry-run] [--only 1 5 349]`（PPT→两表+报告）、
-  `python tool/show_jianpu.py <编号> [--map]`（简谱字体渲染出图 + 逐字对位索引）、`--review` 列被标记的行
+  `python tool/show_jianpu.py <编号> [--map]`（简谱字体渲染出图 + 逐字对位索引）、`--review` 列被标记的行；
+  **已接入全链路**：菜单 `13` / `--step 13`（增量：按 `src_md5` 跳过未变 PPT），
+  编排实现 `crawler_core/jianpu_sync.py::sync_ppt_jianpu`；PPT 是**外部素材**（不在下载链路），
+  全量出报告仍用 `tool/extract_jianpu.py`
 - 官方简谱曲谱（v9 五表）：`python tool/build_score.py [--learn] [--learn-mode anchors|row] [--limit N] [--dry-run]`
-  （官方 PDF→入库；`--learn` = **拍位级锚点投票**学「码位→记号」（默认 `anchors`，旧整行同构用 `row`），
+  （官方 PDF→入库；**默认增量**——只处理有 PDF 但未入库/`pdf_path` 变化的编号，`--force` 全量重算；
+  `--learn` = **拍位级锚点投票**学「码位→记号」（默认 `anchors`，旧整行同构用 `row`），
   幂等可重跑——会先清掉上一轮同来源映射再学）、
   `--show <编号>`（打印曲谱/歌词/逐字对应）、`--stats`（等长行 / 逐字可靠率）；
-  表名 `hymn_score` / `hymn_score_line` / `hymn_score_lyric` / `hymn_score_char` / `hymn_codepoint_map`
+  表名 `hymn_score` / `hymn_score_line` / `hymn_score_lyric` / `hymn_score_char` / `hymn_codepoint_map`；
+  **已接入全链路**：下载到新简谱 PDF 后，菜单 `7`/Step 10 末尾自动增量补齐，也可
+  `python crawler_api.py --step 12 [--force]` 单跑；编排实现 `crawler_core/jianpu_sync.py::sync_scores`
 - 曲谱 + 歌词人读输出：`python tool/show_score.py <编号|区间>`（谱行 × 词行**竖排对齐**——曲谱与它配的歌词
   按列对齐打印，可直接贴文档）；`--chars` 逐字明细、`--all-parts` 含和声部、`--list` 列库内编号；
   **按节分页打印**（唱诗用）：`--by-stanza`（每页 = 全部谱行 + 该节词行；副歌行每页重复、标签 `词ⓒ`；

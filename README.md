@@ -37,6 +37,7 @@ hymn_crawler/
 │   ├── ppt_jianpu.py           # ★ 从《赞美诗》PPT 提取带简谱文字歌词（解析+5 项校验+报告）
 │   ├── pdf_jianpu.py           # ★ 官方简谱 PDF 侧：码位→记号自举学习 + 逐字几何对位（POC）
 │   ├── audio_duration.py       # ★ 音频时长读取（mutagen 按后缀分派：m4a/mp3 → audio_durations）
+│   ├── jianpu_sync.py          # ★ 简谱数据增量编排（v9 曲谱 / v8 PPT 歌词；全链路与 tool 共用）
 │   ├── db.py                   # 数据库管理 + 迁移（v7 + 带简谱歌词 v8 + 音频时长 v10）+ UPSERT + hymn_category 重建
 │   └── selenium_legacy/        # 🛟 Selenium 保底引擎（旧实现原样保留，默认不参与主流程）
 │       ├── driver.py / scanner_selenium.py / extractor_dom.py / probe_audio.py
@@ -77,10 +78,11 @@ hymn_crawler/
 │   ├── verify_merged.py        # 合并数据校验
 │   └── ...                     # 其他数据比对 / 清理脚本
 │
-├── test/                       # 🧪 pytest 测试（211 项，离线可跑）
+├── test/                       # 🧪 pytest 测试（231 项，离线可跑）
 │   ├── test_api_client.py      # ★ API 客户端：分页/映射/目录名规则/重试/缓存/可用性状态机
 │   ├── test_db_v7.py           # ★ DB v7：api_raw/空值守卫/hymn_category/增量计划/引擎隔离
 │   ├── test_audio_duration.py  # ★ 音频时长 v10：合成 mp3/mp4 读时长、键集一一匹配、写库幂等
+│   ├── test_jianpu_sync.py     # ★ 简谱增量编排：待处理判据 / 增量写库 / md5 跳过 / 全链接入
 │   ├── test_no_crash.py        # ★ 不崩断言（§5.9.6）：坏 URL/断网续跑/null 不下载/结构改版
 │   ├── test_lyrics_api.py      # 歌词 API + DOM box 归并 + chorus 字段
 │   ├── test_jianpu.py          # ★ PPT 带简谱歌词：字形语义/计数/解析/编号归属/DB v8 两表
@@ -126,6 +128,9 @@ hymn_crawler/
 /home/zjx/python_env/bin/python crawler_api.py --step 5                     # 校验与报告
 /home/zjx/python_env/bin/python crawler_api.py --step 10                    # 全量/增量极速同步
 /home/zjx/python_env/bin/python crawler_api.py --step 11                    # 音频时长统计入库（v10）
+/home/zjx/python_env/bin/python crawler_api.py --step 12                    # 官方简谱曲谱入库（v9 增量）
+/home/zjx/python_env/bin/python crawler_api.py --step 12 --force            # 同上，全量重算
+/home/zjx/python_env/bin/python crawler_api.py --step 13                    # PPT 带简谱歌词入库（v8 增量）
 /home/zjx/python_env/bin/python crawler_api.py --step check                 # 三方一致性检查（不落盘）
 /home/zjx/python_env/bin/python crawler_api.py --refresh-api-cache --step 1 # 忽略分页缓存重抓
 
@@ -136,7 +141,8 @@ hymn_crawler/
 | 参数 | 说明 |
 | --- | --- |
 | `--engine api\|selenium\|auto` | `api`（默认，零浏览器依赖）/ `selenium`（DOM 保底）/ `auto`（API 优先，逐首失败才降级 DOM） |
-| `--step 1`…`11` / `check` / `incremental` / `audio` | 非交互执行单步（`check` = 扫描一致性检查，`incremental` = 增量同步，`11`/`audio` = 音频时长统计入库） |
+| `--step 1`…`13` / `check` / `incremental` / `audio` / `score` / `jianpu` | 非交互执行单步（`check` = 扫描一致性检查，`incremental` = 增量同步，`11`/`audio` = 音频时长，`12`/`score` = v9 曲谱，`13`/`jianpu` = v8 PPT 歌词） |
+| `--force` | 忽略已入库状态、全量重算（配合 `--step 12` / `score`） |
 | `--refresh-api-cache` | 忽略并重建 `Hymn_Downloads/api_cache/`（默认命中缓存不请求） |
 
 程序启动后显示当前数据库 / 探测报告状态，并提供菜单式交互：
@@ -149,16 +155,24 @@ hymn_crawler/
 | `4` | 仅 下载多媒体资源（瞬时错误自动退避重试） |
 | `5` | 校验与报告（数据对账 + 资源核验 + `_unavailable` 归档） |
 | `6` | 仅 转图片入库（PDF→PNG + 双页拼接 + 路径入库 + 哈希清单） |
-| `7` | **全流程**（Step 1 → 2 → 探测 → 下载 → 校验 → 转图入库 → **音频时长**） |
+| `7` | **全流程**（Step 1 → 2 → 探测 → 下载 → 校验 → 转图入库 → **音频时长** → **简谱曲谱**） |
 | `8` | 补全提取失败诗歌（菜单动态出现） |
 | `9` | 歌词重抓（官网 API 全量刷新正歌 `verse_*` + 副歌 `chorus`） |
-| `10` | ⚡ 极速全量同步（纯 API）：全量 / 增量（水位 = `api_raw.updated_at`；末尾自动带音频时长） |
+| `10` | ⚡ 极速全量同步（纯 API）：全量 / 增量（水位 = `api_raw.updated_at`；末尾自动带音频时长与简谱曲谱） |
 | `11` | 🔊 音频时长统计入库（v10 `audio_durations`，与版本列表一一匹配；幂等兜底/重算） |
+| `12` | 🎼 官方简谱曲谱入库（v9 **增量**：新下载的 `{编号}_简谱.pdf` → `hymn_score*` 五表） |
+| `13` | 🎼 PPT 带简谱歌词入库（v8 **增量**：按 `src_md5` 判增量；需 `data/赞美诗PPT/` 素材） |
 | `0` | 退出 |
 
 > 🔊 **音频时长是全链路内建的**：`Step 4 下载` 完成后的路径回写（`downloader._backfill_paths_to_db`）
 > 会把 `audio_versions` / `audio_version_list` / `audio_durations` **同一条 UPDATE 写全**——即「下载完新音频 → 时长随音频一起入库」；
 > 全流程（菜单 7）与 Step 10 末尾再跑一次幂等兜底，覆盖 probe 回填/手工放入目录等未走下载回写的场景。
+>
+> 🎼 **简谱数据也已接入全链路**（实现见 `crawler_core/jianpu_sync.py`）：
+> - **v9 曲谱**（源 = 爬虫下载的官方简谱 PDF）：判据为「有 PDF 但 `hymn_score` 未入库 / `pdf_path` 变化」的编号 →
+>   全流程（菜单 7）与 Step 10 末尾自动补齐；也可 `--step 12`（`--force` 全量重算）。
+> - **v8 PPT 歌词**（源 = 人工整理的 `data/赞美诗PPT/`，**不在下载链路**）：判据为 `src_md5` 变化 → 素材更新后跑 `--step 13`；
+>   目录缺失时自动跳过（不影响 v9）。
 
 > ✅ 所有阶段**支持幂等重跑**：已存在的内容自动跳过，断点进度文件（`step2/5/7_progress.json`、`lyrics_progress.json`）可续跑。
 > 进阶用法：`python -c "from crawler_core.lyrics_api import run; run(force=True, reset=True)"` 全量重抓歌词。
@@ -233,8 +247,8 @@ hymn_crawler/
 | **转图入库** | `crawler_core/images.py` | PDF → 300DPI 窄边距 PNG，双页上下拼接 | ✅ 完成 |
 | **哈希清单** | `crawler_core/checksums.py` | 各目录 `checksums.json` 维护 PNG SHA-256 | ✅ 完成 |
 | **图片入库** | `crawler_core/db.py` (`update_png_paths`) | PNG 路径以新增字段 `*_png_path` 入库，不覆盖原 PDF 路径 | ✅ 完成 |
-| **带简谱歌词** | `crawler_core/ppt_jianpu.py` + `tool/extract_jianpu.py` | 474 份 PPT → 每节每行「简谱记号 + 歌词」；5 项校验（行配对/节号自洽/跨节曲调一致/歌词归属/音符-字数等长），写 `hymn_jianpu` + `hymn_jianpu_line` | ✅ 完成（404 首全项通过 / 70 首带复核标记） |
-| **官方简谱曲谱** | `crawler_core/pdf_score.py` + `tool/build_score.py`（入库）/ `tool/show_score.py`（人读输出） | 官方简谱 PDF（网站标准源）→ 逐乐句「曲谱串 + 歌词 + 拍位 + 逐字对应」；写 `hymn_score` / `hymn_score_line` / `hymn_score_lyric` / `hymn_score_char` / `hymn_codepoint_map` | ✅ 完成（473 首入库 / 7914 谱行 / 逐字对位可靠 99.0%；#349 无文本层待 OCR） |
+| **带简谱歌词** | `crawler_core/ppt_jianpu.py` + `crawler_core/jianpu_sync.py`（增量编排）+ `tool/extract_jianpu.py`（全量报告） | 474 份 PPT → 每节每行「简谱记号 + 歌词」；5 项校验（行配对/节号自洽/跨节曲调一致/歌词归属/音符-字数等长），写 `hymn_jianpu` + `hymn_jianpu_line` | ✅ 完成（404 首全项通过 / 70 首带复核标记）；**已接入全链路**（菜单 13 / `--step 13`，按 `src_md5` 增量） |
+| **官方简谱曲谱** | `crawler_core/pdf_score.py` + `crawler_core/jianpu_sync.py`（增量编排）+ `tool/build_score.py`（`--learn`/`--force`）/ `tool/show_score.py` | 官方简谱 PDF（网站标准源）→ 逐乐句「曲谱串 + 歌词 + 拍位 + 逐字对应」；写 `hymn_score` / `hymn_score_line` / `hymn_score_lyric` / `hymn_score_char` / `hymn_codepoint_map` | ✅ 完成（473 首入库 / 7914 谱行 / 逐字对位可靠 99.0%；#349 无文本层待 OCR）；**已接入全链路**（下载后/菜单 7/Step 10 末尾自动增量，`--step 12` 可单跑） |
 | **音频时长** | `crawler_core/audio_duration.py` + `tool/build_audio_durations.py` | 离线读本地音频（m4a/mp3）→ 时长写 v10 字段 `audio_durations`（JSON：版本名 → 秒），与 `audio_versions` / `audio_version_list` **键集一一匹配**；**下载回写即同批入库**，全流程/Step 10 末尾兜底，`--step 11` 可单独重算 | ✅ 完成（474 首 / 1119 条全部读出 / 合计 47h59m / 键集 0 不一致） |
 
 ---
@@ -358,16 +372,19 @@ hymn_crawler/
 - **tool/ 数据脚本**：OCR 切片合并、JSON↔DB 比对、图片合并、结果校验等
 - **tool/reorder_table_columns.py**：把 `tjc_hymn` 表的**物理列顺序**对齐 `crawler_core/db.py::_create_table_v4`
   （解析代码 DDL 为唯一权威 → 事务重建 + 逐行逐列自检；幂等，`--dry-run` 只报告不改库）
-- **带简谱歌词**（`data/赞美诗PPT/` 就位时）：
+- **带简谱歌词**（`data/赞美诗PPT/` 就位时；**已接入全链路**——菜单 13 / `--step 13` 按 `src_md5` 增量入库）：
   - `python tool/extract_jianpu.py --dry-run`：474 份 PPT → 出校验报告 `data/jianpu_report.txt`（不写库）
-  - `python tool/extract_jianpu.py`：解析 + 写 `hymn_jianpu` / `hymn_jianpu_line`（幂等，可反复跑）
+  - `python tool/extract_jianpu.py`：全量解析 + 写 `hymn_jianpu` / `hymn_jianpu_line` + 出报告（需要完整报告时用）
   - `python tool/show_jianpu.py 1 --map`：渲染 #1 的简谱+歌词（简谱字体出图、逐字对位索引），
     与 `Hymn_Downloads/001_1頌讚獨一真神/1_简谱.png` 官方简谱并排核对；`--review` 列被标记的行
-- **官方简谱曲谱**（`Hymn_Downloads/` 就位时）：
-  - `python tool/build_score.py --limit 20 --dry-run`：抽 20 首试跑（只统计，不写库）
+- **官方简谱曲谱**（`Hymn_Downloads/` 就位时；**已接入全链路**——下载后/菜单 7/Step 10 末尾自动增量）：
+  - `python crawler_api.py --step 12`（或菜单 `12`）：增量入库（有 PDF 但未入库 / `pdf_path` 变化才处理）
+  - `python tool/build_score.py`：等价独立入口（默认增量；`--force` 全量重算）
+  - `python tool/build_score.py --limit 20 --dry-run`：抽 20 首试跑（dry-run 默认全量抽取，不写库）
   - `python tool/build_score.py --learn`：先学「码位 → 记号」映射（**拍位级锚点投票**，写 `hymn_codepoint_map`；
-    幂等重跑：先清掉上一轮 `source=anchored` 再从头自举），再全量抽取入库
+    幂等重跑：先清掉上一轮 `source=anchored` 再从头自举），再**全量**抽取入库
   - `python tool/build_score.py --learn --learn-mode row`：旧的「整行同构」学习（对照/复现用）
+  - `python tool/build_score.py --force`：全量重算（默认是增量：只处理未入库 / `pdf_path` 变化的编号）
   - `python tool/build_score.py --stats`：覆盖统计（等长行 / 逐字可靠率）；`--show 334` 打印某首曲谱/歌词/逐字对应
   - `python tool/build_score.py --only 334 349`：只处理指定编号（幂等，可反复跑）
   - `python tool/show_score.py 1 14`：**人读输出**——把 `hymn_score*` 里的曲谱行与对应歌词**按列对齐**打印

@@ -16,6 +16,9 @@
   python tool/extract_jianpu.py                    # 解析 + 写库 + 出报告
   python tool/extract_jianpu.py --only 1 5 349     # 抽样复核若干首
   python tool/extract_jianpu.py --quiet            # 只打印统计与入库结果
+
+说明（全链路入口）：`python crawler_api.py --step 13`（或菜单 `13`）= 按 `src_md5` 的**增量**入库
+（见 `crawler_core/jianpu_sync.py`）；本工具始终**全量解析**并产出完整校验报告 `data/jianpu_report.txt`。
 """
 import argparse
 import os

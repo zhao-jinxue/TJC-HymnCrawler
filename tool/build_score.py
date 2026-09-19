@@ -16,10 +16,15 @@
 用法（项目根执行）：
   python tool/build_score.py --learn                # 先学码位映射（拍位级锚点投票），再全量抽取入库
   python tool/build_score.py --learn --learn-mode row   # 旧的整行同构学习（对照用）
+  python tool/build_score.py                        # **增量**：有 PDF 但未入库/PDF 变化的编号才处理
+  python tool/build_score.py --force                # 全量重算（忽略已入库状态）
   python tool/build_score.py --only 334 349 1       # 只处理指定编号
-  python tool/build_score.py --limit 20 --dry-run   # 抽样试跑，不写库
+  python tool/build_score.py --limit 20 --dry-run   # 抽样试跑（dry-run 默认全量抽取，不写库）
   python tool/build_score.py --stats                # 库内覆盖统计
   python tool/build_score.py --show 334             # 打印某首的曲谱/歌词/逐字对应（人读）
+
+说明（全链路入口）：`python crawler_api.py --step 12`（或菜单 `12`）= 同一增量实现
+（见 `crawler_core/jianpu_sync.py`）；本工具额外提供 `--learn` 标定与 `--force` 全量重算。
 """
 import argparse
 import os
@@ -31,7 +36,7 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)
 os.chdir(ROOT)
 
-from crawler_core import db, pdf_jianpu as P, pdf_score as S  # noqa: E402
+from crawler_core import db, jianpu_sync as jw, pdf_jianpu as P, pdf_score as S  # noqa: E402
 
 
 def all_numbers():
@@ -117,18 +122,26 @@ def show(num, db_path):
     return 0
 
 
+def record_get(rec, key, default=""):
+    """`ScoreRecord`(dataclass) / dict 统一取值"""
+    if isinstance(rec, dict):
+        return rec.get(key, default)
+    return getattr(rec, key, default)
+
+
 def main(argv=None):
     ap = argparse.ArgumentParser(description="官方简谱 PDF → 曲谱/歌词/拍位/逐字对应（v9 入库）")
-    ap.add_argument("numbers", nargs="*", help="诗歌编号（缺省 = 全部有 PDF 的编号）")
+    ap.add_argument("numbers", nargs="*", help="诗歌编号（缺省 = 增量：未入库/PDF 变化的编号）")
     ap.add_argument("--only", nargs="*", default=None, help="同位置参数，便于脚本里显式书写")
     ap.add_argument("--limit", type=int, default=None, help="最多处理多少首")
     ap.add_argument("--db", default=db.DB_PATH, help=f"数据库（默认 {db.DB_PATH}）")
+    ap.add_argument("--force", action="store_true", help="全量重算（忽略已入库状态）")
     ap.add_argument("--learn", action="store_true", help="先学码位映射并写 hymn_codepoint_map")
     ap.add_argument("--learn-mode", choices=("anchors", "row"), default="anchors",
                     help="学习算法：anchors=拍位级锚点投票（默认）/ row=整行同构（旧）")
     ap.add_argument("--learn-limit", type=int, default=120, help="学习用样本上限（默认 120 首）")
     ap.add_argument("--no-map", action="store_true", help="不使用库里的码位映射（记号列为 `?`）")
-    ap.add_argument("--dry-run", action="store_true", help="只抽取与统计，不写库")
+    ap.add_argument("--dry-run", action="store_true", help="只抽取与统计，不写库（默认全量）")
     ap.add_argument("--stats", action="store_true", help="只打印库内统计")
     ap.add_argument("--show", nargs="*", default=None, help="打印指定编号的抽取结果后退出")
     ap.add_argument("--quiet", action="store_true", help="不打印每首明细")
@@ -142,10 +155,15 @@ def main(argv=None):
             show(n, args.db)
         return 0
 
-    nums = args.only or args.numbers or all_numbers()
-    if args.limit:
-        nums = nums[: args.limit]
-    print(f"🎼 待处理 {len(nums)} 首：{nums[:6]}{' …' if len(nums) > 6 else ''}")
+    nums = args.only or args.numbers or None
+    # dry-run / --force / 学完映射后的全量：都走「忽略已入库状态」的全量路径
+    force = args.force or args.dry_run or (args.learn and not nums)
+    if nums:
+        print(f"🎼 指定 {len(nums)} 首：{nums[:6]}{' …' if len(nums) > 6 else ''}")
+    else:
+        listed = all_numbers() if force else jw.score_pending_numbers(args.db)
+        print(f"🎼 {'全量重算' if force else '增量待处理'} {len(listed)} 首："
+              f"{listed[:6]}{' …' if len(listed) > 6 else ''}")
 
     mapping = {} if args.no_map else db.load_codepoint_map(args.db)
     if mapping:
@@ -159,34 +177,35 @@ def main(argv=None):
             if stale:
                 print(f"🧹 清掉上一轮 source={source} 的映射 {stale} 条，从头自举")
                 mapping = {} if args.no_map else db.load_codepoint_map(args.db)
-        learned, stats = learn_mapping(nums, args.learn_limit, quiet=args.quiet,
-                                       mode=args.learn_mode)
+        learned, stats = learn_mapping(nums or all_numbers(), args.learn_limit,
+                                       quiet=args.quiet, mode=args.learn_mode)
         if learned and not args.dry_run:
             n = db.save_codepoint_map(learned, stats, source=source, db_path=args.db)
             print(f"💾 码位映射已写入 hymn_codepoint_map：{n} 条（source={source}）")
         mapping = {**mapping, **learned}
 
-    records, t0 = [], time.time()
-    for i, num in enumerate(nums, 1):
-        rec = S.build_score(num, mapping=mapping)
-        records.append(rec)
-        if not args.quiet:
-            print(f"  [{i}/{len(nums)}] #{num}: 乐句{rec.phrase_count} 谱行{rec.line_count} "
-                  f"词{rec.lyric_count} 拍{rec.beat_total} 字{rec.syllable_total} "
-                  f"ok={rec.align_ok}" + (f" | {rec.review_reason}" if rec.review_reason else ""))
-    ok = sum(1 for r in records if r.align_ok)
-    print(f"✅ 抽取完成：{len(records)} 首 / 全部校验通过 {ok} 首 / 耗时 {time.time() - t0:.1f}s")
+    def _on_rec(rec, i, total):
+        print(f"  [{i}/{total}] #{record_get(rec, 'hymn_number')}: "
+              f"乐句{record_get(rec, 'phrase_count')} 谱行{record_get(rec, 'line_count')} "
+              f"词{record_get(rec, 'lyric_count')} 拍{record_get(rec, 'beat_total')} "
+              f"字{record_get(rec, 'syllable_total')} ok={record_get(rec, 'align_ok')}"
+              + (f" | {record_get(rec, 'review_reason')}" if record_get(rec, 'review_reason') else ""))
+
+    summary = jw.sync_scores(numbers=nums, limit=args.limit, dry_run=args.dry_run,
+                             db_path=args.db, mapping=mapping, force=force,
+                             on_rec=None if args.quiet else _on_rec)
+    print(f"✅ 抽取完成：{summary['processed']} 首 / 全部校验通过 {summary['align_ok']} 首 / "
+          f"耗时 {summary['seconds']:.1f}s")
 
     if args.dry_run:
         print("（--dry-run：未写库）")
         return 0
-    saved = db.save_score_records(records, args.db)
-    print(f"💾 已写入 hymn_score {saved['hymns']} 首 / hymn_score_line {saved['lines']} 行 / "
-          f"hymn_score_lyric {saved['lyrics']} 行 / hymn_score_char {saved['chars']} 字")
-    for num, reason in saved["skipped"][:10]:
+    print(f"💾 已写入 hymn_score {summary['hymns']} 首 / hymn_score_line {summary['lines']} 行 / "
+          f"hymn_score_lyric {summary['lyrics']} 行 / hymn_score_char {summary['chars']} 字")
+    for num, reason in summary["skipped"][:10]:
         print(f"   跳过 {num}：{reason}")
-    if len(saved["skipped"]) > 10:
-        print(f"   …… 其余 {len(saved['skipped']) - 10} 首同上")
+    if len(summary["skipped"]) > 10:
+        print(f"   …… 其余 {len(summary['skipped']) - 10} 首同上")
     print(f"📊 库内统计：{db.score_stats(args.db)}")
     print("🔍 复核：python tool/build_score.py --show <编号>")
     return 0
